@@ -19,7 +19,7 @@ The CPU is almost fully implemented. About 26 (not counting cb-prefixed) out of 
 - cb-prefixed opcodes
 
 ### Mapper/cartridge type support
-Only the mapper 0x0 (ROM Only) is supported as of now, that means games such as Tetris, Dr. Mario, Space Invaders, Asteroids, etc. are loadable.
+Only mapper `0x0` (`ROM Only`) is supported as of now, that means games such as Tetris, Dr. Mario, Space Invaders, Asteroids, etc. are loadable.
 
 ### PPU/GPU
 Only the background layer is supported as of now. The PPU is cycle-accurate though (interrupts wouldn't be possible otherwise), timing is based on the cycles elapsed since the last CPU instruction.
