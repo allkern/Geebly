@@ -3,7 +3,7 @@
 </p>
 
 # Geebly
-A Gameboy Emulator written in C++, currently under development.
+A Gameboy emulator written in C++, currently under development.
 
 ## Current state
 ### CPU
