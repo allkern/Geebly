@@ -19,20 +19,20 @@ namespace gameboy {
         inline void update(size_t pci, size_t ci, bool j = false) {
             registers::cycles += ci;
             registers::last_instruction_cycles = ci;
-            st.pc_increment = pci;
+            s.pc_increment = pci;
             jump = j;
         }
 
         void fetch() {
-            st.opcode = bus::read(registers::pc, 1);
-            st.imm = bus::read(registers::pc+1, 2);
-            st.imm8 = st.imm & 0xff;
+            s.opcode = bus::read(registers::pc, 1);
+            s.imm = bus::read(registers::pc+1, 2);
+            s.imm8 = s.imm & 0xff;
         }
 
         bool execute() {
             using namespace registers;
 
-            u8 opcode = st.opcode;
+            u8 opcode = s.opcode;
 
             switch (opcode) {
                 // nop
@@ -114,7 +114,7 @@ namespace gameboy {
 
                 case 0xa6: { op_and(r[a], bus::read(hl, 1)); update(1, 8); }
 
-                case 0xe6: { op_and(r[a], st.imm8); update(2, 8); } break;
+                case 0xe6: { op_and(r[a], s.imm8); update(2, 8); } break;
 
                 // xor a, r8; xor a, (hl)
                 case 0xa8: case 0xa9: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xaf: {
@@ -134,10 +134,10 @@ namespace gameboy {
 
                 // ld r8, d8; ld *%hl, d8;
                 case 0x06: case 0x16: case 0x26: case 0x0e: case 0x1e: case 0x2e: case 0x3e: {
-                    r[(opcode & 0x38) >> 3] = st.imm8;
+                    r[(opcode & 0x38) >> 3] = s.imm8;
                     update(2, 8);
                 } break;
-                case 0x36: { bus::write(hl, st.imm8, 1); update(2, 12); } break;
+                case 0x36: { bus::write(hl, s.imm8, 1); update(2, 12); } break;
 
                 // rst #rst_vector;
                 case 0xc7: case 0xd7: case 0xe7: case 0xf7: case 0xcf: case 0xdf: case 0xef: case 0xff: {
@@ -147,12 +147,12 @@ namespace gameboy {
                 } break;
 
                 // ld %r16, #imm16;
-                case 0x01: { bc = st.imm; update(3, 12); } break;
-                case 0x11: { de = st.imm; update(3, 12); } break;
-                case 0x21: { hl = st.imm; update(3, 12); } break;
-                case 0x31: { sp = st.imm; update(3, 12); } break;
+                case 0x01: { bc = s.imm; update(3, 12); } break;
+                case 0x11: { de = s.imm; update(3, 12); } break;
+                case 0x21: { hl = s.imm; update(3, 12); } break;
+                case 0x31: { sp = s.imm; update(3, 12); } break;
 
-                case 0x08: { bus::write(st.imm, sp, 2); update(3, 20); } break;
+                case 0x08: { bus::write(s.imm, sp, 2); update(3, 20); } break;
                 
                 // inc %r16;
                 case 0x03: { bc++; update(1, 8); } break;
@@ -189,11 +189,11 @@ namespace gameboy {
                 case 0x29: { hl = hl + hl; set_flags(N, false); update(1, 8); } break;
                 case 0x39: { hl = hl + sp; set_flags(N, false); update(1, 8); } break;
 
-                case 0x20: { if (!test_flags(Z)) { pc += (s8)st.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x30: { if (!test_flags(C)) { pc += (s8)st.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x18: { pc += (s8)st.imm8 + 2; update(2, 12, true); } break;
-                case 0x28: { if ( test_flags(Z)) { pc += (s8)st.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x38: { if ( test_flags(C)) { pc += (s8)st.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x20: { if (!test_flags(Z)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x30: { if (!test_flags(C)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x18: { pc += (s8)s.imm8 + 2; update(2, 12, true); } break;
+                case 0x28: { if ( test_flags(Z)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x38: { if ( test_flags(C)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
                 
                 case 0xc1: { bc = pop(); update(1, 12); } break;
                 case 0xd1: { de = pop(); update(1, 12); } break;
@@ -211,51 +211,51 @@ namespace gameboy {
                 case 0xd8: { if ( test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
                 case 0xc9: { pc = pop(); update(1, 16); } break;
                 
-                case 0xc2: { if (!test_flags(Z)) { pc = st.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xd2: { if (!test_flags(C)) { pc = st.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xca: { if ( test_flags(Z)) { pc = st.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xda: { if ( test_flags(C)) { pc = st.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xc3: { pc = st.imm; update(3, 16, true); } break;
+                case 0xc2: { if (!test_flags(Z)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xd2: { if (!test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xca: { if ( test_flags(Z)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xda: { if ( test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xc3: { pc = s.imm; update(3, 16, true); } break;
 
-                case 0xf8: { hl = sp + (s8)st.imm8; update(2, 12); } break;
+                case 0xf8: { hl = sp + (s8)s.imm8; update(2, 12); } break;
                 case 0xf9: { sp = (u16)hl; update(1, 8); } break;
 
-                case 0xea: { bus::write(st.imm, r[a], 1); update(3, 16); } break;
-                case 0xfa: { r[a] = bus::read(st.imm, 1); update(3, 16); } break;
+                case 0xea: { bus::write(s.imm, r[a], 1); update(3, 16); } break;
+                case 0xfa: { r[a] = bus::read(s.imm, 1); update(3, 16); } break;
 
                 // TO-DO implement carry and halfcarry detection
-                case 0xe8: { sp += (s8)st.imm8; set_flags(Z | N, false); update(2, 16); } break;
+                case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); update(2, 16); } break;
                 case 0xe9: { pc = (u16)hl; set_flags(1, 4, true); } break;
 
-                case 0xc4: { if (!test_flags(Z)) { push(pc); pc = st.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xd4: { if (!test_flags(C)) { push(pc); pc = st.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xcc: { if ( test_flags(Z)) { push(pc); pc = st.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xdc: { if ( test_flags(C)) { push(pc); pc = st.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xcd: { push(pc); pc = st.imm; update(3, 24, true); } break;
+                case 0xc4: { if (!test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xd4: { if (!test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xcc: { if ( test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xdc: { if ( test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xcd: { push(pc); pc = s.imm; update(3, 24, true); } break;
 
-                case 0xe0: { bus::write(0xff00 + st.imm8, r[a], 1); update(2, 12); } break;
-                case 0xf0: { r[a] = bus::read(0xff00 + st.imm8, 1); update(2, 12); } break;
+                case 0xe0: { bus::write(0xff00 + s.imm8, r[a], 1); update(2, 12); } break;
+                case 0xf0: { r[a] = bus::read(0xff00 + s.imm8, 1); update(2, 12); } break;
 
                 case 0xe2: { bus::write(0xff00 + r[c], r[a], 1); update(1, 8); } break;
                 case 0xf2: { r[a] = bus::read(0xff00 + r[c], 1); update(1, 8); } break;
 
                 case 0xfe: {
-                    u32 dst = r[a] - st.imm8;
+                    u32 dst = r[a] - s.imm8;
                     set_flags(Z, !dst);
                     set_flags(N, true);
                     //set_flags(H, true);
-                    set_flags(C, r[a] < st.imm8);
+                    set_flags(C, r[a] < s.imm8);
                     update(2, 8);
                 } break;
 
                 default: {
                     _log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
-                    st.pc_increment = 1; // Softlock execution
+                    s.pc_increment = 1; // Softlock execution
                     //return false; // Halt and Catch Fire!
                 }
             }
 
-            if (!jump) { pc += st.pc_increment; }
+            if (!jump) { pc += s.pc_increment; }
             jump = false;
 
             return true;

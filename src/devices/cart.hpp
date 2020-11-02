@@ -45,6 +45,7 @@ namespace gameboy {
 
             switch (header[HDR_CART_TYPE]) {
                 case 0x00: { cartridge = new rom_only(); } break;
+                case 0x01: { cartridge = new mbc1(); } break;
 
                 default: {
                     _log(error, "Unimplemented cartridge type 0x%02x", header[HDR_CART_TYPE]);
@@ -56,20 +57,8 @@ namespace gameboy {
         }
 
         u32 read(u16 addr, size_t size) {
-            if (addr <= RVA_END) {
-                u32 d = 0;
-                while (size) {
-                    d |= rva[addr+(size-1)] << (((size--)-1)*8);
-                }
-                return d;
-            }
-            if (addr >= HDR_BEGIN && addr <= HDR_END) {
-                u32 d = 0;
-                while (size) {
-                    d |= header[(addr+(size-1))-0x100] << (((size--)-1)*8);
-                }
-                return d;
-            }
+            if (addr <= RVA_END) { utility::default_mb_read(rva.data(), addr, size, RVA_BEGIN); }
+            if (addr >= HDR_BEGIN && addr <= HDR_END) { utility::default_mb_read(header.data(), addr, size, RVA_BEGIN); }
             if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { return cartridge->read(addr, size); }
             if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { return cartridge->read(addr, size); }
             return 0;

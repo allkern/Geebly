@@ -6,7 +6,20 @@
 
 namespace gameboy {
     namespace cpu {
+        #define Z 0b10000000
+        #define N 0b01000000
+        #define H 0b00100000
+        #define C 0b00010000
+
+        struct state {
+            u8 opcode, imm8;
+            u16 imm;
+            bool jump = false;
+            size_t pc_increment;
+        } s;
+        
         namespace registers {
+
             struct pair {
                 u8 *high, *low;
 

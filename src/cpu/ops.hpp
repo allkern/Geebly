@@ -5,20 +5,8 @@
 
 namespace gameboy {
     namespace cpu {
-        #define Z 0b10000000
-        #define N 0b01000000
-        #define H 0b00100000
-        #define C 0b00010000
-
-        struct state {
-            u8 opcode, imm8;
-            u16 imm;
-            bool jump = false;
-            size_t pc_increment;
-        } st;
-
         inline bool get_carry() {
-            return registers::af & 0x10u;
+            return registers::af.operator&(0x10u);
         }
 
         inline void set_flags(u8 mask, bool cond, bool reset = true) {
@@ -42,8 +30,8 @@ namespace gameboy {
         }
 
         inline void pop(u16& dst) {
-            dst = bus::read(registers::sp, 2);
             registers::sp += 2;
+            dst = bus::read(registers::sp, 2);
         }
 
         inline u16 pop() {

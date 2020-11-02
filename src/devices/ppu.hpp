@@ -5,7 +5,6 @@
 
 #include <sys/unistd.h>
 
-
 #include <array>
 
 #define PPU_BEGIN   0x8000
@@ -40,7 +39,7 @@ namespace gameboy {
         u8 dummy = 0;
 
         sf::Thread* ppu_events_thread = nullptr;
-        sf::RenderWindow window(sf::VideoMode(160, 144), "Geebly 1.0a");
+        sf::RenderWindow window(sf::VideoMode(160*2, 144*2), "Geebly 1.0a");
         lgw::framebuffer frame;
 
         vram_t vram = { 0 }; // 0x1fff size
@@ -232,6 +231,8 @@ namespace gameboy {
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return vram[addr-VRAM_BEGIN]; }
             if (r[PPU_STAT] & 3 == 2) return dummy;
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return vram[addr-OAM_BEGIN]; }
+
+            return dummy;
         }
         
         void cycle() {
@@ -247,7 +248,12 @@ namespace gameboy {
                         if (r[PPU_LY] == 143) {
                             r[PPU_STAT] &= 0xfc;
                             r[PPU_STAT] |= 1;
-                            window.draw(*frame.get_drawable());
+
+                            auto f = frame.get_drawable();
+
+                            f->setScale(2, 2);
+                            
+                            window.draw(*f);
                             window.display();
                         } else {
                             r[PPU_STAT] &= 0xfc;
