@@ -19,7 +19,7 @@ namespace gameboy {
         };
 
         class mapper {
-            u8 ro_sink = 0;
+            u8 dummy = 0;
             
         public:
             mapper_tag tag;
@@ -27,10 +27,9 @@ namespace gameboy {
             virtual void init(std::ifstream*) {};
             virtual u32 read(u16, size_t) { return 0; };
             virtual void write(u16, u16, size_t) {};
-            virtual u8& ref(u16) { return ro_sink; };
+            virtual u8& ref(u16) { return dummy; };
         };
 
-        // ROM-Only mapper (no mapper) id=0x0
         class rom_only : public mapper {
             typedef std::array<u8, 0x7eb0> rom_t;
 
@@ -48,11 +47,7 @@ namespace gameboy {
             }
 
             u32 read(u16 addr, size_t size) override {
-                u32 d = 0;
-                while (size) {
-                    d |= rom[(addr-CART_ROM_BEGIN)+(size-1)] << (((size--)-1)*8);
-                }
-                return d;
+                utility::default_mb_read(rom.data(), addr, size, CART_ROM_BEGIN);
             }
         };
 

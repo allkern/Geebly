@@ -22,7 +22,7 @@ namespace gameboy {
         typedef std::array<u8, 0xff> rva_t;
 
         u8 dummy;
-         
+
         rva_t rva;
         header_t header;
 
@@ -32,7 +32,7 @@ namespace gameboy {
             { 0x02, "ROM+MBC1+RAM" },
             { 0x03, "ROM+MBC1+RAM+BATT" }
         };
-        
+
         mapper* cartridge = nullptr;
 
         void insert_cartridge(std::string rom) {
