@@ -30,3 +30,23 @@
 *.exe
 *.out
 *.app
+
+# Ignore the compiled executable
+geebly
+
+# Ignore external libraries
+src/lgw/
+src/imgui/
+
+# Ignore external object files
+build/imgui.o
+build/imgui_draw.o
+build/imgui_widgets.o
+build/imgui-SFML.o
+
+# Ignore all BIOSes/ROMs
+*.gb
+*.bin
+
+# Ignore the CPU to-do tracker file
+cpu_todo.pdn
