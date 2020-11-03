@@ -7,7 +7,7 @@ A Gameboy emulator written in C++, currently under development.
 
 ## Current state
 ### CPU
-The CPU is almost fully implemented. About 7 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
+The CPU is almost fully implemented. About 10 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
 - Rotate opcodes (`rla`, `rra`, etc)
 - Carry flag opcodes (`ccf`, `scf`)
 - `cpl`
