@@ -58,22 +58,26 @@ namespace gameboy {
 
         void write(u16 addr, u16 value, size_t size) {
             // Handle a cartridge header/ROM read
-            if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { cart::write(addr, value, size); }
+            if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { cart::write(addr, value, size); return; }
 
             // Handle a cartridge RAM read
-            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { cart::write(addr, value, size); }
+            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { cart::write(addr, value, size); return; }
 
             // Handle a PPU (CRAM, VRAM) read
-            if (addr >= PPU_BEGIN && addr <= PPU_END) { ppu::write(addr, value, size); }
+            if (addr >= PPU_BEGIN && addr <= PPU_END) { ppu::write(addr, value, size); return; }
 
             // Handle a WRAM read
-            if (addr >= WRAM_BEGIN && addr <= WRAM_END) { wram::write(addr, value, size); }
+            if (addr >= WRAM_BEGIN && addr <= WRAM_END) {
+                wram::write(addr, value, size); return;
+            }
 
             // Handle an OAM read
-            if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); }
+            if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
 
             // Handle a read to a PPU register
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { ppu::write(addr, value, size); }
+            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { ppu::write(addr, value, size); return; }
+
+            return;
         }
     }
 }

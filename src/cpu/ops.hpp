@@ -56,7 +56,7 @@ namespace gameboy {
             set_flags(Z, res==0);
             set_flags(N, true);
             set_flags(H, res&0x8);
-            //set_flags(C, res&0x100);
+            set_flags(C, res&0xff00);
         }
 
         inline void op_and(u8& dst, u8 src) {
@@ -88,6 +88,14 @@ namespace gameboy {
             set_flags(N, false);
             set_flags(H, false);
             set_flags(C, false);
+        }
+
+        inline void op_cp(u8& dst, u8 src) {
+            u32 temp = dst - src;
+            set_flags(Z, !temp);
+            set_flags(N, true);
+            //set_flags(H, true);
+            set_flags(C, dst < src);
         }
     }
 }

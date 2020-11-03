@@ -44,6 +44,9 @@ build/imgui_draw.o
 build/imgui_widgets.o
 build/imgui-SFML.o
 
+# Ignore ImGui's window thing
+imgui.ini
+
 # Ignore all BIOSes/ROMs
 *.gb
 *.bin

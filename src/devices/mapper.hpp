@@ -47,7 +47,7 @@ namespace gameboy {
             }
 
             u32 read(u16 addr, size_t size) override {
-                utility::default_mb_read(rom.data(), addr, size, CART_ROM_BEGIN);
+                return utility::default_mb_read(rom.data(), addr, size, CART_ROM_BEGIN);
             }
         };
 
@@ -72,7 +72,6 @@ namespace gameboy {
 
                     while (!f->eof()) {
                         f->read((char*)b.data(), b.size());
-                        std::cout << "bank[0]=" << std::hex << (unsigned int)b[0] << std::endl;
                         banks.push_back(b);
                         b.fill(0);
                     }

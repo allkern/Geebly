@@ -23,13 +23,13 @@
 #define PPU_R_END   0xff4b
 
 namespace gameboy {
-    template <class T> std::string bin(T v) {
-        std::string s;
-        for (int b = (sizeof(T) * 8) - 1; b >= 0; b--) {
-            s += (v & (1 << b)) ? '1' : '0';
-        }
-        return s;
-    }
+    //template <class T> std::string bin(T v) {
+    //    std::string s;
+    //    for (int b = (sizeof(T) * 8) - 1; b >= 0; b--) {
+    //        s += (v & (1 << b)) ? '1' : '0';
+    //    }
+    //    return s;
+    //}
 
     namespace ppu {
         typedef std::array <u8, 0x2000> vram_t;
@@ -38,7 +38,6 @@ namespace gameboy {
 
         u8 dummy = 0;
 
-        sf::Thread* ppu_events_thread = nullptr;
         sf::RenderWindow window(sf::VideoMode(160*2, 144*2), "Geebly 1.0a");
         lgw::framebuffer frame;
 
@@ -103,22 +102,7 @@ namespace gameboy {
 
         #define TEST_REG(reg, mask) (r[reg] & mask)
 
-        void ppu_events_thread_func(sf::RenderWindow* w) {
-            while (w->isOpen()) {
-                sf::Event event;
-                while (w->pollEvent(event)) {
-                    switch (event.type) {
-                        case sf::Event::Closed: { w->close(); } break;
-                    }
-                }
-                usleep(1);
-            }
-        }
-
         void init(u8& cpu_last_cycles_register) {
-            ppu_events_thread = new sf::Thread(&ppu_events_thread_func, &window);
-            ppu_events_thread->launch();
-
             frame.init(160, 144);
 
             vram.fill(0);
@@ -237,6 +221,13 @@ namespace gameboy {
         
         void cycle() {
             clk += *last_cpu_time;
+
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                switch (event.type) {
+                    case sf::Event::Closed: { window.close(); } break;
+                }
+            }
 
             switch (r[PPU_STAT] & 3) {
                 // HBlank mode

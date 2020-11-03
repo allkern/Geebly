@@ -17,9 +17,11 @@ namespace gameboy {
             bool jump = false;
             size_t pc_increment;
         } s;
-        
-        namespace registers {
 
+        std::atomic <bool> step;
+        std::atomic <bool> run;
+
+        namespace registers {
             struct pair {
                 u8 *high, *low;
 
@@ -54,6 +56,9 @@ namespace gameboy {
 
             // Stack Pointer
             uint16_t sp = 0xfffe;
+
+            // Interrupt Master Enable
+            bool ime = true;
 
             pair af { r[a], r[f] },
                  bc { r[b], r[c] },

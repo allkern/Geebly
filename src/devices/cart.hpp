@@ -18,8 +18,8 @@
 
 namespace gameboy {
     namespace cart {
-        typedef std::array<u8, 0x4f> header_t;
-        typedef std::array<u8, 0xff> rva_t;
+        typedef std::array<u8, 0x50> header_t;
+        typedef std::array<u8, 0x100> rva_t;
 
         u8 dummy;
 
@@ -39,8 +39,8 @@ namespace gameboy {
             std::ifstream f(rom, std::ios::binary);
 
             if (f.is_open()) {
-                f.read((char*)rva.data(), rva.size() + 1);
-                f.read((char*)header.data(), header.size() + 1);
+                f.read((char*)rva.data(), rva.size());
+                f.read((char*)header.data(), header.size());
             }
 
             switch (header[HDR_CART_TYPE]) {
@@ -57,8 +57,8 @@ namespace gameboy {
         }
 
         u32 read(u16 addr, size_t size) {
-            if (addr <= RVA_END) { utility::default_mb_read(rva.data(), addr, size, RVA_BEGIN); }
-            if (addr >= HDR_BEGIN && addr <= HDR_END) { utility::default_mb_read(header.data(), addr, size, RVA_BEGIN); }
+            if (addr <= RVA_END) { return utility::default_mb_read(rva.data(), addr, size, RVA_BEGIN); }
+            if (addr >= HDR_BEGIN && addr <= HDR_END) { return utility::default_mb_read(header.data(), addr, size, HDR_BEGIN); }
             if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { return cartridge->read(addr, size); }
             if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { return cartridge->read(addr, size); }
             return 0;

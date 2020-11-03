@@ -43,11 +43,13 @@ namespace gameboy {
                 while (size--) {
                     bank0[(addr++)-WRA0_BEGIN] = value & (0xff << (s++)*8);
                 }
+                return;
             }
             if (addr >= WRA1_BEGIN && addr <= WRA1_END) {
                 while (size--) {
                     bank1[(addr++)-WRA1_BEGIN] = value & (0xff << (s++)*8);
                 }
+                return;
             }
         }
 

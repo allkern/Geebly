@@ -5,6 +5,7 @@
 #include <utility>
 #include <memory>
 #include <vector>
+#include <atomic>
 #include <array>
 
 #include "../aliases.hpp"
@@ -34,6 +35,8 @@ namespace gameboy {
 
             u8 opcode = s.opcode;
 
+            if (run == false) { while (step) { usleep(1); } }
+            
             switch (opcode) {
                 // nop
                 case 0x00: { update(1, 4); } break;
@@ -112,9 +115,15 @@ namespace gameboy {
                     update(1, 4);
                 } break;
 
-                case 0xa6: { op_and(r[a], bus::read(hl, 1)); update(1, 8); }
+                case 0xa6: { op_and(r[a], bus::read(hl, 1)); update(1, 8); } break;
 
-                case 0xe6: { op_and(r[a], s.imm8); update(2, 8); } break;
+                // or a, r8; or a, (hl)
+                case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5: case 0xb7: {
+                    op_or(r[a], r[opcode & 7]);
+                    update(1, 4);
+                } break;
+
+                case 0xb6: { op_or(r[a], bus::read(hl, 1)); update(1, 8); } break;
 
                 // xor a, r8; xor a, (hl)
                 case 0xa8: case 0xa9: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xaf: {
@@ -122,15 +131,32 @@ namespace gameboy {
                     update(1, 4);
                 } break;
 
-                case 0xae: {
-                    op_xor(r[a], bus::read(hl, 1));
-                    update(1, 8);
+                case 0xae: { op_xor(r[a], bus::read(hl, 1)); update(1, 8); } break;
+
+                // cp a, r8; cp a, (hl)
+                case 0xb8: case 0xb9: case 0xba: case 0xbb: case 0xbc: case 0xbd: case 0xbf: {
+                    op_cp(r[a], r[opcode & 7]);
+                    update(1, 4);
                 } break;
 
-                case 0xb1: {
-                    op_or(r[a], r[c]);
-                    update(1, 4);
-                }
+                case 0xbe: { op_cp(r[a], bus::read(hl, 1)); update(1, 8); } break;
+
+                case 0xc6: case 0xce: {
+                    bool carry = (opcode & 8) && get_carry();
+                    op_adc(r[a], s.imm8, carry);
+                    update(2, 8);
+                } break;
+
+                case 0xd6: case 0xde: {
+                    bool carry = (opcode & 8) && get_carry();
+                    op_sbc(r[a], s.imm8, carry);
+                    update(2, 8);
+                } break;
+
+                case 0xe6: { op_and(r[a], s.imm8); update(2, 8); } break;
+                case 0xee: { op_xor(r[a], s.imm8); update(2, 8); } break;
+                case 0xf6: { op_or(r[a], s.imm8); update(2, 8); } break;
+                case 0xfe: { op_cp(r[a], s.imm8); update(2, 8); } break;
 
                 // ld r8, d8; ld *%hl, d8;
                 case 0x06: case 0x16: case 0x26: case 0x0e: case 0x1e: case 0x2e: case 0x3e: {
@@ -220,43 +246,53 @@ namespace gameboy {
                 case 0xf8: { hl = sp + (s8)s.imm8; update(2, 12); } break;
                 case 0xf9: { sp = (u16)hl; update(1, 8); } break;
 
+                // ld *#i16, %a;
                 case 0xea: { bus::write(s.imm, r[a], 1); update(3, 16); } break;
+
+                // ld %a, *#i16;
                 case 0xfa: { r[a] = bus::read(s.imm, 1); update(3, 16); } break;
 
+                // add %sp, #si8;
                 // TO-DO implement carry and halfcarry detection
                 case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); update(2, 16); } break;
+
+                // jp %hl;
                 case 0xe9: { pc = (u16)hl; set_flags(1, 4, true); } break;
 
+                // call[z,c,nz,nc] #i16;
                 case 0xc4: { if (!test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
                 case 0xd4: { if (!test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
                 case 0xcc: { if ( test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
                 case 0xdc: { if ( test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                
+                // call #i16;
                 case 0xcd: { push(pc); pc = s.imm; update(3, 24, true); } break;
 
+                // ld *#0xff00+#i8, %a; ld %a, *#0xff00+#i8;
                 case 0xe0: { bus::write(0xff00 + s.imm8, r[a], 1); update(2, 12); } break;
                 case 0xf0: { r[a] = bus::read(0xff00 + s.imm8, 1); update(2, 12); } break;
 
+                // ld *#0xff00+%c, a, ld a, *#0xff00+%c;
                 case 0xe2: { bus::write(0xff00 + r[c], r[a], 1); update(1, 8); } break;
                 case 0xf2: { r[a] = bus::read(0xff00 + r[c], 1); update(1, 8); } break;
 
-                case 0xfe: {
-                    u32 dst = r[a] - s.imm8;
-                    set_flags(Z, !dst);
-                    set_flags(N, true);
-                    //set_flags(H, true);
-                    set_flags(C, r[a] < s.imm8);
-                    update(2, 8);
-                } break;
+                // ei; di;
+                case 0xf3: { ime = false; update(1, 4); } break;
+                case 0xfb: { ime = true; update(1, 4); } break;
+
+                // reti
+                case 0xd9: { pc = pop(); update(1, 16); ime = true; } break;
 
                 default: {
                     _log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
-                    s.pc_increment = 1; // Softlock execution
+                    s.pc_increment = 0; // Softlock execution
                     //return false; // Halt and Catch Fire!
                 }
             }
 
             if (!jump) { pc += s.pc_increment; }
             jump = false;
+            step = true;
 
             return true;
         }
