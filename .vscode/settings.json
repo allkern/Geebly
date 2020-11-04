@@ -54,6 +54,7 @@
         "mutex": "cpp",
         "iomanip": "cpp",
         "cstring": "cpp",
-        "cinttypes": "cpp"
+        "cinttypes": "cpp",
+        "csignal": "cpp"
     }
 }

@@ -38,10 +38,16 @@ namespace gameboy {
         void insert_cartridge(std::string rom) {
             std::ifstream f(rom, std::ios::binary);
 
-            if (f.is_open()) {
-                f.read((char*)rva.data(), rva.size());
-                f.read((char*)header.data(), header.size());
+            if (!f.is_open() || !f.good()) {
+                #ifdef __linux__
+                int i = system("zenity --error --width 300 --text \"Couldn't open ROM\"");
+                #else
+                _log(error, "Couldn't open ROM");
+                #endif
             }
+
+            f.read((char*)rva.data(), rva.size());
+            f.read((char*)header.data(), header.size());
 
             switch (header[HDR_CART_TYPE]) {
                 case 0x00: { cartridge = new rom_only(); } break;
@@ -66,12 +72,12 @@ namespace gameboy {
 
         void write(u16 addr, u16 value, size_t size) {
             if (addr <= HDR_END                               ) { return; }
-            if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { cartridge->write(addr, value, size); }
-            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { cartridge->write(addr, value, size); }
+            if (addr >= CART_ROM_BEGIN && addr <= CART_ROM_END) { cartridge->write(addr, value, size); return; }
+            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { cartridge->write(addr, value, size); return; }
         }
 
         u8& ref(u16 addr) {
-            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { cartridge->ref(addr); }
+            if (addr >= CART_RAM_BEGIN && addr <= CART_RAM_END) { return cartridge->ref(addr); }
             return dummy;
         }
     }

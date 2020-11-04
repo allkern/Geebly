@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include "../lgw/framebuffer.hpp"
 #include "../aliases.hpp"
 
@@ -22,6 +24,8 @@
 #define PPU_R_BEGIN 0xff40
 #define PPU_R_END   0xff4b
 
+#define SCALE 4
+
 namespace gameboy {
     //template <class T> std::string bin(T v) {
     //    std::string s;
@@ -38,7 +42,7 @@ namespace gameboy {
 
         u8 dummy = 0;
 
-        sf::RenderWindow window(sf::VideoMode(160*2, 144*2), "Geebly 1.0a");
+        sf::RenderWindow window(sf::VideoMode(160*SCALE, 144*SCALE), "Geebly 1.0a");
         lgw::framebuffer frame;
 
         vram_t vram = { 0 }; // 0x1fff size
@@ -53,14 +57,6 @@ namespace gameboy {
         int mode, clk;
 
         u8* last_cpu_time = nullptr;
-
-        bool lcd_enabled = true;
-        bool window_tilemap; // 0: 9800-9BFF, 1: 9C00-9FFF
-        bool window_enabled;
-        bool background_tileset = true; // 0: 8800-97FF, 1: 8000-8FFF
-        bool sprite_size; // 0: 8x8, 1: 8x16
-        bool sprites_enabled;
-        bool background_enabled = true;
 
         u32 color_palette[] = {
             0xfffffffful,
@@ -107,7 +103,29 @@ namespace gameboy {
 
             vram.fill(0);
             oam.fill(0);
+
+            u8 bgmap0[13] = {
+                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+                0x09, 0x0a, 0x0b, 0x0c, 0x19
+            };
+
+            u8 bgmap1[12] = {
+                0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
+                0x15, 0x16, 0x17, 0x18
+            };
+
+            for (int addr = 0x1904; addr <= 0x1910; addr++) {
+                vram[addr] = bgmap0[addr-0x1904];
+            }
+
+            for (int addr = 0x1924; addr <= 0x192f; addr++) {
+                vram[addr] = bgmap1[addr-0x1924];
+            }
+
+            frame.get_drawable()->setScale(SCALE, SCALE);
+
             r[PPU_LCDC] = 0x91;
+            r[PPU_BGP] = 0xfc;
 
             last_cpu_time = &cpu_last_cycles_register;
         }
@@ -168,15 +186,16 @@ namespace gameboy {
                 }
                 return d;
             }
-            if (r[PPU_STAT] & 3 == 3) return 0xff;
-            if (addr >= VRAM_BEGIN && addr <= VRAM_END) { 
+
+            if ((r[PPU_STAT] & 3) >= 2) return 0xff;
+            if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
                 while (size) {
                     d |= vram[(addr+(size-1))-VRAM_BEGIN] << (((size--)-1)*8);
                 }
                 return d;
             }
 
-            if (r[PPU_STAT] & 3 == 2) return 0xff;
+            if ((r[PPU_STAT] & 3) >= 2) return 0xff;
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
                 while (size) {
                     d |= oam[(addr+(size-1))-OAM_BEGIN] << (((size--)-1)*8);
@@ -193,23 +212,27 @@ namespace gameboy {
                 while (size--) {
                     vram[(addr++)-PPU_R_BEGIN] = value & (0xff << (s++)*8);
                 }
+                return;
             }
-            if (r[PPU_STAT] & 3 == 3) return;
+
+            if ((r[PPU_STAT] & 3) >= 2) return;
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
                 while (size--) {
                     vram[(addr++)-VRAM_BEGIN] = value & (0xff << (s++)*8);
                 }
+                return;
             }
-            if (r[PPU_STAT] & 3 == 2) return;
+
+            if ((r[PPU_STAT] & 3) >= 2) return;
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
                 while (size--) {
                     oam[(addr++)-OAM_BEGIN] = value & (0xff << (s++)*8);
                 }
+                return;
             }
         }
 
         u8& ref(u16 addr) {
-            int s = 0;
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return vram[addr-PPU_R_BEGIN]; }
             if (r[PPU_STAT] & 3 == 3) return dummy;
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return vram[addr-VRAM_BEGIN]; }
@@ -220,7 +243,7 @@ namespace gameboy {
         }
         
         void cycle() {
-            clk += *last_cpu_time;
+            clk += (*last_cpu_time) * 1.5;
 
             sf::Event event;
             while (window.pollEvent(event)) {
@@ -236,15 +259,11 @@ namespace gameboy {
                         clk = 0;
                         r[PPU_LY]++;
 
-                        if (r[PPU_LY] == 143) {
+                        if (r[PPU_LY] == 0x94) {
                             r[PPU_STAT] &= 0xfc;
                             r[PPU_STAT] |= 1;
-
-                            auto f = frame.get_drawable();
-
-                            f->setScale(2, 2);
                             
-                            window.draw(*f);
+                            window.draw(*frame.get_drawable());
                             window.display();
                         } else {
                             r[PPU_STAT] &= 0xfc;
@@ -284,6 +303,10 @@ namespace gameboy {
 
                         if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
                             render_scanline();
+
+                            #ifdef GEEBLY_DEBUG
+                            
+                            #endif
                         }
                     }
                 }

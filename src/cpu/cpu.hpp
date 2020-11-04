@@ -35,8 +35,9 @@ namespace gameboy {
 
             u8 opcode = s.opcode;
 
+            #ifdef GEEBLY_DEBUG
             if (run == false) { while (step) { usleep(1); } }
-            
+            #endif
             switch (opcode) {
                 // nop
                 case 0x00: { update(1, 4); } break;
@@ -292,7 +293,12 @@ namespace gameboy {
 
             if (!jump) { pc += s.pc_increment; }
             jump = false;
+            
+            #ifdef GEEBLY_DEBUG
             step = true;
+            #endif
+
+            done = true;
 
             return true;
         }

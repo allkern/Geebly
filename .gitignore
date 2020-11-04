@@ -51,5 +51,8 @@ imgui.ini
 *.gb
 *.bin
 
+# Ignore all Assembly source files
+*.asm
+
 # Ignore the CPU to-do tracker file
 cpu_todo.pdn

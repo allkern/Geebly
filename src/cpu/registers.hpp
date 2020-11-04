@@ -20,6 +20,7 @@ namespace gameboy {
 
         std::atomic <bool> step;
         std::atomic <bool> run;
+        std::atomic <bool> done;
 
         namespace registers {
             struct pair {
@@ -38,8 +39,10 @@ namespace gameboy {
                 BINARY_OP(*)
                 BINARY_OP(/)
 
-                pair& operator++(int) { (*low)++; if (!(*low)) { (*high)++; } return *this; }
-                pair& operator--(int) { (*low)--; if (*low == 0xff) { (*high)--; } return *this; }
+                u16 operator++(int) { u16 old = (u16)*this; (*low)++; if (!(*low)) { (*high)++; } return old; }
+                u16 operator--(int) { u16 old = (u16)*this; (*low)--; if (*low == 0xff) { (*high)--; } return old; }
+                pair& operator++() { (*low)++; if (!(*low)) { (*high)++; } return *this; }
+                pair& operator--() { (*low)--; if (*low == 0xff) { (*high)--; } return *this; }
 
                 pair(u8& high, u8& low) : high(&high), low(&low) {};
             };

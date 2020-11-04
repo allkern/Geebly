@@ -10,5 +10,4 @@ cd ..
 mv "build/geebly" "geebly"
 rm "build/geebly.o"
 
-echo "Geebly:"
 time ./geebly
