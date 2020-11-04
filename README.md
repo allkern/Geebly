@@ -6,11 +6,15 @@
 A Gameboy emulator written in C++, currently under development.
 
 ## Current state
+### Screenshots
+![alt text](https://user-images.githubusercontent.com/15825466/98177033-82bb1500-1ed8-11eb-9125-ad29cffd7d04.png "Booting Tetris")
+![alt text](https://user-images.githubusercontent.com/15825466/98177035-83ec4200-1ed8-11eb-8a09-bf29397a564d.png "Booting Dr. Mario")
+![alt text](https://user-images.githubusercontent.com/15825466/98177037-83ec4200-1ed8-11eb-8369-727e7a48437f.png "Booting Space Invaders")
+
+
 ### CPU
 The CPU is almost fully implemented. About 10 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
 - Rotate opcodes (`rla`, `rra`, etc)
-- Carry flag opcodes (`ccf`, `scf`)
-- `cpl`
 - `stop`
 - `halt`
 - cb-prefixed opcodes
