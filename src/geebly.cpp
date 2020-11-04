@@ -1,7 +1,13 @@
-#include "devices/ppu.hpp"
+//#include "devices/ppu.hpp"
 
 //#define GEEBLY_DEBUG
+
+#ifdef GEEBLY_DEBUG
 #include "thread.hpp"
+#else
+#include "cpu/cpu.hpp"
+#include "cpu/mnemonics.hpp"
+#endif
 #include "log.hpp"
 
 #include "debug.hpp"
@@ -62,7 +68,7 @@ int main() {
     
     bios::init("bios.bin");
 
-    cart::insert_cartridge("test.gb");
+    cart::insert_cartridge("qix.gb");
 
     #ifdef GEEBLY_DEBUG
     debug::init();
@@ -70,18 +76,18 @@ int main() {
 
     ppu::init(cpu::registers::last_instruction_cycles);
 
-    //cpu::registers::pc = 0x38;
-
+    #ifdef GEEBLY_DEBUG
     init();
+    #endif
 
-    sf::Clock perf;
-
-    perf.restart();
     while (true) {
-        if (cpu::done) {
-            ppu::cycle();
-            cpu::done = false;
-        }
+        #ifndef GEEBLY_DEBUG
+        cpu::fetch();
+
+        cpu::execute();
+        #endif
+
+        ppu::cycle();
 
         #ifdef GEEBLY_DEBUG
         debug::update();

@@ -24,7 +24,7 @@
 #define PPU_R_BEGIN 0xff40
 #define PPU_R_END   0xff4b
 
-#define SCALE 4
+#define SCALE 2
 
 namespace gameboy {
     //template <class T> std::string bin(T v) {
@@ -58,11 +58,18 @@ namespace gameboy {
 
         u8* last_cpu_time = nullptr;
 
+        //u32 color_palette[] = {
+        //    0xfffffffful,
+        //    0xaaaaaafful,
+        //    0x555555fful,
+        //    0x000000fful
+        //};
+
         u32 color_palette[] = {
-            0xfffffffful,
-            0xaaaaaafful,
-            0x555555fful,
-            0x000000fful
+            0x9bbc0ffful,
+            0x8bac0ffful,
+            0x306230fful,
+            0x0f380ffful
         };
 
         u8 scroll_x = 0, scroll_y = 0;
@@ -99,33 +106,36 @@ namespace gameboy {
         #define TEST_REG(reg, mask) (r[reg] & mask)
 
         void init(u8& cpu_last_cycles_register) {
-            frame.init(160, 144);
+            frame.init(160, 144, sf::Color(color_palette[3]));
 
             vram.fill(0);
             oam.fill(0);
 
-            u8 bgmap0[13] = {
-                0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
-                0x09, 0x0a, 0x0b, 0x0c, 0x19
-            };
-
-            u8 bgmap1[12] = {
-                0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
-                0x15, 0x16, 0x17, 0x18
-            };
-
-            for (int addr = 0x1904; addr <= 0x1910; addr++) {
-                vram[addr] = bgmap0[addr-0x1904];
-            }
-
-            for (int addr = 0x1924; addr <= 0x192f; addr++) {
-                vram[addr] = bgmap1[addr-0x1924];
-            }
+            //u8 bgmap0[13] = {
+            //    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            //    0x09, 0x0a, 0x0b, 0x0c, 0x19
+            //};
+//
+            //u8 bgmap1[12] = {
+            //    0x0d, 0x0e, 0x0f, 0x10, 0x11, 0x12, 0x13, 0x14,
+            //    0x15, 0x16, 0x17, 0x18
+            //};
+//
+            //for (int addr = 0x1904; addr <= 0x1910; addr++) {
+            //    vram[addr] = bgmap0[addr-0x1904];
+            //}
+//
+            //for (int addr = 0x1924; addr <= 0x192f; addr++) {
+            //    vram[addr] = bgmap1[addr-0x1924];
+            //}
 
             frame.get_drawable()->setScale(SCALE, SCALE);
 
             r[PPU_LCDC] = 0x91;
             r[PPU_BGP] = 0xfc;
+
+            window.clear(sf::Color(color_palette[3]));
+            window.display();
 
             last_cpu_time = &cpu_last_cycles_register;
         }
@@ -179,55 +189,36 @@ namespace gameboy {
         }
 
         u32 read(u16 addr, size_t size) {
-            u32 d = 0;
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
-                while (size) {
-                    d |= r[(addr+(size-1))-PPU_R_BEGIN] << (((size--)-1)*8);
-                }
-                return d;
+                return utility::default_mb_read(r.data(), addr, size, PPU_R_BEGIN);
             }
 
             if ((r[PPU_STAT] & 3) >= 2) return 0xff;
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                while (size) {
-                    d |= vram[(addr+(size-1))-VRAM_BEGIN] << (((size--)-1)*8);
-                }
-                return d;
+                return utility::default_mb_read(vram.data(), addr, size, VRAM_BEGIN);
             }
 
-            if ((r[PPU_STAT] & 3) >= 2) return 0xff;
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                while (size) {
-                    d |= oam[(addr+(size-1))-OAM_BEGIN] << (((size--)-1)*8);
-                }
-                return d;
+                return utility::default_mb_read(oam.data(), addr, size, OAM_BEGIN);
             }
 
             return 0;
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            int s = 0;
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
-                while (size--) {
-                    vram[(addr++)-PPU_R_BEGIN] = value & (0xff << (s++)*8);
-                }
+            if (addr >= PPU_R_BEGIN+1 && addr <= PPU_R_END) {
+                utility::default_mb_write(r.data(), addr, value, size, PPU_R_BEGIN);
                 return;
             }
 
-            if ((r[PPU_STAT] & 3) >= 2) return;
+            //if ((r[PPU_STAT] & 3) >= 2) return;
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                while (size--) {
-                    vram[(addr++)-VRAM_BEGIN] = value & (0xff << (s++)*8);
-                }
+                utility::default_mb_write(vram.data(), addr, value, size, VRAM_BEGIN);
                 return;
             }
 
-            if ((r[PPU_STAT] & 3) >= 2) return;
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                while (size--) {
-                    oam[(addr++)-OAM_BEGIN] = value & (0xff << (s++)*8);
-                }
+                utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
                 return;
             }
         }
@@ -262,8 +253,10 @@ namespace gameboy {
                         if (r[PPU_LY] == 0x94) {
                             r[PPU_STAT] &= 0xfc;
                             r[PPU_STAT] |= 1;
+
+                            auto f = frame.get_drawable();
                             
-                            window.draw(*frame.get_drawable());
+                            window.draw(*f);
                             window.display();
                         } else {
                             r[PPU_STAT] &= 0xfc;

@@ -24,20 +24,32 @@ namespace gameboy {
             return registers::r[registers::f] & mask;
         }
 
+
         inline void push(u16 addr) {
-            bus::write(registers::sp, addr, 2);
             registers::sp -= 2;
+            bus::write(registers::sp, addr, 2);
         }
 
         inline void pop(u16& dst) {
-            registers::sp += 2;
             dst = bus::read(registers::sp, 2);
+            registers::sp += 2;
         }
 
         inline u16 pop() {
             u16 p = bus::read(registers::sp, 2);
             registers::sp += 2;
             return p;
+        }
+
+        inline void assert_if() {
+            using namespace registers;
+            // Vblank
+            //if ((bus::read(0xff0f, 1) & 1) && ime && bus::read(0xffff, 1) & 1) {
+            //    ime = false;
+            //    push(pc);
+            //    pc = 0x40;
+            //    jump = true;
+            //}
         }
 
         inline void op_adc(u8& dst, u8 src, bool carry) {

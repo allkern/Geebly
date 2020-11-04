@@ -23,32 +23,23 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             u32 d = 0;
             if (addr >= WRA0_BEGIN && addr <= WRA0_END) {
-                while (size) {
-                    d |= bank0[(addr+(size-1))-WRA0_BEGIN] << (((size--)-1)*8);
-                }
-                return d;
+                return utility::default_mb_read(bank0.data(), addr, size, WRA0_BEGIN);
             }
+                
             if (addr >= WRA1_BEGIN && addr <= WRA1_END) {
-                while (size) {
-                    d |= bank1[(addr+(size-1))-WRA1_BEGIN] << (((size--)-1)*8);
-                }
-                return d;
+                return utility::default_mb_read(bank1.data(), addr, size, WRA0_BEGIN);
             }
             return 0;
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            int s = 0;
             if (addr >= WRA0_BEGIN && addr <= WRA0_END) {
-                while (size--) {
-                    bank0[(addr++)-WRA0_BEGIN] = value & (0xff << (s++)*8);
-                }
+                utility::default_mb_write(bank0.data(), addr, value, size, WRA0_BEGIN);
                 return;
             }
+
             if (addr >= WRA1_BEGIN && addr <= WRA1_END) {
-                while (size--) {
-                    bank1[(addr++)-WRA1_BEGIN] = value & (0xff << (s++)*8);
-                }
+                utility::default_mb_write(bank1.data(), addr, value, size, WRA1_BEGIN);
                 return;
             }
         }

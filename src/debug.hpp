@@ -34,7 +34,7 @@ namespace gameboy {
         void cpu_window() {
             using namespace ImGui;
 
-            SetNextWindowSize(ImVec2(400, 500));
+            SetNextWindowSize(ImVec2(400, 300));
             SetNextWindowPos(ImVec2(0, 0));
 
             Begin("CPU", nullptr,
@@ -103,7 +103,7 @@ namespace gameboy {
         }
 
         inline void init() {
-            window = new sf::RenderWindow(sf::VideoMode(1000, 500), "Geebly Debugger");
+            window = new sf::RenderWindow(sf::VideoMode(400, 300), "Geebly Debugger");
 
             ImGui::CreateContext();
             ImGui::SFML::Init(*window, true);

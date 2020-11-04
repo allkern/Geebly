@@ -12,6 +12,11 @@ namespace gameboy {
         while (exec) {
             cpu::fetch();
             exec = cpu::execute();
+            //usleep(1);
+            //if (cpu::registers::pc == 0x392/*28030x27ac*/) {
+            //    cpu::run = false;
+            //    std::cout << std::hex << (unsigned int)bus::read(0x9280, 1) << std::endl;
+            //}
         }
     }
 

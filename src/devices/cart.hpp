@@ -52,6 +52,8 @@ namespace gameboy {
             switch (header[HDR_CART_TYPE]) {
                 case 0x00: { cartridge = new rom_only(); } break;
                 case 0x01: { cartridge = new mbc1(); } break;
+                case 0x02: { cartridge = new mbc1(); } break;
+                case 0x03: { cartridge = new mbc1(); } break;
 
                 default: {
                     _log(error, "Unimplemented cartridge type 0x%02x", header[HDR_CART_TYPE]);

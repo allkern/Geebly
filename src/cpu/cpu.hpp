@@ -168,7 +168,7 @@ namespace gameboy {
 
                 // rst #rst_vector;
                 case 0xc7: case 0xd7: case 0xe7: case 0xf7: case 0xcf: case 0xdf: case 0xef: case 0xff: {
-                    push(pc);
+                    push(pc+1);
                     pc = opcode & 0x38;
                     update(1, 16, true);
                 } break;
@@ -236,7 +236,7 @@ namespace gameboy {
                 case 0xd0: { if (!test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
                 case 0xc8: { if ( test_flags(Z)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
                 case 0xd8: { if ( test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
-                case 0xc9: { pc = pop(); update(1, 16); } break;
+                case 0xc9: { pc = pop(); update(1, 16, true); } break;
                 
                 case 0xc2: { if (!test_flags(Z)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
                 case 0xd2: { if (!test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
@@ -258,16 +258,16 @@ namespace gameboy {
                 case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); update(2, 16); } break;
 
                 // jp %hl;
-                case 0xe9: { pc = (u16)hl; set_flags(1, 4, true); } break;
+                case 0xe9: { pc = (u16)hl; update(1, 4, true); } break;
 
                 // call[z,c,nz,nc] #i16;
-                case 0xc4: { if (!test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xd4: { if (!test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xcc: { if ( test_flags(Z)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xdc: { if ( test_flags(C)) { push(pc); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xc4: { if (!test_flags(Z)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xd4: { if (!test_flags(C)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xcc: { if ( test_flags(Z)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xdc: { if ( test_flags(C)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
                 
                 // call #i16;
-                case 0xcd: { push(pc); pc = s.imm; update(3, 24, true); } break;
+                case 0xcd: { push(pc+3); pc = s.imm; update(3, 24, true); } break;
 
                 // ld *#0xff00+#i8, %a; ld %a, *#0xff00+#i8;
                 case 0xe0: { bus::write(0xff00 + s.imm8, r[a], 1); update(2, 12); } break;
@@ -284,12 +284,24 @@ namespace gameboy {
                 // reti
                 case 0xd9: { pc = pop(); update(1, 16); ime = true; } break;
 
+                case 0x2f: { r[a] = ~r[a]; set_flags(N | H, true); update(1, 4); } break;
+
+                case 0xcb: { update(2, 8); } break;
+
+                case 0x1f: { update(1, 4); } break;
+                case 0x07: { update(1, 4); } break;
+
+                case 0x37: { set_flags(C, true); set_flags(N | H, false); update(1, 4); }; break;
+                case 0x3f: { set_flags(C, !test_flags(C)); set_flags(N | H, false); update(1, 4); }; break;
+
                 default: {
                     _log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
                     s.pc_increment = 0; // Softlock execution
                     //return false; // Halt and Catch Fire!
                 }
             }
+
+            assert_if();
 
             if (!jump) { pc += s.pc_increment; }
             jump = false;

@@ -4,7 +4,9 @@
 #include "devices/bios.hpp"
 #include "devices/cart.hpp"
 #include "devices/wram.hpp"
+#include "devices/hram.hpp"
 #include "devices/ppu.hpp"
+#include "devices/io.hpp"
 
 namespace gameboy {
     namespace bus {
@@ -30,6 +32,10 @@ namespace gameboy {
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::read(addr, size); }
 
+            if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::read(addr, size); }
+
+            if (addr == MMIO_IF && addr == MMIO_IE) { return io::read(addr, size); }
+
             return 0x0;
         }
 
@@ -52,6 +58,10 @@ namespace gameboy {
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::ref(addr); }
+
+            if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::ref(addr); }
+
+            if (addr == MMIO_IF && addr == MMIO_IE) { return io::ref(addr); }
 
             return ro_sink;
         }
@@ -76,6 +86,10 @@ namespace gameboy {
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { ppu::write(addr, value, size); return; }
+
+            if (addr >= HRAM_BEGIN && addr <= HRAM_END) { hram::write(addr, value, size); return; }
+
+            if (addr == MMIO_IF && addr == MMIO_IE) { io::write(addr, value, size); return; }
 
             return;
         }
