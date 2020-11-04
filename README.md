@@ -7,19 +7,16 @@ A Gameboy emulator written in C++, currently under development.
 
 ## Current state
 ### CPU
-The CPU is almost fully implemented. About 26 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
+The CPU is almost fully implemented. About 10 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
 - Rotate opcodes (`rla`, `rra`, etc)
 - Carry flag opcodes (`ccf`, `scf`)
 - `cpl`
 - `stop`
 - `halt`
-- `cp %r` opcodes
-- Operations with A as dest and immediate src (`add #i8`, `sub #i8`, etc) 
-- `ei`, `di` and `reti`
 - cb-prefixed opcodes
 
 ### Mapper/cartridge type support
-Only mapper `0x0` (`ROM Only`) is supported as of now, that means games such as Tetris, Dr. Mario, Space Invaders, Asteroids, etc. are loadable.
+Mappers `0x0` (ROM Only) and `0x1` (MBC1, partially) are supported, many more games are now loadable due to the implementation of MBC1! 
 
 ### PPU/GPU
 Only the background layer is supported as of now. The PPU is cycle-accurate though (interrupts wouldn't be possible otherwise), timing is based on the cycles elapsed since the last CPU instruction.
