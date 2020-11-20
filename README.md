@@ -5,6 +5,8 @@
 # Geebly
 A Gameboy emulator written in C++, currently under development.
 
+![alt text](https://user-images.githubusercontent.com/15825466/99772991-88287a00-2aea-11eb-9d80-630cd04bd06b.gif "Running Tetris")
+
 ## Usage
 `geebly <settings> rom_name.gb`
 
@@ -22,7 +24,6 @@ Here's all the settings currently present in the CLI:
 |`--vram-access-emulation`/`--no-vram-access-emulation`|`Evram-access`/`-Eno-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Enable
 
 ## Current state
-![alt text](https://user-images.githubusercontent.com/15825466/99772991-88287a00-2aea-11eb-9d80-630cd04bd06b.gif "Running Tetris")
 ### CPU
 The CPU is fully implemented, with the exception of `stop` and `halt`. Interrupts are partially supported, `Vblank` is the only one that's currently implemented
 
