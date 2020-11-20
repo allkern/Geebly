@@ -112,7 +112,7 @@ namespace gameboy {
         inline void op_adc(u8& dst, u8 src, bool carry) {
             u16 res = dst;
             res += src + (int)carry;
-            set_flags(Z, res==0);
+            set_flags(Z, (u8)res==0);
             set_flags(N, false);
             set_flags(H, res&0x10);
             set_flags(C, res&0x100);
@@ -136,7 +136,7 @@ namespace gameboy {
         inline void op_sbc(u8& dst, u8 src, bool carry) {
             u16 res = dst;
             res -= src - (int)carry;
-            set_flags(Z, res==0);
+            set_flags(Z, (u8)res==0);
             set_flags(N, true);
             set_flags(H, res&0x8);
             set_flags(C, res&0xff00);
@@ -176,7 +176,7 @@ namespace gameboy {
 
         inline void op_cp(u8& dst, u8 src) {
             u32 temp = dst - src;
-            set_flags(Z, !temp);
+            set_flags(Z, !(u8)temp);
             set_flags(N, true);
             //set_flags(H, true);
             set_flags(C, dst < src);

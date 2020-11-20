@@ -154,7 +154,7 @@ namespace gameboy {
                     update(1, 4);
                 } break;
 
-                // add a, (hl); adc a, (hl)
+                // add a, *%hl; adc a, *%hl
                 case 0x86: case 0x8e: {
                     bool carry = (opcode & 8) && get_carry();
                     op_adc(r[a], bus::read(hl, 1), carry);
