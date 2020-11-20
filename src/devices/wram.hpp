@@ -27,7 +27,7 @@ namespace gameboy {
             }
                 
             if (addr >= WRA1_BEGIN && addr <= WRA1_END) {
-                return utility::default_mb_read(bank1.data(), addr, size, WRA0_BEGIN);
+                return utility::default_mb_read(bank1.data(), addr, size, WRA1_BEGIN);
             }
             return 0;
         }

@@ -17,6 +17,52 @@
 
 namespace gameboy {
     namespace cpu {
+        void init() {
+            using namespace registers;
+
+            if (skip_bootrom) {
+                pc = 0x100;
+                sp = 0xfffe;
+                af = 0x01b0;
+                bc = 0x0013;
+                de = 0x00d8;
+                hl = 0x014d;
+            }
+        }
+
+        // Cleanup interrupt_skip on next commit
+        int interrupt_skip = 0;
+
+        u8 fired = 0;
+
+        // Basic interrupt handler
+        inline void handle_interrupts() {
+            using namespace registers;
+            
+            u8& ie = bus::ref(0xffff),
+              & ia = bus::ref(0xff0f);
+
+            if (ime && ie && ia) {
+                //std::cout << std::boolalpha << ime << " " << std::hex << (unsigned int)ie << " " << (unsigned int)ia << "\n";
+                // Mask off ints that aren't enabled
+                fired = ie & ia;
+
+                if (fired) {
+                    ime = false;
+                    interrupt_skip = 0;
+                }
+            }
+
+            if (interrupt_skip == 0) {
+                u8& ia = bus::ref(0xff0f);
+                // Handle VBlank
+                if (fired & 0x01) { ia &= 0xfe; call(0x40); }
+
+                interrupt_skip = 0;
+                fired = 0;
+            }
+        }
+
         inline void update(size_t pci, size_t ci, bool j = false) {
             registers::cycles += ci;
             registers::last_instruction_cycles = ci;
@@ -30,14 +76,17 @@ namespace gameboy {
             s.imm8 = s.imm & 0xff;
         }
 
-        bool execute() {
+
+        // Properly implement halt and stop
+        bool execute(u8 override = 0x0) {
             using namespace registers;
 
-            u8 opcode = s.opcode;
+            u8 opcode = override ? override : s.opcode;
 
-            #ifdef GEEBLY_DEBUG
-            if (run == false) { while (step) { usleep(1); } }
-            #endif
+            if (debugger_enabled) {
+                if (run == false) { while (step) { usleep(1); } }
+            }
+            
             switch (opcode) {
                 // nop
                 case 0x00: { update(1, 4); } break;
@@ -47,6 +96,11 @@ namespace gameboy {
                 case 0x05: case 0x15: case 0x25: case 0x0d: case 0x1d: case 0x2d: case 0x3d: {
                     op_idc(r[(opcode >> 3) & 0x7], opcode & 1);
                     update(1, 4);
+                } break;
+
+                // stop #i8
+                case 0x10: {
+                    update(2, 4);
                 } break;
 
                 // inc *%hl, dec *%hl;
@@ -65,7 +119,18 @@ namespace gameboy {
                 case 0x78: case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7f: {
                     r[(opcode >> 3) & 7] = r[opcode & 7];
                     update(1, 4);
-                    break;
+                } break;
+
+                // rla; rlca;
+                case 0x07: case 0x17: {
+                    op_rlc(r[a], opcode&0x10);
+                    update(1, 4);
+                } break;
+
+                // rra; rrca;
+                case 0x0f: case 0x1f: {
+                    op_rrc(r[a], opcode&0x10);
+                    update(1, 4);
                 } break;
 
                 // ld r8, (hl)
@@ -270,45 +335,111 @@ namespace gameboy {
                 case 0xcd: { push(pc+3); pc = s.imm; update(3, 24, true); } break;
 
                 // ld *#0xff00+#i8, %a; ld %a, *#0xff00+#i8;
-                case 0xe0: { bus::write(0xff00 + s.imm8, r[a], 1); update(2, 12); } break;
-                case 0xf0: { r[a] = bus::read(0xff00 + s.imm8, 1); update(2, 12); } break;
+                case 0xe0: { bus::write(0xff00 | s.imm8, r[a], 1); update(2, 12); } break;
+                case 0xf0: { r[a] = bus::read(0xff00 | s.imm8, 1); update(2, 12); } break;
 
                 // ld *#0xff00+%c, a, ld a, *#0xff00+%c;
-                case 0xe2: { bus::write(0xff00 + r[c], r[a], 1); update(1, 8); } break;
-                case 0xf2: { r[a] = bus::read(0xff00 + r[c], 1); update(1, 8); } break;
+                case 0xe2: { bus::write(0xff00 | r[c], r[a], 1); update(1, 8); } break;
+                case 0xf2: { r[a] = bus::read(0xff00 | r[c], 1); update(1, 8); } break;
 
                 // ei; di;
                 case 0xf3: { ime = false; update(1, 4); } break;
                 case 0xfb: { ime = true; update(1, 4); } break;
 
                 // reti
-                case 0xd9: { pc = pop(); update(1, 16); ime = true; } break;
+                case 0xd9: { pc = pop(); update(1, 16, jump); ime = true; } break;
 
+                // cpl
                 case 0x2f: { r[a] = ~r[a]; set_flags(N | H, true); update(1, 4); } break;
 
-                case 0xcb: { update(2, 8); } break;
+                // daa
+                case 0x27: { op_daa(r[a]); update(1, 4); } break;
 
-                case 0x1f: { update(1, 4); } break;
-                case 0x07: { update(1, 4); } break;
+                case 0xcb: {
+                    opcode = bus::read(++registers::pc, 1);
 
+                    switch (opcode) {
+                        // bit b, r
+                        case 0x40: case 0x41: case 0x42: case 0x43: case 0x44: case 0x45: case 0x47:
+                        case 0x48: case 0x49: case 0x4a: case 0x4b: case 0x4c: case 0x4d: case 0x4f:
+                        case 0x50: case 0x51: case 0x52: case 0x53: case 0x54: case 0x55: case 0x57:
+                        case 0x58: case 0x59: case 0x5a: case 0x5b: case 0x5c: case 0x5d: case 0x5f:
+                        case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x67:
+                        case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6f:
+                        case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
+                        case 0x78: case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7f: {
+                            op_bit(r[opcode&0x7], (opcode >> 3) & 0x7);
+                            update(1, 8);
+                        } break;
+
+                        // res b, r; set b, r
+                        case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:
+                        case 0x88: case 0x89: case 0x8a: case 0x8b: case 0x8c: case 0x8d: case 0x8f:
+                        case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97:
+                        case 0x98: case 0x99: case 0x9a: case 0x9b: case 0x9c: case 0x9d: case 0x9f:
+                        case 0xa0: case 0xa1: case 0xa2: case 0xa3: case 0xa4: case 0xa5: case 0xa7:
+                        case 0xa8: case 0xa9: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xaf:
+                        case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5: case 0xb7:
+                        case 0xb8: case 0xb9: case 0xba: case 0xbb: case 0xbc: case 0xbd: case 0xbf:
+                        case 0xc0: case 0xc1: case 0xc2: case 0xc3: case 0xc4: case 0xc5: case 0xc7:
+                        case 0xc8: case 0xc9: case 0xca: case 0xcb: case 0xcc: case 0xcd: case 0xcf:
+                        case 0xd0: case 0xd1: case 0xd2: case 0xd3: case 0xd4: case 0xd5: case 0xd7:
+                        case 0xd8: case 0xd9: case 0xda: case 0xdb: case 0xdc: case 0xdd: case 0xdf:
+                        case 0xe0: case 0xe1: case 0xe2: case 0xe3: case 0xe4: case 0xe5: case 0xe7:
+                        case 0xe8: case 0xe9: case 0xea: case 0xeb: case 0xec: case 0xed: case 0xef:
+                        case 0xf0: case 0xf1: case 0xf2: case 0xf3: case 0xf4: case 0xf5: case 0xf7:
+                        case 0xf8: case 0xf9: case 0xfa: case 0xfb: case 0xfc: case 0xfd: case 0xff: {
+                            op_rst(r[opcode&0x7], (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            update(1, 8);
+                        } break;
+
+                        case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
+                        case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
+                            op_rlc(r[opcode&0x7], (bool)opcode&0x10);
+                            update(1, 8);
+                        } break;
+                        
+                        case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d: case 0x0f:
+                        case 0x18: case 0x19: case 0x1a: case 0x1b: case 0x1c: case 0x1d: case 0x1f: {
+                            op_rrc(r[opcode&0x7], (bool)opcode&0x10);
+                            update(1, 8);
+                        } break;
+
+                        case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27: {
+                            op_sla(r[opcode&0x7]);
+                            update(1, 8);
+                        } break;
+
+                        case 0x28: case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2f:
+                        case 0x38: case 0x39: case 0x3a: case 0x3b: case 0x3c: case 0x3d: case 0x3f: {
+                            op_sra(r[opcode&0x7], (bool)(opcode&0x10));
+                            update(1, 8);
+                        } break;
+
+                        case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37: {
+                            op_swap(r[opcode&0x7]);
+                            update(1, 8);
+                        } break;
+                    }
+                } break;
+
+                // scf; ccf
                 case 0x37: { set_flags(C, true); set_flags(N | H, false); update(1, 4); }; break;
                 case 0x3f: { set_flags(C, !test_flags(C)); set_flags(N | H, false); update(1, 4); }; break;
 
                 default: {
-                    _log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
-                    s.pc_increment = 0; // Softlock execution
+                    //_log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
+                    update(1, 4);
                     //return false; // Halt and Catch Fire!
                 }
             }
 
-            assert_if();
+            handle_interrupts();
 
             if (!jump) { pc += s.pc_increment; }
             jump = false;
             
-            #ifdef GEEBLY_DEBUG
-            step = true;
-            #endif
+            if (debugger_enabled) step = true;
 
             done = true;
 

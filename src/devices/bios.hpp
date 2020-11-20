@@ -7,16 +7,12 @@
 
 namespace gameboy {
     namespace bios {
-        typedef std::array <u8, 0xff> bios_rom_t;
+        typedef std::array <u8, 0x100> bios_rom_t;
 
         bios_rom_t rom;
 
         u32 read(u16 addr, size_t size) {
-            u32 r = 0; size_t s = size;
-            while (size) {
-                r |= rom[addr++] << ((s - (size--))*8);
-            }
-            return r;
+            return utility::default_mb_read(rom.data(), addr, size, 0);
         }
 
         u8& ref(u16 addr) {
@@ -28,7 +24,7 @@ namespace gameboy {
 
             std::ifstream file(filename, std::ios::binary);
 
-            file.read((char*)rom.data(), 0xff);
+            file.read((char*)rom.data(), 0x100);
         }
     }
 }

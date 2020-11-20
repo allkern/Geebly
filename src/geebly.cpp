@@ -1,16 +1,11 @@
-//#include "devices/ppu.hpp"
-
-//#define GEEBLY_DEBUG
-
-#ifdef GEEBLY_DEBUG
-#include "thread.hpp"
-#else
+#include "aliases.hpp"
+#include "cpu/thread.hpp"
 #include "cpu/cpu.hpp"
 #include "cpu/mnemonics.hpp"
-#endif
 #include "log.hpp"
 
 #include "debug.hpp"
+#include "cli.hpp"
 
 #include <csignal>
 
@@ -36,7 +31,7 @@ void sigsegv_handler(int sig) {
             cpu::s.imm8,
             cpu::s.jump
         );
-        
+
         int i = system(&buf[0]);
     #endif
 
@@ -61,36 +56,59 @@ void sigsegv_handler(int sig) {
     std::exit(1);
 }
 
-int main() {
+int main(int argc, const char* argv[]) {
+    cli::init(argc, argv);
+    cli::parse();
+
+    // This should probably be either automatic, or somewhere else
+    debugger_enabled = cli::setting("debug");
+    inaccessible_vram_emulation_enabled = !cli::setting("no-vram-access-emulation");
+    bios_checks_enabled = !cli::setting("no-bios-checks");
+    skip_bootrom = cli::setting("bootrom-skip");
+
     _log::log::init("geebly");
 
+    // Clean this up
     std::signal(SIGSEGV, sigsegv_handler);
-    
-    bios::init("bios.bin");
 
-    cart::insert_cartridge("qix.gb");
+    bios::init(cli::setting("bios", "bios.bin"));
 
-    #ifdef GEEBLY_DEBUG
-    debug::init();
-    #endif
+    // Patch infinite loops for 2 NOPs
+    if (!bios_checks_enabled) {
+        bios::rom[0xfa] = 0x00;
+        bios::rom[0xfb] = 0x00;
+        bios::rom[0xe9] = 0x00;
+        bios::rom[0xea] = 0x00;
+    }
 
-    ppu::init(cpu::registers::last_instruction_cycles);
+    cart::insert_cartridge(cli::setting("cartridge", "undefined"));
 
-    #ifdef GEEBLY_DEBUG
-    init();
-    #endif
+    ppu::init(std::stoi(cli::setting("scale", "1")), cpu::registers::last_instruction_cycles);
 
-    while (true) {
-        #ifndef GEEBLY_DEBUG
-        cpu::fetch();
+    cpu::init();
 
-        cpu::execute();
-        #endif
+    bus::init();
 
-        ppu::cycle();
+    if (debugger_enabled) {
+        debug::init();
+        init();
+    }
 
-        #ifdef GEEBLY_DEBUG
-        debug::update();
-        #endif
+    while (!window_closed) {
+        if (!debugger_enabled) {
+            cpu::fetch();
+            cpu::execute();
+        }
+
+        if (debugger_enabled) {
+            if (cpu::done) {
+                ppu::cycle();
+                cpu::done = false;
+            }
+        } else {
+            ppu::cycle();
+        }
+
+        if (debugger_enabled) debug::update();
     }
 }

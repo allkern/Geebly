@@ -55,10 +55,10 @@ namespace gameboy {
             uint8_t last_instruction_cycles = 0;
 
             // Program Counter
-            uint16_t pc = 0x100;
+            uint16_t pc = 0x0;
 
             // Stack Pointer
-            uint16_t sp = 0xfffe;
+            uint16_t sp = 0x0;
 
             // Interrupt Master Enable
             bool ime = true;

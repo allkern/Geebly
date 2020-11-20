@@ -64,18 +64,18 @@ namespace gameboy {
 
                 ImGui::Columns(3);
 
+                Text("AF: %04x", gpr[0]->operator gameboy::u16()); NextColumn();
                 Text("A: %02x", *gpr[0]->high); NextColumn();
                 Text("F: %02x", *gpr[0]->low); NextColumn();
-                Text("AF: %04x", gpr[0]->operator gameboy::u16()); NextColumn();
+                Text("BC: %04x", gpr[1]->operator gameboy::u16()); NextColumn();
                 Text("B: %02x", *gpr[1]->high); NextColumn();
                 Text("C: %02x", *gpr[1]->low); NextColumn();
-                Text("BC: %04x", gpr[1]->operator gameboy::u16()); NextColumn();
+                Text("DE: %04x", gpr[2]->operator gameboy::u16()); NextColumn();
                 Text("D: %02x", *gpr[2]->high); NextColumn();
                 Text("E: %02x", *gpr[2]->low); NextColumn();
-                Text("DE: %04x", gpr[2]->operator gameboy::u16()); NextColumn();
+                Text("HL: %04x", gpr[3]->operator gameboy::u16()); NextColumn();
                 Text("H: %02x", *gpr[3]->high); NextColumn();
                 Text("L: %02x", *gpr[3]->low); NextColumn();
-                Text("HL: %04x", gpr[3]->operator gameboy::u16()); NextColumn();
                 
             End();
         }

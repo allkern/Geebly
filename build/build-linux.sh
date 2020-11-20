@@ -9,5 +9,3 @@ c++ geebly.o imgui.o imgui_draw.o imgui_widgets.o imgui-SFML.o -o geebly -Ofast 
 cd ..
 mv "build/geebly" "geebly"
 rm "build/geebly.o"
-
-time ./geebly

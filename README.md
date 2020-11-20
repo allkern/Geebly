@@ -5,27 +5,36 @@
 # Geebly
 A Gameboy emulator written in C++, currently under development.
 
+## Usage
+`geebly <settings> rom_name.gb`
+
+### Settings
+There are different settings for every part of the emulation engine, Boot ROM/BIOS related settings are prefixed with a `B`, general emulation settings are prefixed with a `E`, etc. Common settings' shorthands usually are just one letter long though.
+
+Here's all the settings currently present in the CLI:
+|Setting|Shorthand|Description|Default|
+|--|--|--|--|
+|`--debug`|`-d`|Enable the Geebly Debugger|Disable
+|`--bios`|`-b`|Specify a Boot ROM|`"bios.bin"`
+|`--scale`|`-s`|Set the display scale|1
+|`--no-patch-bios-checks`/`--patch-bios-checks`|`-Bchecks`/`-Bno-checks`|Patch Boot ROM checks|Patch checks
+|`--no-skip-bootrom`/`--skip-bootrom`|`-Bno-skip`/`-Bskip`|Skip the scrolling boot logo|No skip
+|`--vram-access-emulation`/`--no-vram-access-emulation`|`Evram-access`/`-Eno-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Enable
+
 ## Current state
-### Screenshots
-![alt text](https://user-images.githubusercontent.com/15825466/98177033-82bb1500-1ed8-11eb-9125-ad29cffd7d04.png "Booting Tetris")
-![alt text](https://user-images.githubusercontent.com/15825466/98177035-83ec4200-1ed8-11eb-8a09-bf29397a564d.png "Booting Dr. Mario")
-![alt text](https://user-images.githubusercontent.com/15825466/98177037-83ec4200-1ed8-11eb-8369-727e7a48437f.png "Booting Space Invaders")
-
-
+![alt text](https://user-images.githubusercontent.com/15825466/99772991-88287a00-2aea-11eb-9d80-630cd04bd06b.gif "Running Tetris")
 ### CPU
-The CPU is almost fully implemented. About 10 (not counting cb-prefixed) out of 214 opcodes have not yet been implemented:
-- Rotate opcodes (`rla`, `rra`, etc)
-- `stop`
-- `halt`
-- cb-prefixed opcodes
+The CPU is fully implemented, with the exception of `stop` and `halt`. Interrupts are partially supported, `Vblank` is the only one that's currently implemented
 
 ### Mapper/cartridge type support
-Mappers `0x0` (ROM Only) and `0x1` (MBC1, partially) are supported, many more games are now loadable due to the implementation of MBC1! 
+Mappers `0x0` (ROM Only), `MBC1` and `MBC3` are currently supported, those last two being partially implemented
 
 ### PPU/GPU
-Only the background layer is supported as of now. The PPU is cycle-accurate though (interrupts wouldn't be possible otherwise), timing is based on the cycles elapsed since the last CPU instruction.
+Cycle-accurate. Only the background layer is supported as of now.
 
-`LCDC`, `STAT` (partially) and `LY` are currently implemented, and mapped to their corresponding HRAM addresses.
+Vertical scrolling (`SCY`) is implemented.
 
-### Etc
-The interrupt system is not yet implemented, however, just like everything else on this list, its easily implementable, as I really put a lot of effort on devising a cohesive structure so that new features can be easily added or changed.
+`LCDC`, `STAT` (partially), `LY` and `SCY` are currently implemented, and mapped to their corresponding HRAM addresses
+
+### Blargg's tests
+`cpu_instrs.gb` reports 12 out of 12 tests failed. Though I think this is a misdiagnosis, the register values before the tests might be wrong, and that's whats causing checksum errors when actually testing instructions/behaviour.
