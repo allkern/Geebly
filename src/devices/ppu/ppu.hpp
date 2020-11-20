@@ -190,17 +190,24 @@ namespace gameboy {
             int spsize = TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 16 : 8;
 
             while (addr <= 0x9f) {
+                int y_start = 0,
+                    y_end = spsize,
+                    x_start = 0,
+                    x_end = 8;
+                
                 u8 by = oam[addr++],
                    bx = oam[addr++],
                    t = oam[addr++],
                    attr = oam[addr++];
 
-                for (int y = 0; y < spsize; y++) {
-                    
+                if (attr & SPATTR_XFLP) std::swap(x_start, x_end);
+                if (attr & SPATTR_YFLP) std::swap(y_start, y_end);
+
+                for (int y = y_start; y < y_end;) {
                     u8 l = vram[(t * 16) + ((y % spsize) * 2)],
                        h = vram[(t * 16) + ((y % spsize) * 2) + 1];
 
-                    for (int x = 0; x < 8; x++) {
+                    for (int x = x_start; x < x_end;) {
                         int px = 7 - (x % 8);
 
                         u8 pal_offset = ((l & (1 << px)) >> px) | (((h & (1 << px)) >> px) << 1);
@@ -208,7 +215,11 @@ namespace gameboy {
                         int color = ((attr & SPATTR_PALL ? r[PPU_OBP0] : r[PPU_OBP1]) & (3 << (pal_offset * 2))) >> (pal_offset * 2);
 
                         if (color != 0) frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
+
+                        if (attr & SPATTR_XFLP) { x--; } else { x++; }
                     }
+
+                    if (attr & SPATTR_YFLP) { y--; } else { y++; }
                 }
             }
         }
