@@ -38,4 +38,4 @@ Vertical scrolling (`SCY`) is implemented.
 `LCDC`, `STAT` (partially), `LY` and `SCY` are currently implemented, and mapped to their corresponding HRAM addresses
 
 ### Blargg's tests
-`cpu_instrs.gb` reports 12 out of 12 tests failed. Though I think this is a misdiagnosis, the register values before the tests might be wrong, and that's whats causing checksum errors when actually testing instructions/behaviour.
+`cpu_instrs.gb` reports 12 out of 12 tests failed. Though I think this is a misdiagnosis, register values before tests might be wrong, and that's whats causing checksum errors when actually testing instructions/behaviour.
