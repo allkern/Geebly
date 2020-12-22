@@ -31,7 +31,7 @@
 *.out
 *.app
 
-# Ignore the compiled executable
+# Ignore compiled executable
 geebly
 
 # Ignore external libraries
@@ -41,6 +41,7 @@ tests/
 
 # Ignore fonts
 *.ttf
+res/
 
 # Ignore external object files
 build/imgui.o

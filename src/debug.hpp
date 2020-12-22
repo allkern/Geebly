@@ -266,8 +266,8 @@ namespace gameboy {
             ImGuiIO& io = ImGui::GetIO();
 
             io.Fonts->Clear();
-            io.Fonts->AddFontFromFileTTF("ubuntu.ttf", 14.0f);
-            io.Fonts->AddFontFromFileTTF("roboto.ttf", 12.0f);
+            io.Fonts->AddFontFromFileTTF("res/ubuntu.ttf", 14.0f);
+            io.Fonts->AddFontFromFileTTF("res/roboto.ttf", 12.0f);
 
             ImGui::SFML::UpdateFontTexture();
 
