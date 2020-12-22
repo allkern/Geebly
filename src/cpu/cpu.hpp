@@ -15,52 +15,65 @@
 #include "registers.hpp"
 #include "ops.hpp"
 
+#include <sys/unistd.h>
+
 namespace gameboy {
     namespace cpu {
         void init() {
             using namespace registers;
 
-            if (skip_bootrom) {
+            if (settings::skip_bootrom) {
                 pc = 0x100;
                 sp = 0xfffe;
-                af = 0x01b0;
+                af = settings::cgb_mode ? 0x11b0 : 0x01b0;
                 bc = 0x0013;
                 de = 0x00d8;
                 hl = 0x014d;
             }
         }
-
-        // Cleanup interrupt_skip on next commit
-        int interrupt_skip = 0;
+        
+        bool halted = false,
+             ei_issued = false;
+        int  ei_delay = 0;
 
         u8 fired = 0;
 
         // Basic interrupt handler
         inline void handle_interrupts() {
             using namespace registers;
+
+            if (ei_issued) {
+                if (!(ei_delay--)) {
+                    ime = true;
+                    ei_issued = false;
+                }
+            }
             
             u8& ie = bus::ref(0xffff),
               & ia = bus::ref(0xff0f);
 
             if (ime && ie && ia) {
-                //std::cout << std::boolalpha << ime << " " << std::hex << (unsigned int)ie << " " << (unsigned int)ia << "\n";
-                // Mask off ints that aren't enabled
                 fired = ie & ia;
 
                 if (fired) {
+                    halted = false;
                     ime = false;
-                    interrupt_skip = 0;
                 }
             }
 
-            if (interrupt_skip == 0) {
+            {
                 u8& ia = bus::ref(0xff0f);
-                // Handle VBlank
-                if (fired & 0x01) { ia &= 0xfe; call(0x40); }
 
-                interrupt_skip = 0;
+                // Handle VBlank
+                if (fired & 0x01) { ia &= 0xfe; pc += s.pc_increment - 1; call(0x40); }
+
                 fired = 0;
             }
+        }
+
+        inline void enable_interrupts() {
+            ei_issued = true;
+            ei_delay = 1;
         }
 
         inline void update(size_t pci, size_t ci, bool j = false) {
@@ -76,16 +89,17 @@ namespace gameboy {
             s.imm8 = s.imm & 0xff;
         }
 
-
         // Properly implement halt and stop
         bool execute(u8 override = 0x0) {
             using namespace registers;
 
             u8 opcode = override ? override : s.opcode;
 
-            if (debugger_enabled) {
-                if (run == false) { while (step) { usleep(1); } }
+            if (settings::debugger_enabled) {
+                if (!run) { while (step) { usleep(1); } }
             }
+
+            if (halted) goto skip;
             
             switch (opcode) {
                 // nop
@@ -133,8 +147,14 @@ namespace gameboy {
                     update(1, 4);
                 } break;
 
+                // halt
+                case 0x76: {
+                    //halted = true;
+                    update(1, 4);
+                } break;
+
                 // ld r8, (hl)
-                case 0x46: case 0x4e: case 0x56: case 0x5e: case 0x66: case 0x6e: case 0x76: case 0x7e: {
+                case 0x46: case 0x4e: case 0x56: case 0x5e: case 0x66: case 0x6e: case 0x7e: {
                     r[(opcode >> 3) & 7] = bus::read(hl, 1);
                     update(1, 8);
                     break;
@@ -229,6 +249,7 @@ namespace gameboy {
                     r[(opcode & 0x38) >> 3] = s.imm8;
                     update(2, 8);
                 } break;
+                
                 case 0x36: { bus::write(hl, s.imm8, 1); update(2, 12); } break;
 
                 // rst #rst_vector;
@@ -259,16 +280,16 @@ namespace gameboy {
                 case 0x3b: { sp--; update(1, 8); } break;
 
                 // ld *%r16, %a;
-                case 0x02: { bus::write(bc, r[a], 1); update(1, 8); } break;
-                case 0x12: { bus::write(de, r[a], 1); update(1, 8); } break;
+                case 0x02: { bus::write((u16)bc, r[a], 1); update(1, 8); } break;
+                case 0x12: { bus::write((u16)de, r[a], 1); update(1, 8); } break;
 
                 // ld *%hl+-, %a;
                 case 0x22: { bus::write(hl++, r[a], 1); update(1, 8); } break;
                 case 0x32: { bus::write(hl--, r[a], 1); update(1, 8); } break;
 
                 // ld *%r16, %a;
-                case 0x0a: { r[a] = bus::read(bc, 1); update(1, 8); } break;
-                case 0x1a: { r[a] = bus::read(de, 1); update(1, 8); } break;
+                case 0x0a: { r[a] = bus::read((u16)bc, 1); update(1, 8); } break;
+                case 0x1a: { r[a] = bus::read((u16)de, 1); update(1, 8); } break;
 
                 // ld %a, *%hl+-;
                 case 0x2a: { r[a] = bus::read(hl++, 1); update(1, 8); } break;
@@ -290,12 +311,12 @@ namespace gameboy {
                 case 0xc1: { bc = pop(); update(1, 12); } break;
                 case 0xd1: { de = pop(); update(1, 12); } break;
                 case 0xe1: { hl = pop(); update(1, 12); } break;
-                case 0xf1: { af = pop(); update(1, 12); } break;
+                case 0xf1: { af = pop() & 0xfff0; update(1, 12); } break;
                 
-                case 0xc5: { push(bc); update(1, 12); } break;
-                case 0xd5: { push(de); update(1, 12); } break;
-                case 0xe5: { push(hl); update(1, 12); } break;
-                case 0xf5: { push(af); update(1, 12); } break;
+                case 0xc5: { push((u16)bc); update(1, 12); } break;
+                case 0xd5: { push((u16)de); update(1, 12); } break;
+                case 0xe5: { push((u16)hl); update(1, 12); } break;
+                case 0xf5: { push((u16)af); update(1, 12); } break;
 
                 case 0xc0: { if (!test_flags(Z)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
                 case 0xd0: { if (!test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
@@ -320,7 +341,7 @@ namespace gameboy {
 
                 // add %sp, #si8;
                 // TO-DO implement carry and halfcarry detection
-                case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); update(2, 16); } break;
+                case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); set_flags(Z | N, false); update(2, 16); } break;
 
                 // jp %hl;
                 case 0xe9: { pc = (u16)hl; update(1, 4, true); } break;
@@ -343,11 +364,11 @@ namespace gameboy {
                 case 0xf2: { r[a] = bus::read(0xff00 | r[c], 1); update(1, 8); } break;
 
                 // ei; di;
+                case 0xfb: { enable_interrupts(); update(1, 4); } break;
                 case 0xf3: { ime = false; update(1, 4); } break;
-                case 0xfb: { ime = true; update(1, 4); } break;
 
                 // reti
-                case 0xd9: { pc = pop(); update(1, 16, jump); ime = true; } break;
+                case 0xd9: { pc = pop(); enable_interrupts(); update(1, 16, jump); } break;
 
                 // cpl
                 case 0x2f: { r[a] = ~r[a]; set_flags(N | H, true); update(1, 4); } break;
@@ -372,6 +393,14 @@ namespace gameboy {
                             update(1, 8);
                         } break;
 
+                        case 0x46: case 0x4e:
+                        case 0x56: case 0x5e:
+                        case 0x66: case 0x6e:
+                        case 0x76: case 0x7e: {
+                            op_bit(bus::ref(hl), (opcode >> 3) & 0x7);
+                            update(1, 16);
+                        } break;
+
                         // res b, r; set b, r
                         case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:
                         case 0x88: case 0x89: case 0x8a: case 0x8b: case 0x8c: case 0x8d: case 0x8f:
@@ -393,10 +422,23 @@ namespace gameboy {
                             update(1, 8);
                         } break;
 
+                        case 0x86: case 0x8e: case 0x96: case 0x9e:
+                        case 0xa6: case 0xae: case 0xb6: case 0xbe:
+                        case 0xc6: case 0xce: case 0xd6: case 0xde:
+                        case 0xe6: case 0xee: case 0xf6: case 0xfe: {
+                            op_rst(bus::ref(hl), (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            update(1, 16);
+                        } break;
+
                         case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
                         case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
                             op_rlc(r[opcode&0x7], (bool)opcode&0x10);
                             update(1, 8);
+                        } break;
+
+                        case 0x06: case 0x16: {
+                            op_rlc(bus::ref(hl), (bool)opcode&0x10);
+                            update(1, 16);
                         } break;
                         
                         case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d: case 0x0f:
@@ -405,9 +447,19 @@ namespace gameboy {
                             update(1, 8);
                         } break;
 
+                        case 0x0e: case 0x1e: {
+                            op_rrc(bus::ref(hl), (bool)opcode&0x10);
+                            update(1, 16);
+                        } break;
+
                         case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27: {
                             op_sla(r[opcode&0x7]);
                             update(1, 8);
+                        } break;
+
+                        case 0x26: {
+                            op_sla(bus::ref(hl));
+                            update(1, 16);
                         } break;
 
                         case 0x28: case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2f:
@@ -416,9 +468,19 @@ namespace gameboy {
                             update(1, 8);
                         } break;
 
+                        case 0x2e: case 0x3e: {
+                            op_sra(bus::ref(hl), (bool)(opcode&0x10));
+                            update(1, 16);
+                        } break;
+
                         case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37: {
                             op_swap(r[opcode&0x7]);
                             update(1, 8);
+                        } break;
+
+                        case 0x36: {
+                            op_swap(bus::ref(hl));
+                            update(1, 16);
                         } break;
                     }
                 } break;
@@ -434,17 +496,18 @@ namespace gameboy {
                 }
             }
 
+            skip:
+
             handle_interrupts();
 
             if (!jump) { pc += s.pc_increment; }
             jump = false;
             
-            if (debugger_enabled) step = true;
+            if (settings::debugger_enabled && !cpu::run) step = true;
 
             done = true;
 
             return true;
         }
-        
     };
 }

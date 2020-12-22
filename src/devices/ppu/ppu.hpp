@@ -4,13 +4,15 @@
 
 #include "../../lgw/framebuffer.hpp"
 #include "../../aliases.hpp"
-#include "../io.hpp"
+#include "../ic.hpp"
 
 #include "memory.hpp"
+#include "../../global.hpp"
+
+#include "../joypad.hpp"
 
 #include <sys/unistd.h>
 #include <cstdlib>
-
 #include <array>
 
 #define PPU_WIDTH  160
@@ -18,14 +20,9 @@
 
 namespace gameboy {
     namespace ppu {
-        sf::RenderWindow window(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly 2.0");
+        sf::RenderWindow window(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly", sf::Style::Titlebar);
 
         lgw::framebuffer frame;
-
-        u8 rows[2] = { 0xf, 0xf };
-        u8 column = 0;
-
-        int clk;
 
         u8* last_cpu_time = nullptr;
 
@@ -36,19 +33,26 @@ namespace gameboy {
         //    0x000000fful
         //};
 
+        u32 color_palette[] = {
+            0xe0f8d0fful,
+            0x88c070fful,
+            0x346856fful,
+            0x081820fful
+        };
+
         //u32 color_palette[] = {
-        //    0xe0f8d0fful,
-        //    0x88c070fful,
-        //    0x346856fful,
+        //    0xe8fcccfful,
+        //    0xacd490fful,
+        //    0x548c70fful,
         //    0x081820fful
         //};
 
-        u32 color_palette[] = {
-            0xe8fcccfful,
-            0xacd490fful,
-            0x548c70fful,
-            0x081820fful
-        };
+        //u32 color_palette[] = {
+        //    0xffefcefful,
+        //    0xde944afful,
+        //    0xad2921fful,
+        //    0x311852fful,
+        //};
 
         // PPU register indexes
         #define PPU_LCDC    0x0
@@ -57,9 +61,6 @@ namespace gameboy {
         #define PPU_SCX     0x3
         #define PPU_LY      0x4
         #define PPU_LYC     0x5
-
-        // DMA controller not handled by the PPU
-        // #define PPU_DMA     0x6
         #define PPU_BGP     0x7
         #define PPU_OBP0    0x8
         #define PPU_OBP1    0x9
@@ -90,23 +91,26 @@ namespace gameboy {
         #define SPATTR_XFLP 0b00100000
         #define SPATTR_PALL 0b00010000
 
-        // JOYP masks
-        #define JOYP_BUTTON 0b00100000
-        #define JOYP_DIRECT 0b00010000
-        #define JOYP_START  0b00001000
-        #define JOYP_SELECT 0b00000100
-        #define JOYP_B      0b00000010
-        #define JOYP_A      0b00000001
-        #define JOYP_DOWN   0b00001000
-        #define JOYP_UP     0b00000100
-        #define JOYP_LEFT   0b00000010
-        #define JOYP_RIGHT  0b00000001
-
         // Macro to test register bits
         #define TEST_REG(reg, mask) (r[reg] & mask)
 
+        // Fix JOYP emulation
+        inline void update_window() {
+            sf::Event event;
+            if (window.pollEvent(event)) {
+                switch (event.type) {
+                    case sf::Event::Closed: { window.close(); window_closed = true; return; } break;
+                    case sf::Event::KeyPressed: { joypad::keydown(event.key.code); } break;
+                    case sf::Event::KeyReleased: { joypad::keyup(event.key.code); } break;
+                    default: break;
+                }
+            }
+        }
+
         void init(int scale, u8& cpu_last_cycles_register) {
             frame.init(PPU_WIDTH, PPU_HEIGHT, sf::Color(color_palette[3]));
+
+            //window.setPosition(sf::Vector2i(100, 100));
             
             window.setFramerateLimit(60);
 
@@ -122,7 +126,10 @@ namespace gameboy {
             window.setSize(sf::Vector2u(PPU_WIDTH*scale, PPU_HEIGHT*scale));
 
             // Start PPU on mode 2 (OAM read)
-            if (skip_bootrom) {
+            r[PPU_STAT] = 0x84;
+
+            if (settings::skip_bootrom) {
+                r[PPU_LCDC] = 0x91;
                 r[PPU_STAT] = 0x85;
             }
 
@@ -133,17 +140,26 @@ namespace gameboy {
         }
 
         inline bool vram_disabled() {
-            // Disable VRAM and OAM on modes 2 and 3, and when LCDC bit 7 is low
+            // Disable VRAM on mode 3, and when LCDC bit 7 is low
+            return (r[PPU_STAT] & 3) == 3 && TEST_REG(PPU_LCDC, LCDC_SWITCH);
+        }
+        
+        inline bool oam_disabled() {
+            // Disable OAM on modes 2 & 3, and when LCDC bit 7 is low
             return (r[PPU_STAT] & 3) >= 2 && TEST_REG(PPU_LCDC, LCDC_SWITCH);
         }
 
         // Maybe should probably implement this as a state machine later on?
-        void render_scanline() {
-            if (TEST_REG(PPU_LCDC, LCDC_BGWSWI)) {
-                u8 y = ((r[PPU_LY]) + r[PPU_SCY]);
+        void render_scanline(bool window = false) {
+            u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
+               scroll   = window ? PPU_WY       : PPU_SCY,
+               tilemap  = window ? LCDC_WNDTMS  : LCDC_BGWTMS;
+
+            if (TEST_REG(PPU_LCDC, sw_mask)) {
+                u8 y = ((r[PPU_LY]) + r[scroll]);
 
                 // Get tilemap and tileset offsets based on bits 3 and 4 of LCDC
-                u16 tilemap_offset = (TEST_REG(PPU_LCDC, LCDC_BGWTMS) ? 0x1c00 : 0x1800),
+                u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800),
                     tileset_offset = (TEST_REG(PPU_LCDC, LCDC_BGWTSS) ? 0x0 : 0x800);
                 
                 #define TILE_OFFSET tilemap_offset + ((y >> 3) * 32)
@@ -160,17 +176,16 @@ namespace gameboy {
                 u8 l = vram[char_base], h = vram[char_base + 1];
 
                 // Start rendering the whole scanline
-                for (int x = 0; x < 160; x++) {
+                for (int x = 0; x < PPU_WIDTH; x++) {
                     int px = 7 - (x % 8);
 
-                    // Cleanup these formulas?
-                    u8 pal_offset = ((l & (1 << px)) >> px) | (((h & (1 << px)) >> px) << 1);
+                    u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
 
-                    int color = (r[PPU_BGP] & (3 << (pal_offset * 2))) >> (pal_offset * 2);
+                    int color = (r[PPU_BGP] >> (pal_offset * 2)) & 0x3;
 
-                    frame.draw(x, r[PPU_LY], sf::Color(color_palette[color]));
+                    frame.draw(x + (r[PPU_SCX] % (PPU_WIDTH-0xdf)), r[PPU_LY], sf::Color(color_palette[color]));
 
-                    // Recalculate offsets when reaching the tile boundary
+                    // Recalculate offsets when reaching tile boundaries
                     if (px == 0) {
                         tile = vram[++TILE_OFFSET];
                         char_base = CHAR_OFFSET;
@@ -182,7 +197,7 @@ namespace gameboy {
         }
 
         // Clean this up
-        void draw_sprites() {
+        void render_sprites() {
             u16 addr = 0;
 
             u32 draw_color = 0;
@@ -200,53 +215,51 @@ namespace gameboy {
                    t = oam[addr++],
                    attr = oam[addr++];
 
-                if (attr & SPATTR_XFLP) std::swap(x_start, x_end);
-                if (attr & SPATTR_YFLP) std::swap(y_start, y_end);
+                bool x_flip = (attr & SPATTR_XFLP),
+                     y_flip = (attr & SPATTR_YFLP);
 
-                for (int y = y_start; y < y_end;) {
-                    u8 l = vram[(t * 16) + ((y % spsize) * 2)],
-                       h = vram[(t * 16) + ((y % spsize) * 2) + 1];
+                if (x_flip) { std::swap(x_start, x_end); x_start--; x_end--; };
+                if (y_flip) { std::swap(y_start, y_end); y_start--; y_end--; };
 
-                    for (int x = x_start; x < x_end;) {
-                        int px = 7 - (x % 8);
+                for (int y = y_start; y_flip ? y > y_end : y < y_end;) {
+                    int y_off = y_flip ? ((spsize-1) - (y % spsize)) : (y % spsize);
+                    u8 l = vram[(t * 16) + (y_off * 2)],
+                       h = vram[(t * 16) + (y_off * 2) + 1];
 
-                        u8 pal_offset = ((l & (1 << px)) >> px) | (((h & (1 << px)) >> px) << 1);
+                    for (int x = x_start; x_flip ? x > x_end : x < x_end;) {
+                        int px = x_flip ? (x % 8) : (7 - (x % 8));
 
-                        int color = ((attr & SPATTR_PALL ? r[PPU_OBP0] : r[PPU_OBP1]) & (3 << (pal_offset * 2))) >> (pal_offset * 2);
+                        u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
 
-                        if (color != 0) frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
+                        if (pal_offset) {
+                            u8 color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
+  
+                            frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
+                        }
 
-                        if (attr & SPATTR_XFLP) { x--; } else { x++; }
+                        if (x_flip) { x--; } else { x++; }
                     }
 
-                    if (attr & SPATTR_YFLP) { y--; } else { y++; }
+                    if (y_flip) { y--; } else { y++; }
                 }
             }
         }
 
         u32 read(u16 addr, size_t size) {
             // Handle JOYP reads
-            if (addr == 0xff00) {
-                if (column == 0x10) {
-                    return rows[0] & 0xf;
-                }
-
-                if (column == 0x20) {
-                    return rows[1] & 0xf;
-                }
-
-                return 0xff;
-            }
+            if (addr == 0xff00) { return joypad::read(); }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
                 return utility::default_mb_read(r.data(), addr, size, PPU_R_BEGIN);
             }
 
-            if (inaccessible_vram_emulation_enabled) { if (vram_disabled()) return 0xff; }
+            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return 0xff; }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
                 return utility::default_mb_read(vram.data(), addr, size, VRAM_BEGIN);
             }
+
+            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return 0xff; }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
                 return utility::default_mb_read(oam.data(), addr, size, OAM_BEGIN);
@@ -256,22 +269,21 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            if (addr == 0xff00) {
-                column = value & 0x30;
-                return;
-            }
+            if (addr == 0xff00) { joypad::write(value); }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
                 utility::default_mb_write(r.data(), addr, value, size, PPU_R_BEGIN);
                 return;
             }
 
-            if (inaccessible_vram_emulation_enabled) { if (vram_disabled()) return; }
+            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return; }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
                 utility::default_mb_write(vram.data(), addr, value, size, VRAM_BEGIN);
                 return;
             }
+
+            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return; }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
                 utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
@@ -280,48 +292,17 @@ namespace gameboy {
         }
 
         u8& ref(u16 addr) {
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return vram[addr-PPU_R_BEGIN]; }
+            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return r[addr-PPU_R_BEGIN]; }
 
-            if (inaccessible_vram_emulation_enabled) { if (vram_disabled()) return dummy; }
+            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return dummy; }
             
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return vram[addr-VRAM_BEGIN]; }
-            if (addr >= OAM_BEGIN && addr <= OAM_END) { return vram[addr-OAM_BEGIN]; }
+
+            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return dummy; }
+
+            if (addr >= OAM_BEGIN && addr <= OAM_END) { return oam[addr-OAM_BEGIN]; }
 
             return dummy;
-        }
-
-        // Fix JOYP emulation
-        inline void update_window() {
-            sf::Event event;
-            if (window.pollEvent(event)) {
-                switch (event.type) {
-                    case sf::Event::Closed: { window.close(); window_closed = true; } break;
-                    case sf::Event::KeyPressed: {
-                        switch (event.key.code) {
-                            case sf::Keyboard::Enter: { rows[0] &= ~(JOYP_START ); } break;
-                            case sf::Keyboard::Q    : { rows[0] &= ~(JOYP_SELECT); } break;
-                            case sf::Keyboard::A    : { rows[0] &= ~(JOYP_A     ); } break;
-                            case sf::Keyboard::S    : { rows[0] &= ~(JOYP_B     ); } break;
-                            case sf::Keyboard::Up   : { rows[1] &= ~(JOYP_UP    ); } break;
-                            case sf::Keyboard::Down : { rows[1] &= ~(JOYP_DOWN  ); } break;
-                            case sf::Keyboard::Left : { rows[1] &= ~(JOYP_LEFT  ); } break;
-                            case sf::Keyboard::Right: { rows[1] &= ~(JOYP_RIGHT ); } break;
-                        }
-                    } break;
-                    case sf::Event::KeyReleased: {
-                        switch (event.key.code) {
-                            case sf::Keyboard::Enter: { rows[0] |= (JOYP_START ); } break;
-                            case sf::Keyboard::Q    : { rows[0] |= (JOYP_SELECT); } break;
-                            case sf::Keyboard::A    : { rows[0] |= (JOYP_A     ); } break;
-                            case sf::Keyboard::S    : { rows[0] |= (JOYP_B     ); } break;
-                            case sf::Keyboard::Up   : { rows[1] |= (JOYP_UP    ); } break;
-                            case sf::Keyboard::Down : { rows[1] |= (JOYP_DOWN  ); } break;
-                            case sf::Keyboard::Left : { rows[1] |= (JOYP_LEFT  ); } break;
-                            case sf::Keyboard::Right: { rows[1] |= (JOYP_RIGHT ); } break;
-                        }
-                    } break;
-                }
-            }
         }
 
         // Clean this up
@@ -334,6 +315,11 @@ namespace gameboy {
                     if (clk >= 204) {
                         clk = 0;
                         r[PPU_LY]++;
+                        if (r[PPU_LY] == r[PPU_LYC]) {
+                            r[PPU_STAT] |= 0x4;
+                        } else {
+                            r[PPU_STAT] &= ~0x4;
+                        }
 
                         if (r[PPU_LY] == 0x94) {
                             // Switch state to Vblank
@@ -342,12 +328,14 @@ namespace gameboy {
                             
                             // Draw frame
                             if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
-                                update_window();
+                                if (TEST_REG(PPU_LCDC, LCDC_SPDISP)) render_sprites();
 
-                                if (TEST_REG(PPU_LCDC, LCDC_SPDISP)) draw_sprites();
-
+                                //window.clear(sf::Color::Black);
                                 window.draw(*frame.get_drawable());
                             }
+
+                            update_window();
+
                             window.display();
                         } else {
                             // Switch to OAM read
@@ -361,9 +349,9 @@ namespace gameboy {
                 case 1: {
                     // Trigger Vblank interrupt
                     if (clk >= 456) {
+                        // Fire interrupt
                         if (!fired) {
-                            u8& ia = io::ref(0xff0f);
-                            ia |= 1;
+                            ic::ref(0xff0f) |= 0x1;
                             fired = true;
                         }
 
@@ -396,6 +384,7 @@ namespace gameboy {
 
                         if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
                             render_scanline();
+                            render_scanline(true);
                         }
                     }
                 }

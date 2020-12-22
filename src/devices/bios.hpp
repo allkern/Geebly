@@ -4,6 +4,7 @@
 #include <array>
 
 #include "../aliases.hpp"
+#include "../global.hpp"
 
 namespace gameboy {
     namespace bios {

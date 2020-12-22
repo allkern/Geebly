@@ -1,13 +1,12 @@
 #pragma once
 
 #include "../aliases.hpp"
-#include "../cpu/registers.hpp"
 
 #define MMIO_IF 0xff0f
 #define MMIO_IE 0xffff
 
 namespace gameboy {
-    namespace io {
+    namespace ic {
         u8 dummy;
 
         u8 ia = 0; // if

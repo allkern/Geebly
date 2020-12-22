@@ -6,8 +6,10 @@
 #include <array>
 
 #include "../aliases.hpp"
+#include "../global.hpp"
 #include "../log.hpp"
 
+#include "mappers/no_cart.hpp"
 #include "mappers/rom_only.hpp"
 #include "mappers/mbc1.hpp"
 #include "mappers/mbc3.hpp"
@@ -31,6 +33,14 @@ namespace gameboy {
         mapper* cartridge = nullptr;
 
         void insert_cartridge(std::string rom) {
+            if (rom == "geebly-no-cart") {
+                rva.fill(0xff);
+                header.fill(0xff);
+                cartridge = new no_cart();
+
+                return;
+            }
+
             std::ifstream f(rom, std::ios::binary);
 
             if (!f.is_open() || !f.good()) {
@@ -51,9 +61,12 @@ namespace gameboy {
                 case 0x01: { cartridge = new mbc1(); } break;
                 case 0x02: { cartridge = new mbc1(); } break;
                 case 0x03: { cartridge = new mbc1(); } break;
+                case 0x06: { cartridge = new mbc1(); } break;
+                case 0x10: { cartridge = new mbc3(); } break;
                 case 0x11: { cartridge = new mbc3(); } break;
                 case 0x12: { cartridge = new mbc3(); } break;
                 case 0x13: { cartridge = new mbc3(); } break;
+                case 0x1b: { cartridge = new mbc3(); } break;
 
                 default: {
                     #ifdef __linux__

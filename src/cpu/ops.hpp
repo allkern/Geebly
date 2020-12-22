@@ -24,7 +24,6 @@ namespace gameboy {
             return registers::r[registers::f] & mask;
         }
 
-
         inline void push(u16 addr) {
             registers::sp -= 2;
             bus::write(registers::sp, addr, 2);
@@ -58,6 +57,7 @@ namespace gameboy {
                 dst |= (bool)msb;
             }
             set_flags(Z, dst == 0);
+            set_flags(N | H, false);
         }
 
         inline void op_sla(u8& dst) {
@@ -77,9 +77,7 @@ namespace gameboy {
         }
 
         inline void op_swap(u8& dst) {
-            u8 lsn = (dst & 0x4) << 4;
-            dst >>= 4;
-            dst |= lsn;
+            dst = ((dst & 0xf) << 4 | (dst & 0xf0) >> 4);
             set_flags(Z, dst==0);
             set_flags(N | H | C, false);
         }
@@ -95,6 +93,7 @@ namespace gameboy {
                 dst |= lsb;
             }
             set_flags(Z, dst == 0);
+            set_flags(N | H, false);
         }
 
         inline void op_daa(u8& dst) {
@@ -110,13 +109,28 @@ namespace gameboy {
         }
 
         inline void op_adc(u8& dst, u8 src, bool carry) {
-            u16 res = dst;
+            u16 res = dst, hct = (dst & 0xf) + (src & 0xf);
             res += src + (int)carry;
             set_flags(Z, (u8)res==0);
             set_flags(N, false);
-            set_flags(H, res&0x10);
+            set_flags(H, hct&0x10);
             set_flags(C, res&0x100);
             dst = res;
+        }
+
+        inline void op_add(u16& dst, u8 src) {
+            u32 res = dst;
+            res += src;
+        }
+
+        inline void op_sbc(u8& dst, u8 src, bool carry) {
+            u16 res = dst, hct = (dst & 0xf0) - (src & 0xf0);
+            res -= src - (int)carry;
+            set_flags(Z, (u8)res==0);
+            set_flags(N, true);
+            set_flags(H, (u8)hct&0x8);
+            set_flags(C, (u8)res&0x80);
+            dst = (u8)res;
         }
 
         inline void op_rst(u8& dst, int b, bool set) {
@@ -133,30 +147,18 @@ namespace gameboy {
             set_flags(H, true);
         }
 
-        inline void op_sbc(u8& dst, u8 src, bool carry) {
-            u16 res = dst;
-            res -= src - (int)carry;
-            set_flags(Z, (u8)res==0);
-            set_flags(N, true);
-            set_flags(H, res&0x8);
-            set_flags(C, res&0xff00);
-            dst = res;
-        }
 
         inline void op_and(u8& dst, u8 src) {
             dst &= src;
             set_flags(Z, dst==0);
             set_flags(N | C, false);
             set_flags(H, true);
-            //set_flags(C, false);
         }
 
         inline void op_or(u8& dst, u8 src) {
             dst |= src;
             set_flags(Z, dst==0);
             set_flags(N | H | C, false);
-            //set_flags(H, false);
-            //set_flags(C, false);
         }
 
         inline void op_idc(u8& dst, bool dec) {
@@ -170,15 +172,13 @@ namespace gameboy {
             dst ^= src;
             set_flags(Z, dst==0);
             set_flags(N | H | C, false);
-            //set_flags(H, false);
-            //set_flags(C, false);
         }
 
         inline void op_cp(u8& dst, u8 src) {
-            u32 temp = dst - src;
+            u32 temp = dst - src, hct = (dst & 0xf0) - (src & 0xf0);
             set_flags(Z, !(u8)temp);
             set_flags(N, true);
-            //set_flags(H, true);
+            set_flags(H, hct&0x8);
             set_flags(C, dst < src);
         }
     }

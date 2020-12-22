@@ -61,7 +61,7 @@ namespace gameboy {
             uint16_t sp = 0x0;
 
             // Interrupt Master Enable
-            bool ime = true;
+            bool ime = false;
 
             pair af { r[a], r[f] },
                  bc { r[b], r[c] },

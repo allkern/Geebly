@@ -55,6 +55,17 @@
         "iomanip": "cpp",
         "cstring": "cpp",
         "cinttypes": "cpp",
-        "csignal": "cpp"
+        "csignal": "cpp",
+        "strstream": "cpp",
+        "bitset": "cpp",
+        "codecvt": "cpp",
+        "complex": "cpp",
+        "list": "cpp",
+        "set": "cpp",
+        "future": "cpp",
+        "cfenv": "cpp",
+        "typeindex": "cpp",
+        "variant": "cpp",
+        "*.ipp": "cpp"
     }
 }

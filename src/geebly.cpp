@@ -1,9 +1,12 @@
+#define SFML_DEFINE_DISCRETE_GPU_PREFERENCE
+
 #include "aliases.hpp"
 #include "cpu/thread.hpp"
 #include "cpu/cpu.hpp"
 #include "cpu/mnemonics.hpp"
 #include "log.hpp"
 
+#include "global.hpp"
 #include "debug.hpp"
 #include "cli.hpp"
 
@@ -61,12 +64,13 @@ int main(int argc, const char* argv[]) {
     cli::parse();
 
     // This should probably be either automatic, or somewhere else
-    debugger_enabled = cli::setting("debug");
-    inaccessible_vram_emulation_enabled = !cli::setting("no-vram-access-emulation");
-    bios_checks_enabled = !cli::setting("no-bios-checks");
-    skip_bootrom = cli::setting("bootrom-skip");
-
-    _log::log::init("geebly");
+    settings::inaccessible_vram_emulation_enabled = cli::setting("vram-access-emulation");
+    settings::bios_checks_enabled                 = !cli::setting("no-bios-checks");
+    settings::debugger_enabled                    = cli::setting("debug");
+    settings::skip_bootrom                        = cli::setting("bootrom-skip");
+    settings::cgb_mode                            = cli::setting("cgb-mode");
+    
+    _log::init("geebly");
 
     // Clean this up
     std::signal(SIGSEGV, sigsegv_handler);
@@ -74,14 +78,20 @@ int main(int argc, const char* argv[]) {
     bios::init(cli::setting("bios", "bios.bin"));
 
     // Patch infinite loops for 2 NOPs
-    if (!bios_checks_enabled) {
+    if (!settings::bios_checks_enabled) {
         bios::rom[0xfa] = 0x00;
         bios::rom[0xfb] = 0x00;
         bios::rom[0xe9] = 0x00;
         bios::rom[0xea] = 0x00;
     }
 
-    cart::insert_cartridge(cli::setting("cartridge", "undefined"));
+    if (!cli::is_defined("cartridge")) _log(warning, "No cartridge inserted, loading no_cart");
+
+    cart::insert_cartridge(cli::setting("cartridge", "geebly-no-cart"));
+
+    wram::init();
+    
+    hram::init();
 
     ppu::init(std::stoi(cli::setting("scale", "1")), cpu::registers::last_instruction_cycles);
 
@@ -89,18 +99,26 @@ int main(int argc, const char* argv[]) {
 
     bus::init();
 
-    if (debugger_enabled) {
+    timer::init(cpu::registers::last_instruction_cycles);
+
+    if (settings::debugger_enabled) {
         debug::init();
         init();
     }
 
+    int counter = 0;
+
     while (!window_closed) {
-        if (!debugger_enabled) {
+        if (!settings::debugger_enabled) {
             cpu::fetch();
             cpu::execute();
         }
 
-        if (debugger_enabled) {
+        //if (cpu::registers::pc >= 0x423 && cpu::registers::pc <= 0x456) {
+        //    std::cout << std::hex << cpu::registers::pc << ": " << (u16)cpu::registers::r[cpu::registers::a] << std::endl;
+        //}
+
+        if (settings::debugger_enabled) {
             if (cpu::done) {
                 ppu::cycle();
                 cpu::done = false;
@@ -109,6 +127,10 @@ int main(int argc, const char* argv[]) {
             ppu::cycle();
         }
 
-        if (debugger_enabled) debug::update();
+        timer::update();
+
+        if (settings::debugger_enabled) {
+            debug::update();
+        }
     }
 }

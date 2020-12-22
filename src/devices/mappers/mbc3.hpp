@@ -2,12 +2,13 @@
 
 #include "mapper.hpp"
 
+#include "../../global.hpp"
+
 namespace gameboy {
     namespace cart {
         class mbc3 : public mapper {
             typedef std::array <u8, 0x4000> bank;
             typedef std::array <u8, 0x2000> ram_t;
-
 
             ram_t ram = { 0 };
 
@@ -19,6 +20,10 @@ namespace gameboy {
 
         public:
             u8 dummy;
+
+            u8* get_bank0() { return banks[0].data(); }
+            u8* get_bank1() { return current_bank->data(); }
+            u8* get_sram() { return ram.data(); }
             
             void init(std::ifstream* f) override {
                 tag = mapper_tag::mbc3;
@@ -52,8 +57,6 @@ namespace gameboy {
             }
 
             void write(u16 addr, u16 value, size_t size) override {
-                if (addr >= 0xa000 && addr <= 0xbfff) { utility::default_mb_write(ram.data(), addr, value, size, 0xa000); return; }
-
                 if (addr <= 0x1fff) {
                     if (value == 0x0a) { ram_enabled = true; }
                     if (value == 0x00) { ram_enabled = false; }
@@ -62,14 +65,16 @@ namespace gameboy {
                 if (addr >= 0x2000 && addr <= 0x3fff) {
                     if ((value & 0x1f) == 0x0) { value++; }
 
-                    current_bank = &banks[(value) % banks.size()];
+                    current_bank = &banks[value % banks.size()];
                 }
+
+                if (addr >= 0xa000 && addr <= 0xbfff) { utility::default_mb_write(ram.data(), addr, value, size, 0xa000); return; }
             }
 
             u8& ref(u16 addr) {
-                if (addr >= 0x150 && addr <= 0x3fff) { return banks[0].at(addr); }
-                if (addr >= 0x4000 && addr <= 0x7fff) { return current_bank->at(addr); }
-                if (addr >= 0xa000 && addr <= 0xbfff) { ram.at(addr); }
+                if (addr >= 0x150 && addr <= 0x3fff) { return banks[0].at(addr-0x150); }
+                if (addr >= 0x4000 && addr <= 0x7fff) { return current_bank->at(addr-0x4000); }
+                if (addr >= 0xa000 && addr <= 0xbfff) { ram.at(addr-0xa000); }
 
                 return dummy;
             }

@@ -37,6 +37,10 @@ geebly
 # Ignore external libraries
 src/lgw/
 src/imgui/
+tests/
+
+# Ignore fonts
+*.ttf
 
 # Ignore external object files
 build/imgui.o
@@ -44,15 +48,24 @@ build/imgui_draw.o
 build/imgui_widgets.o
 build/imgui-SFML.o
 
+# Ignore the build script used for testing
+build/build-linux-internal.sh
+
 # Ignore ImGui's window thing
 imgui.ini
 
 # Ignore all BIOSes/ROMs
 *.gb
+*.gbc
 *.bin
 
-# Ignore all Assembly source files
+# Ignore all Assembly source files and Symbol files
 *.asm
+*.sym
 
 # Ignore the CPU to-do tracker file
 cpu_todo.pdn
+
+# Ignore SRAM/RTC save files
+*.sav
+*.rtc

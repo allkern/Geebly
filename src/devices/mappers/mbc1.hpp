@@ -2,12 +2,13 @@
 
 #include "mapper.hpp"
 
+#include "../../global.hpp"
+
 namespace gameboy {
     namespace cart {
         class mbc1 : public mapper {
             typedef std::array <u8, 0x4000> bank;
             typedef std::array <u8, 0x2000> ram_t;
-
 
             ram_t ram = { 0 };
 
@@ -19,6 +20,10 @@ namespace gameboy {
 
         public:
             u8 dummy;
+
+            u8* get_bank0() { return banks[0].data(); }
+            u8* get_bank1() { return current_bank->data(); }
+            u8* get_sram() { return ram.data(); }
             
             void init(std::ifstream* f) override {
                 tag = mapper_tag::mbc1;

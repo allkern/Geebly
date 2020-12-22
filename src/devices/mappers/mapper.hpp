@@ -17,7 +17,8 @@ namespace gameboy {
             rom_only,
             mbc1,
             mbc2,
-            mbc3
+            mbc3,
+            no_cart = 0x100
         };
 
         class mapper {
@@ -25,6 +26,10 @@ namespace gameboy {
             
         public:
             mapper_tag tag;
+
+            virtual u8* get_bank0() { return nullptr; };
+            virtual u8* get_bank1() { return nullptr; };
+            virtual u8* get_sram() { return nullptr; };
 
             virtual void init(std::ifstream*) {};
             virtual u32 read(u16, size_t) { return 0; };

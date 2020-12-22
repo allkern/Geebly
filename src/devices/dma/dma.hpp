@@ -20,8 +20,14 @@ namespace gameboy {
 
         void write(u16 addr, u16 value, size_t size) {
             u16 base = value << 8;
+
+            if (value > 0xf1) {
+                _log(warning, "Invalid DMA transfer with base 0x%04x", base);
+            }
+
+            u8* t = translate(base);
             
-            std::memcpy(ppu::oam.data(), translate(base), 0xa0);
+            if (t) std::memcpy(ppu::oam.data(), translate(base), 0xa0);
         }
 
         u8& ref(u16 addr) {

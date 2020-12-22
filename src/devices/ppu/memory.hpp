@@ -27,8 +27,10 @@ namespace gameboy {
 
         u8 dummy = 0;
         
-        vram_t vram = { 0 }; // 0x1fff size
-        oam_t oam  = { 0 }; // 0x9f size
+        vram_t vram = { 0 };
+        oam_t oam  = { 0 };
         ppu_registers_t r = { 0 };
+
+        int clk;
     }
 }

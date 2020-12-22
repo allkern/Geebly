@@ -3,6 +3,7 @@
 #include <array>
 
 #include "../aliases.hpp"
+#include "../global.hpp"
 
 #define WRAM_BEGIN 0xc000
 #define WRAM_END 0xdfff
@@ -19,6 +20,13 @@ namespace gameboy {
         u8 dummy;
 
         wram_t bank0, bank1;
+
+        void init() {
+            srand(time(NULL));
+
+            for (auto& b : bank0) { b = rand() % 0xff; }
+            for (auto& b : bank1) { b = rand() % 0xff; }
+        }
 
         u32 read(u16 addr, size_t size) {
             u32 d = 0;

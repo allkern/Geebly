@@ -2,6 +2,8 @@
 
 #include "mapper.hpp"
 
+#include "../../global.hpp"
+
 namespace gameboy {
     namespace cart {
         class rom_only : public mapper {
@@ -10,6 +12,9 @@ namespace gameboy {
             rom_t rom = { 0 };
 
         public:
+            u8* get_bank0() { return rom.data(); }
+            u8* get_bank1() { return &rom[0x3eaf]; }
+
             void init(std::ifstream* f) override {
                 tag = mapper_tag::rom_only;
                 

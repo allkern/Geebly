@@ -6,10 +6,13 @@
 #include "devices/wram.hpp"
 #include "devices/hram.hpp"
 #include "devices/ppu/ppu.hpp"
-#include "devices/io.hpp"
+#include "devices/ic.hpp"
 #include "devices/dma/dma.hpp"
+#include "devices/timer.hpp"
 
 // Clean this whole file up
+
+#define MMIO_DISABLE_BOOTROM 0xff50
 
 namespace gameboy {
     namespace bus {
@@ -17,7 +20,7 @@ namespace gameboy {
         u8 ro_sink = 0;
 
         void init() {
-            if (skip_bootrom) {
+            if (settings::skip_bootrom) {
                 bootrom_enabled = false;
             }
         }
@@ -47,7 +50,9 @@ namespace gameboy {
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::read(addr, size); }
 
-            if (addr == 0xff00) { return ppu::read(addr, size); }
+            if (addr == MMIO_JOYP) { return ppu::read(addr, size); }
+
+            if (addr >= TIMER_BEGIN && addr <= TIMER_END) { return timer::read(addr, size); }
 
             if (addr == MMIO_DMA_TRANSFER) { return dma::read(addr, size); }
 
@@ -56,8 +61,7 @@ namespace gameboy {
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::read(addr, size); }
 
-
-            if (addr == MMIO_IF || addr == MMIO_IE) { return io::read(addr, size); }
+            if (addr == MMIO_IF || addr == MMIO_IE) { return ic::read(addr, size); }
 
             return 0x0;
         }
@@ -86,7 +90,7 @@ namespace gameboy {
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::ref(addr); }
 
-            if (addr == MMIO_IF || addr == MMIO_IE) { return io::ref(addr); }
+            if (addr == MMIO_IF || addr == MMIO_IE) { return ic::ref(addr); }
 
             return ro_sink;
         }
@@ -107,18 +111,18 @@ namespace gameboy {
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
 
-            if (addr == 0xff00) { ppu::write(addr, value, size); return; }
+            if (addr == MMIO_JOYP) { ppu::write(addr, value, size); return; }
 
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { ppu::write(addr, value, size); return; }
 
-            if (addr == 0xff50) { bootrom_enabled = false; return; }
+            if (addr == MMIO_DISABLE_BOOTROM) { bootrom_enabled = false; return; }
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { hram::write(addr, value, size); return; }
 
-            if (addr == MMIO_IF || addr == MMIO_IE) { io::write(addr, value, size); return; }
+            if (addr == MMIO_IF || addr == MMIO_IE) { ic::write(addr, value, size); return; }
 
             return;
         }

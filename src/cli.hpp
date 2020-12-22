@@ -77,6 +77,7 @@ namespace cli {
             DEFINE_SETTING("--scale", "-s", "scale");
 
             DEFINE_SWITCH("--debug", "-d", "debug");
+            DEFINE_SWITCH("--cgb-mode", "-Ecgb", "cgb-mode");
             DEFINE_SWITCH("--patch-bios-checks", "-Bno-checks", "no-bios-checks");
             DEFINE_SWITCH("--no-patch-bios-checks", "-Bchecks", "bios-checks");
             DEFINE_SWITCH("--vram-access-emulation", "-Evram-access", "vram-access-emulation");

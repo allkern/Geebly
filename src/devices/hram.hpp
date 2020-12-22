@@ -3,6 +3,7 @@
 #include <array>
 
 #include "../aliases.hpp"
+#include "../global.hpp"
 
 #define HRAM_BEGIN 0xff80
 #define HRAM_END 0xfffe
@@ -14,6 +15,12 @@ namespace gameboy {
         u8 dummy;
 
         hram_t hram;
+
+        void init() {
+            srand(time(NULL));
+
+            for (auto& b : hram) { b = rand() % 0xff; }
+        }
 
         u32 read(u16 addr, size_t size) {
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) {
