@@ -3,12 +3,17 @@
 </p>
 
 # Geebly
-A Gameboy emulator written in C++, currently under development.
-
-![alt text](https://user-images.githubusercontent.com/15825466/99772991-88287a00-2aea-11eb-9d80-630cd04bd06b.gif "Running Tetris")
+A Gameboy/Color emulator written in C++, currently under development.
+<p align="center">
+  <img src="https://user-images.githubusercontent.com/15825466/105384568-258a5200-5bf1-11eb-949c-8c274d88229e.gif" alt="Running Super Mario Bros. Deluxe (GBC)")
+</p>
 
 ## Usage
+### Linux
 `geebly <settings> <file>`
+
+### Windows (Powershell)
+`./geebly <settings> <file>`
 
 ### Settings
 There are different settings for every part of the emulation engine, Boot ROM/BIOS related settings are prefixed with a `B`, general emulation settings are prefixed with a `E`, etc. Common settings' shorthands usually are just one letter long though.
@@ -25,27 +30,51 @@ Here's all the settings currently present in the CLI:
 |`--cgb-mode`|`-Ecgb`|Hardware identifies itself as CGB (GBC) when enabled|Disabled
 
 ## Current state
+### Game Boy Color Emulation
+Out of nowhere, there's now Game Boy Color emulation! This mostly comprises additional PPU registers and logic, and the CPU's double speed mode, that doesn't really affect the emulated CPU itself, but more the way devices do timing-based stuff based off the CPU clock.
+
+#### Implemented (or mostly implemented) CGB-specific registers:
+- `KEY1`
+- `SVBK`
+- `VBK`
+- `BCPS/BGPI`
+- `BCPD/BGPD`
+
 ### CPU
 The CPU is fully implemented, with the exception of `stop` and `halt`, both are emulated as NOPs.
 
-Interrupts are partially supported, `Vblank` is the only one that's currently implemented
+Interrupts are partially supported, Vblank (`VBL`) is the only one that's currently implemented, Joypad (`JOYP`), and Timer (`TMI`) interrupts are WIP.
 
 ### Mapper/cartridge type support
-Mappers `0x0` (ROM Only), `MBC1` and `MBC3` are currently supported, those last two being partially implemented
+Most common mappers are fully implemented, that is:
+- `ROM only` 
+- `MBC1`
+- `MBC2`
+- `MBC3`
+- `MBC5`
 
-There's no `SRAM` banking support yet
+All of them with full ROM/SRAM banking support!
 
-### PPU/GPU
-All three layers, background, window and sprites are implemented, vertical scrolling (`SCY` and `WY`) is supported in both background and window, but horizontal scrolling (`SCX` and `WX`) is only supported in BG, although, really naively; its not a perfect emulation.
+RTC and Rumble functions are not supported.
 
-The OAM DMA controller is also implemented, it will log warnings when invalid transfers are attempted.
+### Graphics (PPU/GPU)
+Color is supported! in CGB mode, there's two switchable VRAM banks, but the second one should contain a Background Tile Attribute Map that enables selecting CGB palettes in a per-tile basis, among other things like X/Y flipping tiles, etc.
+
+All three layers are implemented, with full scrolling support for both background and window, though a bug seems to make negative X scrolling values offset `SCY` and/or `WY` by 1 character (8 pixels).
+
+The OAM DMA controller is also implemented, it will log warnings when invalid transfers are attempted. The HDMA/GDMA CGB controllers are not yet supported, but short-term planned.
+
+### Sound (SPU/APU)
+Sound emulation is finally supported, but only on Windows, as I don't really have a separate Linux machine to test things on, I'm relying in WSL2 only, which doesn't really have good sound support, I could maybe mess around with `pulseaudio`, but it didn't seem like a straightforward process to me, so that's why I decided to not support sound emulation on Linux for now.
+
+Its not an accurate emulation, nor all features are supported, only channels 1, 2 and 4 are supported, that's the two square channels and a noise channel.
+
+Both square channels support volume envelope, trigger, sound length, but not sweep.
+
+The noise channel's sound is completely off, the documented frequency calculation formula gave out really high frequencies that were inaudible, and so I had to workaround scaling them so something could be heard, this resulted in a high pitched sound being audible alongside the noise, which is undesirable, but at least we get to hear noise stabs or percussion-like sounds.
 
 ### Timers
-Short answer: They're not implemented, but `DIV` can be used as a source of PRNs.
-
-Long answer: After I got Tetris working and in-game, I realized that its PRNG wasn't working, as the only tetromino being generated was the O one. I recalled reading that Tetris in the GameBoy used the `DIV` register as a source for random tetromino generation, and so, I just implemented it as incrementing by CPU cycles elapsed since the last instruction divided by 4 (it could be anything, even a rnd() C call), and that made Tetris work! Other than that, its not doing what it is supposed to do.
-
-`TIMA`, `TAC`, etc. are not implemented.
+`DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated. The timer interrupt `TMI` is not yet implemented.
 
 ### Blargg's tests
 `cpu_instrs.gb` reports 11 out of 11 tests failed.
