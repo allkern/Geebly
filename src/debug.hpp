@@ -1,8 +1,10 @@
 #pragma once
 
+//#include "implot.h"
 #include "imgui/imgui.h"
 #include "imgui/imgui-SFML.h"
 #include "imgui/imgui_internal.h"
+
 
 #include "cpu/registers.hpp"
 #include "cpu/mnemonics.hpp"
@@ -10,11 +12,14 @@
 #include "devices/wram.hpp"
 #include "devices/hram.hpp"
 #include "devices/ppu/memory.hpp"
+#include "devices/timer.hpp"
+
+#ifdef _WIN32
+#include "devices/sound.hpp"
+#endif
 
 #include "aliases.hpp"
 #include "memory_editor.h"
-
-#include <sys/unistd.h>
 
 namespace gameboy {
     namespace debug {
@@ -46,7 +51,8 @@ namespace gameboy {
             "Cartridge header",
             "ROM0",
             "ROMX",
-            "VRAM",
+            "VRA0",
+            "VRA1",
             "SRA0",
             "SRAX",
             "WRA0",
@@ -74,17 +80,18 @@ namespace gameboy {
                 switch (item) {
                     case 0 : mem_edit.DrawContents(cart::rva.data()            , cart::rva.size()      , RVA_BEGIN); break;
                     case 1 : mem_edit.DrawContents(cart::header.data()         , cart::header.size()   , HDR_BEGIN); break;
-                    case 2 : mem_edit.DrawContents(cart::cartridge->get_bank0(), 0x4000-0x150          , CART_ROM_BEGIN); break;
+                    case 2 : mem_edit.DrawContents(cart::cartridge->get_bank0(), 0x4000-0x150          , ROM_BEGIN); break;
                     case 3 : mem_edit.DrawContents(cart::cartridge->get_bank1(), 0x4000                , 0x4000); break;
-                    case 4 : mem_edit.DrawContents(ppu::vram.data()            , ppu::vram.size()      , VRAM_BEGIN); break;
-                    case 5 : case 6:
+                    case 4 : mem_edit.DrawContents(ppu::vram[0].data()         , ppu::vram[0].size()   , VRAM_BEGIN); break;
+                    case 5 : mem_edit.DrawContents(ppu::vram[1].data()         , ppu::vram[1].size()   , VRAM_BEGIN); break;
+                    case 6 : case 7:
                         if (cart::cartridge->get_sram()) {
                             mem_edit.DrawContents(cart::cartridge->get_sram(), 0x2000, 0xa000); 
                         } break;
-                    case 7 : mem_edit.DrawContents(wram::bank0.data()          , wram::bank0.size()    , WRA0_BEGIN); break;
-                    case 8 : mem_edit.DrawContents(wram::bank1.data()          , wram::bank1.size()    , WRA1_BEGIN); break;
-                    case 9 : mem_edit.DrawContents(ppu::oam.data()             , ppu::oam.size()       , OAM_BEGIN); break;
-                    case 10: mem_edit.DrawContents(hram::hram.data()           , hram::hram.size()     , HRAM_BEGIN); break;
+                    case 8 : mem_edit.DrawContents(wram::wram[0].data()        , wram::wram[0].size()  , WRA0_BEGIN); break;
+                    case 9 : mem_edit.DrawContents(wram::current_bank->data()  , wram::current_bank->size(), WRAX_BEGIN); break;
+                    case 10: mem_edit.DrawContents(ppu::oam.data()             , ppu::oam.size()       , OAM_BEGIN); break;
+                    case 11: mem_edit.DrawContents(hram::hram.data()           , hram::hram.size()     , HRAM_BEGIN); break;
                 }
 
                 SameLine();
@@ -92,7 +99,7 @@ namespace gameboy {
                     m_memory_combo_items[item],
                     m_memory_combo_items[item]
                 )) {
-                    for (int n = 0; n < 11; n++) {
+                    for (int n = 0; n < 12; n++) {
                         bool is_selected = (item == n);
                         if (Selectable(m_memory_combo_items[n], is_selected))
                             item = n;
@@ -139,7 +146,6 @@ namespace gameboy {
                         ImGui::Columns(2);
                         
                         Text("Opcode: (%02x) %s", state->opcode, mnemonics[state->opcode].c_str()); NextColumn();
-                        //ImGui::PopFont();
 
                         Text("Immediate (16-bit): %04x", state->imm); NextColumn();
 
@@ -165,12 +171,13 @@ namespace gameboy {
                         Text("LCDC: %02x", ppu::r[PPU_LCDC]);
                         Text("STAT: %02x", ppu::r[PPU_STAT]);
                         Text("LY  : %02x", ppu::r[PPU_LY]);
-                        Text("BG Scroll: (%i (%02x), %i (%02x))", (int8_t)ppu::r[PPU_SCX], ppu::r[PPU_SCX], (int8_t)ppu::r[PPU_SCY], ppu::r[PPU_SCY]);
-                        Text("W Scroll : (%i (%02x), %i (%02x))", (int8_t)ppu::r[PPU_WX], ppu::r[PPU_WX], (int8_t)ppu::r[PPU_WY], ppu::r[PPU_WX]);
+                        Text("BG Scroll: (%+i (%02x), %+i (%02x))", (int8_t)ppu::r[PPU_SCX], ppu::r[PPU_SCX], (int8_t)ppu::r[PPU_SCY], ppu::r[PPU_SCY]);
+                        Text("W Scroll : (%+i (%02x), %+i (%02x))", (int8_t)ppu::r[PPU_WX], ppu::r[PPU_WX], (int8_t)ppu::r[PPU_WY], ppu::r[PPU_WY]);
                         Text("BGP : %02x", ppu::r[PPU_BGP]);
                         EndTabItem();
                     }
 
+                    // WIP Disassembly
                     //for (int i = 0; i < 5; i++)
         // {
         //     float child_height = ImGui::GetTextLineHeight() + style.ScrollbarSize + style.WindowPadding.y * 2.0f;
@@ -225,6 +232,37 @@ namespace gameboy {
 
                         EndTabItem();
                     }
+
+#ifdef _WIN32
+                    if (BeginTabItem("Sound")) {
+                        PlotLines("Channel 1", sound::ch1.samples_float.data(), 500, sound::ch1.p, nullptr, 0, 1, ImVec2(0, 80));
+                        PlotLines("Channel 2", sound::ch2.samples_float.data(), 500, sound::ch2.p, nullptr, 0, 1, ImVec2(0, 80));
+                        PlotLines("Channel 4", sound::ch4.samples_float.data(), 500, sound::ch4.p, nullptr, 0, 1, ImVec2(0, 80));
+                        EndTabItem();
+                    }
+#endif
+
+                    if (BeginTabItem("Timers")) {
+                        static const u32 freq[4] = { 0x1000, 0x40000, 0x10000, 0x4000 };
+                        if (Button("Step")) {
+                            cpu::step = false;
+                        }
+
+                        SameLine();
+
+                        if (Checkbox("Run", &run));
+
+                        cpu::run = run;
+
+                        Text("DIV : %02x (Internal: %04x)", timer::read(MMIO_DIV, 1), timer::div);
+                        Text("TIMA: %02x (Internal: %04x)", timer::read(MMIO_TIMA, 1), timer::tima);
+                        Text("TMA : %02x", timer::tma);
+                        Text("TAC : %02x", timer::read(MMIO_TAC, 1));
+                        Text("\tEnable: %i", timer::tac.enable ? 1 : 0);
+                        Text("\tFreq: %i Hz (%i kHz)", freq[timer::tac.f], freq[timer::tac.f] >> 0xa);
+                        
+                        EndTabItem();
+                    }
                 EndTabBar();
             End();
         }
@@ -272,7 +310,6 @@ namespace gameboy {
             ImGui::SFML::UpdateFontTexture();
 
             ImGui::GetStyle().WindowBorderSize = 0.0f;
-
             ImGui::GetStyle().WindowRounding = 0.0f;
         }
     };

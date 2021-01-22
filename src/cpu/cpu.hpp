@@ -11,11 +11,26 @@
 #include "../aliases.hpp"
 #include "../bus.hpp"
 #include "../log.hpp"
+#include "../devices/clock.hpp"
 
 #include "registers.hpp"
 #include "ops.hpp"
 
+#ifdef __linux__
 #include <sys/unistd.h>
+#define GEEBLY_PERF_SLEEP usleep(1);
+#endif
+
+// Windows only:
+// Undef and redef "N", causes macro conflicts inside windows.h (sigh)
+#ifdef _WIN32
+//#undef N
+//    #define WIN32_LEAN_AND_MEAN
+//    #include <windows.h>
+//#define N 0b01000000
+#define GEEBLY_PERF_SLEEP // Sleep(0);
+#endif
+
 
 namespace gameboy {
     namespace cpu {
@@ -29,6 +44,7 @@ namespace gameboy {
                 bc = 0x0013;
                 de = 0x00d8;
                 hl = 0x014d;
+                bus::ref(0xff0f) = 0x1;
             }
         }
         
@@ -65,7 +81,7 @@ namespace gameboy {
                 u8& ia = bus::ref(0xff0f);
 
                 // Handle VBlank
-                if (fired & 0x01) { ia &= 0xfe; pc += s.pc_increment - 1; call(0x40); }
+                if (fired & 0x01) { ia &= 0xfe; call(0x40, -1); }
 
                 fired = 0;
             }
@@ -96,7 +112,7 @@ namespace gameboy {
             u8 opcode = override ? override : s.opcode;
 
             if (settings::debugger_enabled) {
-                if (!run) { while (step) { usleep(1); } }
+                if (!run) { while (step) { GEEBLY_PERF_SLEEP } }
             }
 
             if (halted) goto skip;
@@ -114,6 +130,7 @@ namespace gameboy {
 
                 // stop #i8
                 case 0x10: {
+                    clock::do_switch();
                     update(2, 4);
                 } break;
 
@@ -418,7 +435,7 @@ namespace gameboy {
                         case 0xe8: case 0xe9: case 0xea: case 0xeb: case 0xec: case 0xed: case 0xef:
                         case 0xf0: case 0xf1: case 0xf2: case 0xf3: case 0xf4: case 0xf5: case 0xf7:
                         case 0xf8: case 0xf9: case 0xfa: case 0xfb: case 0xfc: case 0xfd: case 0xff: {
-                            op_rst(r[opcode&0x7], (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            op_rst(r[opcode&0x7], (opcode >> 3) & 0x7, opcode & 0x40);
                             update(1, 8);
                         } break;
 
@@ -498,9 +515,10 @@ namespace gameboy {
 
             skip:
 
+            if (!jump) { pc += s.pc_increment; }
+
             handle_interrupts();
 
-            if (!jump) { pc += s.pc_increment; }
             jump = false;
             
             if (settings::debugger_enabled && !cpu::run) step = true;

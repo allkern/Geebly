@@ -1,5 +1,5 @@
 cd ../src
-c++ -c geebly.cpp -o ../build/geebly.o -std=c++2a -Ofast -m64 -Wno-format
+c++ -c geebly.cpp -o ../build/geebly.o -std=c++2a -Ofast -m64 -Wno-format -Wno-narrowing
 
 # Link everything into a neat little file, also link OpenGL and X11
 cd ../build

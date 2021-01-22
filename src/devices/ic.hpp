@@ -9,8 +9,7 @@ namespace gameboy {
     namespace ic {
         u8 dummy;
 
-        u8 ia = 0; // if
-        u8 ie = 0;
+        u8 ia = 0, ie = 0;
 
         u32 read(u16 addr, size_t size) {
             if (addr == MMIO_IF) { return ia; }

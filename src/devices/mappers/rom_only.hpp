@@ -26,7 +26,7 @@ namespace gameboy {
             }
 
             u32 read(u16 addr, size_t size) override {
-                return utility::default_mb_read(rom.data(), addr, size, CART_ROM_BEGIN);
+                return utility::default_mb_read(rom.data(), addr, size, ROM_BEGIN);
             }
         };
     }

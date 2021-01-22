@@ -6,14 +6,14 @@
 
 namespace gameboy {
     namespace cart {
-        class mbc3 : public mapper {
+        class mbc5 : public mapper {
             typedef std::array <u8, 0x4000> rom_bank_t;
             typedef std::array <u8, 0x2000> sram_bank_t;
 
-            std::array <sram_bank_t, 8> sram;
+            std::array <sram_bank_t, 16> sram;
             std::vector <rom_bank_t> rom;
 
-            u8 current_rom_bank_idx = 0;
+            u16 current_rom_bank_idx = 0;
 
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
@@ -21,7 +21,7 @@ namespace gameboy {
             bool sram_enabled = false;
 
         public:
-            mbc3(std::ifstream& sav) {
+            mbc5(std::ifstream& sav) {
                 if (sav.is_open()) {
                     sav.read((char*)sram.data(), sram.size());
                     sav.close();
@@ -35,7 +35,7 @@ namespace gameboy {
             u8* get_sram() { return current_sram_bank->data(); }
             
             void init(std::ifstream* f) override {
-                tag = mapper_tag::mbc3;
+                tag = mapper_tag::mbc1;
                 
                 if (f->is_open() && f->good()) {
                     f->seekg(0);
@@ -71,18 +71,31 @@ namespace gameboy {
                     return;
                 }
 
-                if (addr <= 0x1fff) { sram_enabled = ((value & 0xf) == 0xa); return; }
+                if (addr <= 0x1fff) sram_enabled = ((value & 0xf) == 0xa);
 
-                // SRAM bank select/ROM MSB select
+                // SRAM bank select
                 if (addr >= 0x4000 && addr <= 0x5fff) {
-                    current_sram_bank = &sram[value & 0x3];
-                    return;
+                    current_sram_bank = &sram[value & 0xf];
                 }
 
-                if (addr >= 0x2000 && addr <= 0x3fff) {
-                    if ((value & 0x7f) == 0x0) value++;
+                if (addr >= 0x2000 && addr <= 0x2fff) {
+                    u16 old = current_rom_bank_idx;
+                    current_rom_bank_idx = value & 0xff;
+                    current_rom_bank_idx |= old & 0xff00;
 
-                    current_rom_bank_idx = value;
+                    // Selecting Bank 0 is supported on MBC5?
+                    //if (!current_rom_bank_idx) current_rom_bank_idx++;
+
+                    current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
+                }
+
+                if (addr >= 0x3000 && addr <= 0x3fff) {
+                    u16 old = current_rom_bank_idx;
+                    current_rom_bank_idx = (value & 0xff) << 8;
+                    current_rom_bank_idx |= old & 0xff;
+
+                    // Selecting Bank 0 is supported on MBC5?
+                    //if (!current_rom_bank_idx) current_rom_bank_idx++;
 
                     current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
                 }

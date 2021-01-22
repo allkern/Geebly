@@ -9,7 +9,7 @@ namespace gameboy {
             return registers::af.operator&(0x10u);
         }
 
-        inline void set_flags(u8 mask, bool cond, bool reset = true) {
+        inline static void set_flags(u8 mask, bool cond, bool reset = true) {
             using namespace registers;
             if (cond) {
                 r[f] |= mask;
@@ -109,8 +109,9 @@ namespace gameboy {
         }
 
         inline void op_adc(u8& dst, u8 src, bool carry) {
-            u16 res = dst, hct = (dst & 0xf) + (src & 0xf);
-            res += src + (int)carry;
+            u16 res = dst, hct = (dst & 0xf) + (src & 0xf) + (int)carry;
+            res += src;
+            res += (int)carry;
             set_flags(Z, (u8)res==0);
             set_flags(N, false);
             set_flags(H, hct&0x10);
@@ -124,13 +125,13 @@ namespace gameboy {
         }
 
         inline void op_sbc(u8& dst, u8 src, bool carry) {
-            u16 res = dst, hct = (dst & 0xf0) - (src & 0xf0);
-            res -= src - (int)carry;
+            u16 res = dst, hct = (dst & 0xf0) - (src & 0xf0) - (int)carry;
+            res -= src; res -= (int)carry;
             set_flags(Z, (u8)res==0);
             set_flags(N, true);
             set_flags(H, (u8)hct&0x8);
             set_flags(C, (u8)res&0x80);
-            dst = (u8)res;
+            dst = res & 0xff;
         }
 
         inline void op_rst(u8& dst, int b, bool set) {
@@ -146,7 +147,6 @@ namespace gameboy {
             set_flags(N, false);
             set_flags(H, true);
         }
-
 
         inline void op_and(u8& dst, u8 src) {
             dst &= src;

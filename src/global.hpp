@@ -11,10 +11,13 @@ namespace gameboy {
              cgb_mode = false;
     }
 
-    bool stopped = false, window_closed = false;
+    bool stopped = false,
+         window_closed = false,
+         written_to_sram = false,
+         debug_run = false;
 
     namespace utility {
-        inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t region_offset) {
+        inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t region_offset = 0) {
             u32 d = 0;
             while (size) {
                 d |= buffer[(addr+(size-1))-region_offset] << (((size--)-1)*8);

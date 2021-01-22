@@ -3,7 +3,13 @@
 #include "../aliases.hpp"
 #include "../global.hpp"
 
-#include "../SFML/Window.hpp"
+#ifdef __linux__
+#include "SFML/Window.hpp"
+#endif
+
+#ifdef _WIN32
+#include "SFML\Window.hpp"
+#endif
 
 #include <unordered_map>
 

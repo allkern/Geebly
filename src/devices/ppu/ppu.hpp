@@ -4,41 +4,73 @@
 
 #include "../../lgw/framebuffer.hpp"
 #include "../../aliases.hpp"
-#include "../ic.hpp"
-
-#include "memory.hpp"
 #include "../../global.hpp"
-
 #include "../joypad.hpp"
+#include "../clock.hpp"
+#include "../ic.hpp"
+#include "memory.hpp"
 
-#include <sys/unistd.h>
 #include <cstdlib>
 #include <array>
 
 #define PPU_WIDTH  160
 #define PPU_HEIGHT 144
 
+// PPU register indexes
+#define PPU_LCDC    0x0
+#define PPU_STAT    0x1
+#define PPU_SCY     0x2
+#define PPU_SCX     0x3
+#define PPU_LY      0x4
+#define PPU_LYC     0x5
+#define PPU_BGP     0x7
+#define PPU_OBP0    0x8
+#define PPU_OBP1    0x9
+#define PPU_WY      0xa
+#define PPU_WX      0xb
+
+// LCDC masks
+#define LCDC_SWITCH 0b10000000
+#define LCDC_WNDTMS 0b01000000
+#define LCDC_WNDSWI 0b00100000
+#define LCDC_BGWTSS 0b00010000
+#define LCDC_BGWTMS 0b00001000
+#define LCDC_SPSIZE 0b00000100
+#define LCDC_SPDISP 0b00000010 
+#define LCDC_BGWSWI 0b00000001
+
+// STAT masks
+#define STAT_LYCNSD 0b01000000
+#define STAT_MODE02 0b00100000
+#define STAT_MODE01 0b00010000
+#define STAT_MODE00 0b00001000
+#define STAT_CDFLAG 0b00000100
+#define STAT_CRMODE 0b00000011
+
+// Sprite attribute masks
+#define SPATTR_PRIO 0b10000000
+#define SPATTR_YFLP 0b01000000
+#define SPATTR_XFLP 0b00100000
+#define SPATTR_PALL 0b00010000
+
 namespace gameboy {
     namespace ppu {
-        sf::RenderWindow window(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly", sf::Style::Titlebar);
-
+        sf::RenderWindow window(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly");
         lgw::framebuffer frame;
 
-        u8* last_cpu_time = nullptr;
+        u32 color_palette[] = {
+            0xfffffffful,
+            0xaaaaaafful,
+            0x555555fful,
+            0x000000fful
+        };
 
         //u32 color_palette[] = {
-        //    0xfffffffful,
-        //    0xaaaaaafful,
-        //    0x555555fful,
-        //    0x000000fful
+        //    0xe0f8d0fful,
+        //    0x88c070fful,
+        //    0x346856fful,
+        //    0x081820fful
         //};
-
-        u32 color_palette[] = {
-            0xe0f8d0fful,
-            0x88c070fful,
-            0x346856fful,
-            0x081820fful
-        };
 
         //u32 color_palette[] = {
         //    0xe8fcccfful,
@@ -53,43 +85,6 @@ namespace gameboy {
         //    0xad2921fful,
         //    0x311852fful,
         //};
-
-        // PPU register indexes
-        #define PPU_LCDC    0x0
-        #define PPU_STAT    0x1
-        #define PPU_SCY     0x2
-        #define PPU_SCX     0x3
-        #define PPU_LY      0x4
-        #define PPU_LYC     0x5
-        #define PPU_BGP     0x7
-        #define PPU_OBP0    0x8
-        #define PPU_OBP1    0x9
-        #define PPU_WY      0xa
-        #define PPU_WX      0xb
-
-        // LCDC masks
-        #define LCDC_SWITCH 0b10000000
-        #define LCDC_WNDTMS 0b01000000
-        #define LCDC_WNDSWI 0b00100000
-        #define LCDC_BGWTSS 0b00010000
-        #define LCDC_BGWTMS 0b00001000
-        #define LCDC_SPSIZE 0b00000100
-        #define LCDC_SPDISP 0b00000010 
-        #define LCDC_BGWSWI 0b00000001
-
-        // STAT masks
-        #define STAT_LYCNSD 0b01000000
-        #define STAT_MODE02 0b00100000
-        #define STAT_MODE01 0b00010000
-        #define STAT_MODE00 0b00001000
-        #define STAT_CDFLAG 0b00000100
-        #define STAT_CRMODE 0b00000011
-
-        // Sprite attribute masks
-        #define SPATTR_PRIO 0b10000000
-        #define SPATTR_YFLP 0b01000000
-        #define SPATTR_XFLP 0b00100000
-        #define SPATTR_PALL 0b00010000
 
         // Macro to test register bits
         #define TEST_REG(reg, mask) (r[reg] & mask)
@@ -107,7 +102,7 @@ namespace gameboy {
             }
         }
 
-        void init(int scale, u8& cpu_last_cycles_register) {
+        void init(int scale) {
             frame.init(PPU_WIDTH, PPU_HEIGHT, sf::Color(color_palette[3]));
 
             //window.setPosition(sf::Vector2i(100, 100));
@@ -120,7 +115,8 @@ namespace gameboy {
             // Fill VRAM and OAM with random values 
             srand(time(NULL));
 
-            for (auto& b : vram) { b = rand() % 0xff; }
+            for (auto& b : vram[0]) { b = rand() % 0xff; }
+            for (auto& b : vram[1]) { b = rand() % 0xff; }
             for (auto& b : oam) { b = rand() % 0xff; }
 
             window.setSize(sf::Vector2u(PPU_WIDTH*scale, PPU_HEIGHT*scale));
@@ -131,12 +127,11 @@ namespace gameboy {
             if (settings::skip_bootrom) {
                 r[PPU_LCDC] = 0x91;
                 r[PPU_STAT] = 0x85;
+                r[PPU_BGP] = 0xfc;
             }
 
             window.clear(sf::Color(color_palette[3]));
             window.display();
-
-            last_cpu_time = &cpu_last_cycles_register;
         }
 
         inline bool vram_disabled() {
@@ -149,20 +144,26 @@ namespace gameboy {
             return (r[PPU_STAT] & 3) >= 2 && TEST_REG(PPU_LCDC, LCDC_SWITCH);
         }
 
+        struct cgb_bg_attribute {
+            u8 bgp;
+            bool vram_bank, xflip, yflip, priority;
+        } bg_attr;
+
         // Maybe should probably implement this as a state machine later on?
         void render_scanline(bool window = false) {
             u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
-               scroll   = window ? PPU_WY       : PPU_SCY,
+               scrolly  = window ? PPU_WY       : PPU_SCY,
+               scrollx  = window ? PPU_WX       : PPU_SCX,
                tilemap  = window ? LCDC_WNDTMS  : LCDC_BGWTMS;
 
             if (TEST_REG(PPU_LCDC, sw_mask)) {
-                u8 y = ((r[PPU_LY]) + r[scroll]);
+                u8 y = r[PPU_LY] + r[scrolly];
 
                 // Get tilemap and tileset offsets based on bits 3 and 4 of LCDC
                 u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800),
                     tileset_offset = (TEST_REG(PPU_LCDC, LCDC_BGWTSS) ? 0x0 : 0x800);
                 
-                #define TILE_OFFSET tilemap_offset + ((y >> 3) * 32)
+                #define TILE_OFFSET tilemap_offset + ((y >> 3) * 32) + ((r[scrollx] - (window ? 7 : 0)) >> 3)
 
                 // Signed mode requires a slightly different offset calculation
                 #define CHAR_OFFSET \
@@ -170,27 +171,68 @@ namespace gameboy {
                         (tile * 16) + ((y % 8) * 2) : \
                         0x1000 + (((s8)tile * 16) + ((y % 8) * 2));
                 
-                u8 tile = vram[TILE_OFFSET];
+                u8 tile = vram[0][TILE_OFFSET];
+
+                if (settings::cgb_mode) {
+                    u8 bg_attr_byte = vram[1][TILE_OFFSET];
+
+                    bg_attr = {
+                        (u8)(bg_attr_byte & 0x7),
+                        (bool)(bg_attr_byte & 0x8),
+                        (bool)(bg_attr_byte & 0x20),
+                        (bool)(bg_attr_byte & 0x40),
+                        (bool)(bg_attr_byte & 0x80)
+                    };
+                } 
 
                 u16 char_base = CHAR_OFFSET;
-                u8 l = vram[char_base], h = vram[char_base + 1];
+
+                u8 l = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base],
+                   h = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base + 1];
 
                 // Start rendering the whole scanline
                 for (int x = 0; x < PPU_WIDTH; x++) {
-                    int px = 7 - (x % 8);
+                    if (TEST_REG(PPU_LCDC, sw_mask)) {
+                        int px = 7 - ((x + ((r[scrollx] - (window ? 7 : 0)) % 8)) % 8);
 
-                    u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
+                        u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
 
-                    int color = (r[PPU_BGP] >> (pal_offset * 2)) & 0x3;
+                        int color = 0;
+                        u32 out = 0;
+                    
+                        if (settings::cgb_mode) {
+                            color = pal_offset;
+                            u8 off = (bg_attr.bgp << 3) + (color << 1);
+                            u16 p = cgb_palette[off] | (cgb_palette[off+1] << 8);
+                            u8 r = (p & 0x1f) << 3,
+                               g = (((p >> 0x5) & 0x1f) << 3),
+                               b = (((p >> 0xa) & 0x1f) << 3);
+                            out = ((u32)r << 0x18) | ((u32)g << 0x10) | ((u32)b << 0x8) | 0xff;
+                        } else {
+                            color = (r[PPU_BGP] >> (pal_offset * 2)) & 0x3;
+                            out = color_palette[color];
+                        }
 
-                    frame.draw(x + (r[PPU_SCX] % (PPU_WIDTH-0xdf)), r[PPU_LY], sf::Color(color_palette[color]));
+                        if (!(window && !color)) frame.draw(x, r[PPU_LY], sf::Color(out));
 
-                    // Recalculate offsets when reaching tile boundaries
-                    if (px == 0) {
-                        tile = vram[++TILE_OFFSET];
-                        char_base = CHAR_OFFSET;
-                        l = vram[char_base];
-                        h = vram[char_base + 1];
+                        // Recalculate offsets and settings when reaching tile boundaries
+                        if (px == 0) {
+                            tile = vram[0][++TILE_OFFSET];
+                            char_base = CHAR_OFFSET;
+
+                            if (settings::cgb_mode) {
+                                u8 bg_attr_byte = vram[1][TILE_OFFSET];
+
+                                bg_attr.bgp       = (bg_attr_byte & 0x7);
+                                bg_attr.vram_bank = (bool)(bg_attr_byte & 0x8);
+                                bg_attr.xflip     = (bool)(bg_attr_byte & 0x20);
+                                bg_attr.yflip     = (bool)(bg_attr_byte & 0x40);
+                                bg_attr.priority  = (bool)(bg_attr_byte & 0x80);
+                            }
+
+                            l = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base];
+                            h = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base + 1];
+                        }
                     }
                 }
             }
@@ -212,7 +254,7 @@ namespace gameboy {
                 
                 u8 by = oam[addr++],
                    bx = oam[addr++],
-                   t = oam[addr++],
+                   t = oam[addr++] & (TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 0xfe : 0xff),
                    attr = oam[addr++];
 
                 bool x_flip = (attr & SPATTR_XFLP),
@@ -223,8 +265,9 @@ namespace gameboy {
 
                 for (int y = y_start; y_flip ? y > y_end : y < y_end;) {
                     int y_off = y_flip ? ((spsize-1) - (y % spsize)) : (y % spsize);
-                    u8 l = vram[(t * 16) + (y_off * 2)],
-                       h = vram[(t * 16) + (y_off * 2) + 1];
+
+                    u8 l = vram[0][(t * 16) + (y_off * 2)],
+                       h = vram[0][(t * 16) + (y_off * 2) + 1];
 
                     for (int x = x_start; x_flip ? x > x_end : x < x_end;) {
                         int px = x_flip ? (x % 8) : (7 - (x % 8));
@@ -233,13 +276,11 @@ namespace gameboy {
 
                         if (pal_offset) {
                             u8 color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
-  
                             frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
                         }
 
                         if (x_flip) { x--; } else { x++; }
                     }
-
                     if (y_flip) { y--; } else { y++; }
                 }
             }
@@ -248,6 +289,10 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             // Handle JOYP reads
             if (addr == 0xff00) { return joypad::read(); }
+            if (addr == 0xff4f) { return current_bank_idx; }
+            if (addr == 0xff69) {
+                return utility::default_mb_read(cgb_palette.data(), cgb_palette_idx >= 0x40 ? 0x40 : cgb_palette_idx, size);
+            }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
                 return utility::default_mb_read(r.data(), addr, size, PPU_R_BEGIN);
@@ -256,7 +301,7 @@ namespace gameboy {
             if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return 0xff; }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                return utility::default_mb_read(vram.data(), addr, size, VRAM_BEGIN);
+                return utility::default_mb_read(current_bank->data(), addr, size, VRAM_BEGIN);
             }
 
             if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return 0xff; }
@@ -276,10 +321,28 @@ namespace gameboy {
                 return;
             }
 
+            if (addr == 0xff4f) {
+                current_bank_idx = value & 1;
+                current_bank = &vram[current_bank_idx];
+                return;
+            }
+
+            if (addr == 0xff68) {
+                cgb_palette_idx = value & 0x3f;
+                auto_inc = value & 0x80;
+                return;
+            }
+
+            if (addr == 0xff69) {
+                utility::default_mb_write(cgb_palette.data(), cgb_palette_idx >= 0x40 ? 0x40 : cgb_palette_idx, value, size, 0);
+                if (auto_inc) cgb_palette_idx++;
+                return;
+            }
+
             if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return; }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                utility::default_mb_write(vram.data(), addr, value, size, VRAM_BEGIN);
+                utility::default_mb_write(current_bank->data(), addr, value, size, VRAM_BEGIN);
                 return;
             }
 
@@ -296,7 +359,7 @@ namespace gameboy {
 
             if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return dummy; }
             
-            if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return vram[addr-VRAM_BEGIN]; }
+            if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return (*current_bank)[addr-VRAM_BEGIN]; }
 
             if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return dummy; }
 
@@ -390,7 +453,7 @@ namespace gameboy {
                 }
             }
             
-            clk += (*last_cpu_time);
+            clk += clock::get();
         }
     }
 }

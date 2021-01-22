@@ -1,6 +1,7 @@
 #pragma once
 
 #include <array>
+#include <ctime>
 
 #include "../aliases.hpp"
 #include "../global.hpp"

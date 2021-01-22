@@ -21,15 +21,23 @@
 
 namespace gameboy {
     namespace ppu {
-        typedef std::array <u8, 0x2000> vram_t;
-        typedef std::array <u8, 0xa0> oam_t;
-        typedef std::array <u8, 0xc> ppu_registers_t;
+        typedef std::array <u8, 0x2000> vram_bank_t;
+        typedef std::array <u8, 0xa0>   oam_t;
+        typedef std::array <u8, 0x40>   cgb_palette_ram_t;
+        typedef std::array <u8, 0xc>    ppu_registers_t;
 
-        u8 dummy = 0;
+        u8 cgb_palette_idx = 0, dummy = 0;
+
+        std::array <vram_bank_t, 2> vram;
         
-        vram_t vram = { 0 };
-        oam_t oam  = { 0 };
-        ppu_registers_t r = { 0 };
+        ppu_registers_t   r = { 0 };
+        oam_t             oam  = { 0 };
+        cgb_palette_ram_t cgb_palette = { 0 };
+
+        size_t current_bank_idx = 0;
+        vram_bank_t* current_bank = &vram[current_bank_idx];
+
+        bool auto_inc = false;
 
         int clk;
     }

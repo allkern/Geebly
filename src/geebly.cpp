@@ -75,7 +75,8 @@ int main(int argc, const char* argv[]) {
     // Clean this up
     std::signal(SIGSEGV, sigsegv_handler);
 
-    bios::init(cli::setting("bios", "bios.bin"));
+    if (!settings::skip_bootrom)
+        bios::init(cli::setting("bios", settings::cgb_mode ? "cgb_bios.bin" : "bios.bin"));
 
     // Patch infinite loops for 2 NOPs
     if (!settings::bios_checks_enabled) {
@@ -93,20 +94,24 @@ int main(int argc, const char* argv[]) {
     
     hram::init();
 
-    ppu::init(std::stoi(cli::setting("scale", "1")), cpu::registers::last_instruction_cycles);
+    ppu::init(std::stoi(cli::setting("scale", "1")));
 
     cpu::init();
 
     bus::init();
 
-    timer::init(cpu::registers::last_instruction_cycles);
+    clock::init(cpu::registers::last_instruction_cycles);
+
+#ifdef _WIN32
+    sound::init();
+#endif
 
     if (settings::debugger_enabled) {
         debug::init();
-        init();
+        cpu_thread::init();
     }
 
-    int counter = 0;
+    int counter = 1000;
 
     while (!window_closed) {
         if (!settings::debugger_enabled) {
@@ -114,23 +119,28 @@ int main(int argc, const char* argv[]) {
             cpu::execute();
         }
 
-        //if (cpu::registers::pc >= 0x423 && cpu::registers::pc <= 0x456) {
-        //    std::cout << std::hex << cpu::registers::pc << ": " << (u16)cpu::registers::r[cpu::registers::a] << std::endl;
-        //}
-
         if (settings::debugger_enabled) {
             if (cpu::done) {
                 ppu::cycle();
+                timer::update();
                 cpu::done = false;
             }
         } else {
             ppu::cycle();
+            timer::update();
         }
-
-        timer::update();
 
         if (settings::debugger_enabled) {
-            debug::update();
+            if (debug::run) {
+                if (!(counter--)) {
+                    debug::update();
+                    counter = 1000;
+                }
+            } else {
+                debug::update();
+            }
         }
     }
+
+    cart::create_sav_file();
 }

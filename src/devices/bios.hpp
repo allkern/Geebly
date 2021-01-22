@@ -5,27 +5,35 @@
 
 #include "../aliases.hpp"
 #include "../global.hpp"
+#include "../log.hpp"
 
 namespace gameboy {
     namespace bios {
-        typedef std::array <u8, 0x100> bios_rom_t;
+        typedef std::array <u8, 0x900> big_bios_rom_t;
 
-        bios_rom_t rom;
+        u8 dummy;
+
+        big_bios_rom_t rom;
 
         u32 read(u16 addr, size_t size) {
-            return utility::default_mb_read(rom.data(), addr, size, 0);
+            return utility::default_mb_read(rom.data(), addr, size);
         }
 
         u8& ref(u16 addr) {
-            return rom[addr];
+            return dummy;
         }
 
         void init(std::string filename) {
-            rom.fill(0);
+            std::ifstream f(filename, std::ios::binary);
 
-            std::ifstream file(filename, std::ios::binary);
+            rom.fill(0xff);
 
-            file.read((char*)rom.data(), 0x100);
+            if (!f.is_open()) {
+                _log(error, "Couldn't find bootrom \"%s\". Please specify another BIOS file, or enable skipping with \"-Bskip\"", filename.c_str());
+                std::exit(1);
+            }
+
+            f.read((char*)rom.data(), rom.size());
         }
     }
 }

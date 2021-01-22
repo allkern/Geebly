@@ -6,10 +6,10 @@
 #include <vector>
 #include <array>
 
-#define CART_ROM_BEGIN 0x150
-#define CART_ROM_END 0x7fff
-#define CART_RAM_BEGIN 0xa000
-#define CART_RAM_END 0xbfff
+#define ROM_BEGIN   0x150
+#define ROM_END     0x7fff
+#define SRAM_BEGIN  0xa000
+#define SRAM_END    0xbfff
 
 namespace gameboy {
     namespace cart {
