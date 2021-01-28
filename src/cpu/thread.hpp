@@ -9,8 +9,8 @@ namespace gameboy {
         static void func() {
             bool exec = true;
             while (exec && !window_closed) {
-                cpu::fetch();
-                exec = cpu::execute();
+                exec = cpu::cycle();
+                //if (cpu::registers::pc == 0xff80) { cpu::run = false; }
             }
         }
 

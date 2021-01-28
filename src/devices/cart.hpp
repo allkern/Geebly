@@ -127,6 +127,7 @@ namespace gameboy {
         }
 
         u32 read(u16 addr, size_t size) {
+            if (tilted_cartridge) return (u16)rand() % 0xffff;
             if (addr <= RVA_END) { return utility::default_mb_read(rva.data(), addr, size, RVA_BEGIN); }
             if (addr >= HDR_BEGIN && addr <= HDR_END) { return utility::default_mb_read(header.data(), addr, size, HDR_BEGIN); }
             if (addr >= ROM_BEGIN && addr <= ROM_END) { return cartridge->read(addr, size); }
@@ -135,17 +136,20 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
+            if (tilted_cartridge) { addr = (u16)rand() % 0xffff; value = (u16)rand() % 0xffff; }
             if (addr <= HDR_END) { return; }
             if (addr >= ROM_BEGIN && addr <= ROM_END) { cartridge->write(addr, value, size); return; }
             if (addr >= SRAM_BEGIN && addr <= SRAM_END) { written_to_sram = true; cartridge->write(addr, value, size); return; }
         }
 
         u8& ref(u16 addr) {
+            if (tilted_cartridge) { addr = (u16)rand() % 0xffff; }
             if (addr >= SRAM_BEGIN && addr <= SRAM_END) { return cartridge->ref(addr); }
             return dummy;
         }
 
         u8* ptr(u16 addr) {
+            if (tilted_cartridge) { addr = (u16)rand() % 0xffff; }
             if (addr <= RVA_END) { return &rva.at(addr); }
             if (addr >= HDR_BEGIN && addr <= HDR_END) { return &header.at(addr-HDR_BEGIN); }
             if (addr >= ROM_BEGIN && addr <= ROM_END) { return &cartridge->ref(addr); }

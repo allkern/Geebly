@@ -12,10 +12,10 @@ namespace gameboy {
         #define C 0b00010000
 
         struct state {
-            u8 opcode, imm8;
-            u16 imm;
+            u8 opcode = 0x0, imm8 = 0x0;
+            u16 imm = 0x0;
             bool jump = false;
-            size_t pc_increment;
+            size_t pc_increment = 0x0;
         } s;
 
         std::atomic <bool> step;

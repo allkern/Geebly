@@ -133,7 +133,7 @@ namespace gameboy {
 
                         SameLine();
 
-                        if (Checkbox("Run", &run));
+                        Checkbox("Run", &run);
 
                         cpu::run = run;
 
@@ -250,7 +250,7 @@ namespace gameboy {
 
                         SameLine();
 
-                        if (Checkbox("Run", &run));
+                        Checkbox("Run", &run);
 
                         cpu::run = run;
 
@@ -261,6 +261,11 @@ namespace gameboy {
                         Text("\tEnable: %i", timer::tac.enable ? 1 : 0);
                         Text("\tFreq: %i Hz (%i kHz)", freq[timer::tac.f], freq[timer::tac.f] >> 0xa);
                         
+                        EndTabItem();
+                    }
+
+                    if (BeginTabItem("Cartridge")) {
+                        Checkbox("Tilt", &tilted_cartridge);
                         EndTabItem();
                     }
                 EndTabBar();
@@ -286,8 +291,6 @@ namespace gameboy {
 
             devices_window();
             memory_window();
-
-            //ImGui::ShowDemoWindow();
 
             window->clear(sf::Color(25, 25, 25));
             ImGui::SFML::Render(*window);

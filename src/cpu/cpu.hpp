@@ -49,10 +49,32 @@ namespace gameboy {
         }
         
         bool halted = false,
+             halt_bug = false,
+             halt_ime_state = false,
              ei_issued = false;
         int  ei_delay = 0;
 
         u8 fired = 0;
+
+        // Interrupt Service Routine
+        inline void isr() {
+            u8& ia = bus::ref(0xff0f);
+
+            // Handle VBlank
+            if (fired & 0x01) {
+                if (!halt_bug) ia &= 0xfe;
+
+                if (halted) {
+                    if (halt_ime_state) {
+                        call(0x40);
+                    }
+                } else {
+                    call(0x40);
+                }
+            
+            }
+
+        }
 
         // Basic interrupt handler
         inline void handle_interrupts() {
@@ -130,7 +152,9 @@ namespace gameboy {
 
                 // stop #i8
                 case 0x10: {
-                    clock::do_switch();
+                    if (!clock::do_switch()) {
+                        stopped = true;
+                    }
                     update(2, 4);
                 } break;
 
@@ -166,7 +190,17 @@ namespace gameboy {
 
                 // halt
                 case 0x76: {
-                    //halted = true;
+                    // if (!ime) {
+                    //     if (bus::ref(0xff0f) & bus::ref(0xffff) & 0x1f) {
+                    //         halt_bug = true;
+                    //         halted = false;
+                    //     } else {
+                    //         halted = true;
+                    //         halt_ime_state = ime;
+                    //     }
+                    // } else {
+                    //     halted = true;
+                    // }
                     update(1, 4);
                 } break;
 
@@ -449,23 +483,23 @@ namespace gameboy {
 
                         case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
                         case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
-                            op_rlc(r[opcode&0x7], (bool)opcode&0x10);
+                            op_rlc(r[opcode&0x7], opcode&0x10);
                             update(1, 8);
                         } break;
 
                         case 0x06: case 0x16: {
-                            op_rlc(bus::ref(hl), (bool)opcode&0x10);
+                            op_rlc(bus::ref(hl), opcode&0x10);
                             update(1, 16);
                         } break;
                         
                         case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d: case 0x0f:
                         case 0x18: case 0x19: case 0x1a: case 0x1b: case 0x1c: case 0x1d: case 0x1f: {
-                            op_rrc(r[opcode&0x7], (bool)opcode&0x10);
+                            op_rrc(r[opcode&0x7], opcode&0x10);
                             update(1, 8);
                         } break;
 
                         case 0x0e: case 0x1e: {
-                            op_rrc(bus::ref(hl), (bool)opcode&0x10);
+                            op_rrc(bus::ref(hl), opcode&0x10);
                             update(1, 16);
                         } break;
 
@@ -513,19 +547,22 @@ namespace gameboy {
                 }
             }
 
+            if (!jump) { if (!halt_bug) { pc += s.pc_increment; } else { halt_bug = false; } }
+
             skip:
 
-            if (!jump) { pc += s.pc_increment; }
-
-            handle_interrupts();
-
-            jump = false;
-            
             if (settings::debugger_enabled && !cpu::run) step = true;
 
+            jump = false;
             done = true;
 
             return true;
+        }
+
+        bool cycle() {
+            handle_interrupts();
+            fetch();
+            return execute();
         }
     };
 }

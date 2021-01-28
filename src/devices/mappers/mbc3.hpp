@@ -89,7 +89,7 @@ namespace gameboy {
             }
 
             u8& ref(u16 addr) {
-                if (addr >= 0xa000 && addr <= 0xbfff) { current_sram_bank->at(addr-0xa000); }
+                if (addr >= 0xa000 && addr <= 0xbfff) { return current_sram_bank->at(addr-0xa000); }
 
                 return dummy;
             }

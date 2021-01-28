@@ -14,7 +14,8 @@ namespace gameboy {
     bool stopped = false,
          window_closed = false,
          written_to_sram = false,
-         debug_run = false;
+         debug_run = false,
+         tilted_cartridge = false;
 
     namespace utility {
         inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t region_offset = 0) {

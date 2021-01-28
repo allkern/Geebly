@@ -12,12 +12,14 @@ namespace gameboy {
         size_t scale = 1;
         u8* clock;
 
-        void do_switch() {
+        bool do_switch() {
             if (switch_wait) {
                 switch_wait = false;
                 double_speed = !double_speed;
                 scale *= double_speed ? 2 : 0.5;
+                return true;
             }
+            return false;
         }
 
         // Implement KEY1 here (makes sense)

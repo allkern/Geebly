@@ -78,7 +78,7 @@ namespace gameboy {
             }
 
             u8& ref(u16 addr) {
-                if (addr >= 0xa000 && addr <= 0xa1ff) { sram.at(addr-0xa000); }
+                if (addr >= 0xa000 && addr <= 0xa1ff) { return sram.at(addr-0xa000); }
 
                 return dummy;
             }

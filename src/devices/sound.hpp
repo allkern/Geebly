@@ -11,6 +11,7 @@
 #endif
 
 #include "../aliases.hpp"
+#include "../log.hpp"
 
 #include <iostream>
 #include <ctime>
@@ -55,17 +56,20 @@ namespace gameboy {
         //};
 
         int16_t square_generator(double t, double f, double a) {
+            if (f > SAMPLE_RATE) f = SAMPLE_RATE / 2;
+
             int tpc = SAMPLE_RATE / f,
                 cp = int(t) % tpc,
                 hf = tpc / 2;
 
+            //_log(debug, "done");
             if (cp < hf) return 0x7fff * a;
 
             return 0;
         }
 
         int16_t noise_generator(double t, double f, double a) {
-            if (f > SAMPLE_RATE) return 0;
+            if (f > SAMPLE_RATE || !(f && a)) return 0;
 
             int tpc = SAMPLE_RATE / f,
                 cp = int(t) % tpc,
@@ -79,7 +83,7 @@ namespace gameboy {
                     
                     written = true;
                 }
-            
+                
                 return (value * 0x7fff) * a;
             }
             
@@ -142,7 +146,6 @@ namespace gameboy {
                 }
 
                 ch->buf.loadFromSamples(ch->samples.data(), ls, 1, SAMPLE_RATE);
-
                 ch->out.play();
 
                 ch->nr[4] &= 0x7f;
@@ -161,7 +164,7 @@ namespace gameboy {
             if (addr == 0xff11) ch1.nr[1] = value;
             if (addr == 0xff12) ch1.nr[2] = value;
             if (addr == 0xff13) ch1.nr[3] = value;
-            if (addr == 0xff14) { ch1.nr[4] = value; trigger(&ch1); }
+            if (addr == 0xff14) {ch1.nr[4] = value; trigger(&ch1); }
             if (addr == 0xff16) ch2.nr[1] = value;
             if (addr == 0xff17) ch2.nr[2] = value;
             if (addr == 0xff18) ch2.nr[3] = value;
@@ -170,7 +173,6 @@ namespace gameboy {
             if (addr == 0xff21) ch4.nr[2] = value;
             if (addr == 0xff22) ch4.nr[3] = value;
             if (addr == 0xff23) { ch4.nr[4] = value; trigger(&ch4, channel_type::noise); }
-
         }
     }
 }

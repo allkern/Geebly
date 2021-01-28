@@ -115,8 +115,7 @@ int main(int argc, const char* argv[]) {
 
     while (!window_closed) {
         if (!settings::debugger_enabled) {
-            cpu::fetch();
-            cpu::execute();
+            cpu::cycle();
         }
 
         if (settings::debugger_enabled) {

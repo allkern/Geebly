@@ -18,8 +18,8 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            if (addr == MMIO_IF) { ia = value; return; }
-            if (addr == MMIO_IE) { ie = value; return; }
+            if (addr == MMIO_IF) { ia = value & 0xff; return; }
+            if (addr == MMIO_IE) { ie = value & 0xff; return; }
         }
 
         u8& ref(u16 addr) {

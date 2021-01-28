@@ -54,7 +54,7 @@ namespace gameboy {
             if (thru) {
                 dst |= old_c;
             } else {
-                dst |= (bool)msb;
+                dst |= msb ? 1 : 0;
             }
             set_flags(Z, dst == 0);
             set_flags(N | H, false);
@@ -125,12 +125,12 @@ namespace gameboy {
         }
 
         inline void op_sbc(u8& dst, u8 src, bool carry) {
-            u16 res = dst, hct = (dst & 0xf0) - (src & 0xf0) - (int)carry;
+            u16 res = dst;
             res -= src; res -= (int)carry;
             set_flags(Z, (u8)res==0);
             set_flags(N, true);
-            set_flags(H, (u8)hct&0x8);
-            set_flags(C, (u8)res&0x80);
+            set_flags(H, (dst&0xf)<(src&0xf));
+            set_flags(C, dst < src);
             dst = res & 0xff;
         }
 
