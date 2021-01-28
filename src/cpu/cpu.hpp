@@ -228,7 +228,7 @@ namespace gameboy {
                 // add a, *%hl; adc a, *%hl
                 case 0x86: case 0x8e: {
                     bool carry = (opcode & 8) && get_carry();
-                    op_adc(r[a], bus::read(hl, 1), carry);
+                    op_adc(r[a], bus::read((u16)hl, 1), carry);
                     update(1, 8);
                 } break;
 
@@ -242,7 +242,7 @@ namespace gameboy {
 
                 case 0x96: case 0x9e: {
                     bool carry = (opcode & 8) && get_carry();
-                    op_sbc(r[a], bus::read(hl, 1), carry);
+                    op_sbc(r[a], bus::read((u16)hl, 1), carry);
                     update(1, 8);
                 } break;
 
@@ -346,12 +346,11 @@ namespace gameboy {
                 case 0x2a: { r[a] = bus::read(hl++, 1); update(1, 8); } break;
                 case 0x3a: { r[a] = bus::read(hl--, 1); update(1, 8); } break;
 
-                // TO-DO: implement 16-bit carry and half carry detection
                 // add %hl, %r16;
-                case 0x09: { hl = hl + bc; set_flags(N, false); update(1, 8); } break;
-                case 0x19: { hl = hl + de; set_flags(N, false); update(1, 8); } break;
-                case 0x29: { hl = hl + hl; set_flags(N, false); update(1, 8); } break;
-                case 0x39: { hl = hl + sp; set_flags(N, false); update(1, 8); } break;
+                case 0x09: { op_addhl((u16)bc); update(1, 8); } break;
+                case 0x19: { op_addhl((u16)de); update(1, 8); } break;
+                case 0x29: { op_addhl((u16)hl); update(1, 8); } break;
+                case 0x39: { op_addhl(sp); update(1, 8); } break;
 
                 case 0x20: { if (!test_flags(Z)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
                 case 0x30: { if (!test_flags(C)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
@@ -381,7 +380,15 @@ namespace gameboy {
                 case 0xda: { if ( test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
                 case 0xc3: { pc = s.imm; update(3, 16, true); } break;
 
-                case 0xf8: { hl = sp + (s8)s.imm8; update(2, 12); } break;
+                case 0xf8: {
+                    u16 res = sp + (s8)s.imm8;
+                    hl = res;
+                    set_flags(Z | N, false);
+                    set_flags(C, (res&0xff) < s.imm8);
+                    set_flags(H, (res&0xf) < (s.imm8&0xf));
+                    update(2, 12);
+                } break;
+
                 case 0xf9: { sp = (u16)hl; update(1, 8); } break;
 
                 // ld *#i16, %a;
@@ -392,7 +399,13 @@ namespace gameboy {
 
                 // add %sp, #si8;
                 // TO-DO implement carry and halfcarry detection
-                case 0xe8: { sp += (s8)s.imm8; set_flags(Z | N, false); set_flags(Z | N, false); update(2, 16); } break;
+                case 0xe8: {
+                    sp += (s8)s.imm8;
+                    set_flags(Z | N, false);
+                    set_flags(C, (sp&0xff) < s.imm8);
+                    set_flags(H, (sp&0xf) < (s.imm8&0xf));
+                    update(2, 16);
+                } break;
 
                 // jp %hl;
                 case 0xe9: { pc = (u16)hl; update(1, 4, true); } break;
@@ -483,23 +496,23 @@ namespace gameboy {
 
                         case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
                         case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
-                            op_rlc(r[opcode&0x7], opcode&0x10);
+                            op_rlc(r[opcode&0x7], opcode&0x10, true);
                             update(1, 8);
                         } break;
 
                         case 0x06: case 0x16: {
-                            op_rlc(bus::ref(hl), opcode&0x10);
+                            op_rlc(bus::ref(hl), opcode&0x10, true);
                             update(1, 16);
                         } break;
                         
                         case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d: case 0x0f:
                         case 0x18: case 0x19: case 0x1a: case 0x1b: case 0x1c: case 0x1d: case 0x1f: {
-                            op_rrc(r[opcode&0x7], opcode&0x10);
+                            op_rrc(r[opcode&0x7], opcode&0x10, true);
                             update(1, 8);
                         } break;
 
                         case 0x0e: case 0x1e: {
-                            op_rrc(bus::ref(hl), opcode&0x10);
+                            op_rrc(bus::ref(hl), opcode&0x10, true);
                             update(1, 16);
                         } break;
 
