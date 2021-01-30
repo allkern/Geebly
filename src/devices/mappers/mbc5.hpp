@@ -23,7 +23,7 @@ namespace gameboy {
         public:
             mbc5(std::ifstream& sav) {
                 if (sav.is_open()) {
-                    sav.read((char*)sram.data(), sram.size());
+                    sav.read((char*)current_sram_bank->data(), current_sram_bank->size());
                     sav.close();
                 }
             }
