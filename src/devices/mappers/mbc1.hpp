@@ -84,7 +84,7 @@ namespace gameboy {
                         u8 old = current_rom_bank_idx;
                         current_rom_bank_idx = (value & 0x3) << 5;
                         current_rom_bank_idx |= old & 0x1f;
-                        current_rom_bank = &rom[current_rom_bank_idx];
+                        current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
                     }
 
                     if (mode == mode::big_sram) {

@@ -125,12 +125,12 @@ namespace gameboy {
         }
 
         inline void op_sbc(u8& dst, u8 src, bool carry) {
-            u16 res = dst; int hcf = ((dst & 0xf)-(src & 0xf)-(int)carry);
-            res -= src; res -= (int)carry;
+            u16 res = 0; int hcf = ((dst & 0xf)-(src & 0xf)-(int)carry);
+            res = dst - src - (int)carry;
             set_flags(Z, (res & 0xff) == 0);
             set_flags(N, true);
-            set_flags(H, hcf < 0);
-            set_flags(C, dst < src);
+            set_flags(H, (u8)((dst & 0xf) - (src & 0xf) - carry) > 0xf);
+            set_flags(C, (u16)(dst - src - carry) > 0xff);
             dst = res & 0xff;
         }
 
