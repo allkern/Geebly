@@ -15,7 +15,7 @@ namespace gameboy {
 
             rom_bank_t* current_rom_bank = nullptr;
             
-            bool sram_enabled = false;
+            bool sram_enabled = true;
 
         public:
             mbc2(std::ifstream& sav) {
@@ -30,6 +30,13 @@ namespace gameboy {
             u8* get_bank0() { return rom[0].data(); }
             u8* get_bank1() { return current_rom_bank->data(); }
             u8* get_sram() { return sram.data(); }
+
+            void save_sram(std::ofstream& sav) override {
+                if (sav.is_open()) {
+                    sav.write((char*)sram.data(), 0x200);
+                }
+                sav.close();
+            }
             
             void init(std::ifstream* f) override {
                 tag = mapper_tag::mbc2;

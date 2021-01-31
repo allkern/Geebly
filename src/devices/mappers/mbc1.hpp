@@ -14,6 +14,7 @@ namespace gameboy {
 
             typedef std::array <u8, 0x4000> rom_bank_t;
             typedef std::array <u8, 0x2000> sram_bank_t;
+            typedef std::array <sram_bank_t, 4> sram_t;
 
             std::array <sram_bank_t, 4> sram;
             std::vector <rom_bank_t> rom;
@@ -23,7 +24,7 @@ namespace gameboy {
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
             
-            bool sram_enabled = false, mode = mode::big_rom;
+            bool sram_enabled = true, mode = mode::big_rom;
 
         public:
             mbc1(std::ifstream& sav) {
@@ -37,9 +38,18 @@ namespace gameboy {
 
             u8 dummy = 0;
 
-            u8* get_bank0() { return rom[0].data(); }
-            u8* get_bank1() { return current_rom_bank->data(); }
-            u8* get_sram() { return current_sram_bank->data(); }
+            u8* get_bank0() override { return rom[0].data(); }
+            u8* get_bank1() override { return current_rom_bank->data(); }
+            u8* get_sram() override { return current_sram_bank->data(); }
+
+            void save_sram(std::ofstream& sav) override {
+                if (sav.is_open()) {
+                    for (sram_bank_t& b : sram) {
+                        sav.write((char*)b.data(), b.size());
+                    }
+                }
+                sav.close();
+            }
             
             void init(std::ifstream* f) override {
                 tag = mapper_tag::mbc1;

@@ -30,6 +30,7 @@ namespace gameboy {
             virtual u8* get_bank0() { return nullptr; };
             virtual u8* get_bank1() { return nullptr; };
             virtual u8* get_sram() { return nullptr; };
+            virtual void save_sram(std::ofstream& sav) { };
 
             virtual void init(std::ifstream*) {};
             virtual u32 read(u16, size_t) { return 0; };

@@ -18,6 +18,7 @@
 
 #ifdef __linux__
 #include <sys/unistd.h>
+#define GEEBLY_PERF_FFS __builtin_ffs
 #define GEEBLY_PERF_SLEEP usleep(1);
 #endif
 
@@ -28,12 +29,21 @@
 //    #define WIN32_LEAN_AND_MEAN
 //    #include <windows.h>
 //#define N 0b01000000
+#define GEEBLY_PERF_FFS ffs
 #define GEEBLY_PERF_SLEEP // Sleep(0);
 #endif
 
 
 namespace gameboy {
     namespace cpu {
+        #ifdef _WIN32
+        template <class T> size_t ffs(T n) {
+            for (int c = 0; c < sizeof(T)*8; c++) {
+                if (n & (1 << c)) return c + 1;
+            }
+            return 0;
+        }
+        #endif
         void init() {
             using namespace registers;
 
@@ -56,26 +66,6 @@ namespace gameboy {
 
         u8 fired = 0;
 
-        // Interrupt Service Routine
-        inline void isr() {
-            u8& ia = bus::ref(0xff0f);
-
-            // Handle VBlank
-            if (fired & 0x01) {
-                if (!halt_bug) ia &= 0xfe;
-
-                if (halted) {
-                    if (halt_ime_state) {
-                        call(0x40);
-                    }
-                } else {
-                    call(0x40);
-                }
-            
-            }
-
-        }
-
         // Basic interrupt handler
         inline void handle_interrupts() {
             using namespace registers;
@@ -90,23 +80,18 @@ namespace gameboy {
             u8& ie = bus::ref(0xffff),
               & ia = bus::ref(0xff0f);
 
-            if (ime && ie && ia) {
-                fired = ie & ia;
+            u8 i = GEEBLY_PERF_FFS(ie & ia & 0x1f);
 
-                if (fired) {
-                    halted = false;
-                    ime = false;
-                }
+            if (!i) return;
+
+            if (ime) {
+                if (halted) registers::last_instruction_cycles = 4;
+                ia &= ~(1 << (i-1));
+                ime = false;
+                call(0x40 + (0x8 * (i - 1)));
             }
 
-            {
-                u8& ia = bus::ref(0xff0f);
-
-                // Handle VBlank
-                if (fired & 0x01) { ia &= 0xfe; call(0x40, -1); }
-
-                fired = 0;
-            }
+            halted = false;
         }
 
         inline void enable_interrupts() {
@@ -190,17 +175,8 @@ namespace gameboy {
 
                 // halt
                 case 0x76: {
-                    // if (!ime) {
-                    //     if (bus::ref(0xff0f) & bus::ref(0xffff) & 0x1f) {
-                    //         halt_bug = true;
-                    //         halted = false;
-                    //     } else {
-                    //         halted = true;
-                    //         halt_ime_state = ime;
-                    //     }
-                    // } else {
-                    //     halted = true;
-                    // }
+                    u8 ie = bus::read(0xffff, 1), ia = bus::read(0xff0f, 1);
+                    halted = ime || (ia & ie & 0x1f) == 0;
                     update(1, 4);
                 } break;
 
@@ -352,11 +328,11 @@ namespace gameboy {
                 case 0x29: { op_addhl((u16)hl); update(1, 8); } break;
                 case 0x39: { op_addhl(sp); update(1, 8); } break;
 
-                case 0x20: { if (!test_flags(Z)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x30: { if (!test_flags(C)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x18: { pc += (s8)s.imm8 + 2; update(2, 12, true); } break;
-                case 0x28: { if ( test_flags(Z)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x38: { if ( test_flags(C)) { pc += (s8)s.imm8 + 2; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x20: { if (!test_flags(Z)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x30: { if (!test_flags(C)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x18: { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } break;
+                case 0x28: { if ( test_flags(Z)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x38: { if ( test_flags(C)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
                 
                 case 0xc1: { bc = pop(); update(1, 12); } break;
                 case 0xd1: { de = pop(); update(1, 12); } break;
@@ -432,7 +408,7 @@ namespace gameboy {
                 case 0xf3: { ime = false; update(1, 4); } break;
 
                 // reti
-                case 0xd9: { pc = pop(); enable_interrupts(); update(1, 16, jump); } break;
+                case 0xd9: { pc = pop(); ime = true; update(1, 16, true); } break;
 
                 // cpl
                 case 0x2f: { r[a] = ~r[a]; set_flags(N | H, true); update(1, 4); } break;

@@ -150,14 +150,16 @@ namespace gameboy {
         } bg_attr;
 
         // Maybe should probably implement this as a state machine later on?
-        void render_scanline(bool window = false) {
+        void render_scanline() {
+            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]);
+
             u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
                scrolly  = window ? PPU_WY       : PPU_SCY,
                scrollx  = window ? PPU_WX       : PPU_SCX,
                tilemap  = window ? LCDC_WNDTMS  : LCDC_BGWTMS;
 
             if (TEST_REG(PPU_LCDC, sw_mask)) {
-                u8 y = r[PPU_LY] + r[scrolly];
+                u8 y = r[PPU_LY] + (window ? (-r[scrolly]) : r[scrolly]);
 
                 // Get tilemap and tileset offsets based on bits 3 and 4 of LCDC
                 u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800),
@@ -213,7 +215,7 @@ namespace gameboy {
                             out = color_palette[color];
                         }
 
-                        if (!(window && !color)) frame.draw(x, r[PPU_LY], sf::Color(out));
+                        frame.draw(x, r[PPU_LY], sf::Color(out));
 
                         // Recalculate offsets and settings when reaching tile boundaries
                         if (px == 0) {
@@ -276,7 +278,9 @@ namespace gameboy {
 
                         if (pal_offset) {
                             u8 color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
-                            frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
+
+                            if ((x + (bx-8) < PPU_WIDTH) && (y + (by-16) < PPU_HEIGHT))
+                                frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
                         }
 
                         if (x_flip) { x--; } else { x++; }
@@ -394,7 +398,9 @@ namespace gameboy {
                                 if (TEST_REG(PPU_LCDC, LCDC_SPDISP)) render_sprites();
 
                                 //window.clear(sf::Color::Black);
+
                                 window.draw(*frame.get_drawable());
+                                frame.clear();
                             }
 
                             update_window();
@@ -447,7 +453,6 @@ namespace gameboy {
 
                         if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
                             render_scanline();
-                            render_scanline(true);
                         }
                     }
                 }

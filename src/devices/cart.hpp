@@ -93,6 +93,9 @@ namespace gameboy {
                 case 0x1c: { cartridge = new mbc5(sav); } break;
                 case 0x1d: { cartridge = new mbc5(sav); } break;
                 case 0x1e: { cartridge = new mbc5(sav); } break;
+
+                // Pocket camera
+                case 0xfc: { cartridge = new mbc1(sav); } break;
                 // ...
                 // Unsupported cartridge types:
                 // - MMM01
@@ -121,8 +124,7 @@ namespace gameboy {
             if (written_to_sram) {
                 std::ofstream sav(sav_name, std::ios::binary);
 
-                sav.write((char*)cartridge->get_sram(), 0x2000);
-                sav.close();
+                cartridge->save_sram(sav);
             }
         }
 

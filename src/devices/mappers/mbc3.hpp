@@ -9,6 +9,7 @@ namespace gameboy {
         class mbc3 : public mapper {
             typedef std::array <u8, 0x4000> rom_bank_t;
             typedef std::array <u8, 0x2000> sram_bank_t;
+            typedef std::array <sram_bank_t, 8> sram_t;
 
             std::array <sram_bank_t, 8> sram;
             std::vector <rom_bank_t> rom;
@@ -18,7 +19,7 @@ namespace gameboy {
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
             
-            bool sram_enabled = false;
+            bool sram_enabled = true;
 
         public:
             mbc3(std::ifstream& sav) {
@@ -35,6 +36,15 @@ namespace gameboy {
             u8* get_bank0() { return rom[0].data(); }
             u8* get_bank1() { return current_rom_bank->data(); }
             u8* get_sram() { return current_sram_bank->data(); }
+            
+            void save_sram(std::ofstream& sav) override {
+                if (sav.is_open()) {
+                    for (sram_bank_t& b : sram) {
+                        sav.write((char*)b.data(), b.size());
+                    }
+                }
+                sav.close();
+            }
             
             void init(std::ifstream* f) override {
                 tag = mapper_tag::mbc3;
