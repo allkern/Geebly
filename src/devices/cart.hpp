@@ -64,38 +64,54 @@ namespace gameboy {
 
             std::ifstream sav(sav_name);
 
+            struct cartridge_settings_t {
+                mapper_tag  type;
+                bool        sram_present,
+                            sram_battery_backed;
+            };
+
+            // WIP
+            //static const std::unordered_map <u8, cartridge_settings_t> settings_map = {
+            //    { 0x00, { mapper_tag::no_cart   , false, false } },
+            //    { 0x01, { mapper_tag::mbc1      , false, false } },
+            //    { 0x02, { mapper_tag::mbc1      , true , false } },
+            //    { 0x03, { mapper_tag::mbc1      , true , true  } },
+            //    { 0x05, { mapper_tag::mbc2      , true , false } },
+            //    { 0x06, { mapper_tag::mbc2      , true , true  } }
+            //};
+
             switch (header[HDR_CART_TYPE]) {
-                case 0x00: { cartridge = new rom_only(); } break;
-                case 0x01: { cartridge = new mbc1(sav); } break;
-                case 0x02: { cartridge = new mbc1(sav); } break;
-                case 0x03: { cartridge = new mbc1(sav); } break;
+                case 0x00: { cartridge = new rom_only();           } break;
+                case 0x01: { cartridge = new mbc1();               } break;
+                case 0x02: { cartridge = new mbc1(true);           } break;
+                case 0x03: { cartridge = new mbc1(true, &sav);     } break;
                 // 0x04 unused
-                case 0x05: { cartridge = new mbc2(sav); } break;
-                case 0x06: { cartridge = new mbc2(sav); } break;
+                case 0x05: { cartridge = new mbc2();               } break;
+                case 0x06: { cartridge = new mbc2(&sav);           } break;
                 // 0x07 unused
-                case 0x08: { cartridge = new rom_only(); } break;
-                case 0x09: { cartridge = new rom_only(); } break;
+                case 0x08: { cartridge = new rom_only(true);       } break;
+                case 0x09: { cartridge = new rom_only(true, &sav); } break;
                 // 0x0a unused
                 // MMM01 unimplemented, probably MBC1-like?
 
                 // MBC3 carts, RTC not supported
-                case 0x0f: { cartridge = new mbc3(sav); } break;
-                case 0x10: { cartridge = new mbc3(sav); } break;
-                case 0x11: { cartridge = new mbc3(sav); } break;
-                case 0x12: { cartridge = new mbc3(sav); } break;
-                case 0x13: { cartridge = new mbc3(sav); } break;
+                case 0x0f: { cartridge = new mbc3();               } break;
+                case 0x10: { cartridge = new mbc3(true, &sav);     } break;
+                case 0x11: { cartridge = new mbc3();               } break;
+                case 0x12: { cartridge = new mbc3(true);           } break;
+                case 0x13: { cartridge = new mbc3(true, &sav);     } break;
                 // 0x14-0x18 unused
-                case 0x19: { cartridge = new mbc5(sav); } break;
-                case 0x1a: { cartridge = new mbc5(sav); } break;
-                case 0x1b: { cartridge = new mbc5(sav); } break;
+                case 0x19: { cartridge = new mbc5();               } break;
+                case 0x1a: { cartridge = new mbc5(true);           } break;
+                case 0x1b: { cartridge = new mbc5(true, &sav);     } break;
 
                 // Rumble carts, rumble not supported
-                case 0x1c: { cartridge = new mbc5(sav); } break;
-                case 0x1d: { cartridge = new mbc5(sav); } break;
-                case 0x1e: { cartridge = new mbc5(sav); } break;
+                case 0x1c: { cartridge = new mbc5();               } break;
+                case 0x1d: { cartridge = new mbc5(true);           } break;
+                case 0x1e: { cartridge = new mbc5(true, &sav);     } break;
 
                 // Pocket camera
-                case 0xfc: { cartridge = new mbc1(sav); } break;
+                case 0xfc: { cartridge = new mbc3(true, &sav);     } break;
                 // ...
                 // Unsupported cartridge types:
                 // - MMM01

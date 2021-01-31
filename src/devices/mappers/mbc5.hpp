@@ -19,15 +19,23 @@ namespace gameboy {
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
             
-            bool sram_enabled = true;
+            bool sram_enabled = true,
+                 sram_present = false,
+                 sram_battery_backed = false;
 
         public:
-            mbc5(std::ifstream& sav) {
-                if (sav.is_open()) {
+            mbc5(bool has_sram = false, std::ifstream* sav = nullptr) {
+                sram_present = has_sram;
+                sram_battery_backed = sram_present && (sav != nullptr);
+
+                if (!sram_battery_backed) return;
+
+                if (sav->is_open()) {
                     for (sram_bank_t& b : sram) {
-                        sav.read((char*)b.data(), b.size());
+                        sav->read((char*)b.data(), b.size());
                     }
-                    sav.close();
+
+                    sav->close();
                 }
             }
 
@@ -37,13 +45,17 @@ namespace gameboy {
             u8* get_bank1() { return current_rom_bank->data(); }
             u8* get_sram() { return current_sram_bank->data(); }
             
-            void save_sram(std::ofstream& sav) override {
+            bool save_sram(std::ofstream& sav) override {
+                if (!sram_battery_backed) return false;
+
                 if (sav.is_open()) {
                     for (sram_bank_t& b : sram) {
                         sav.write((char*)b.data(), 0x2000);
                     }
                 }
                 sav.close();
+
+                return true;
             }
             
             void init(std::ifstream* f) override {

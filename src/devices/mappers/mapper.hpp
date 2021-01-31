@@ -18,7 +18,9 @@ namespace gameboy {
             mbc1,
             mbc2,
             mbc3,
-            no_cart = 0x100
+            mbc5,
+            no_cart = 0x100,
+            unknown = 0x200
         };
 
         class mapper {
@@ -30,7 +32,7 @@ namespace gameboy {
             virtual u8* get_bank0() { return nullptr; };
             virtual u8* get_bank1() { return nullptr; };
             virtual u8* get_sram() { return nullptr; };
-            virtual void save_sram(std::ofstream& sav) { };
+            virtual bool save_sram(std::ofstream& sav) { return false; };
 
             virtual void init(std::ifstream*) {};
             virtual u32 read(u16, size_t) { return 0; };
