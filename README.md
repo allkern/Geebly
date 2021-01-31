@@ -41,7 +41,7 @@ Out of nowhere, there's now Game Boy Color emulation! This mostly comprises addi
 - `BCPD/BGPD`
 
 ### CPU
-The CPU is fully implemented, with the exception of `stop` and `halt`, both are emulated as NOPs.
+The CPU is fully implemented, with the exception of `stop`, which is emulated as a NOP.
 
 Interrupts are partially supported, Vblank (`VBL`) is the only one that's currently implemented, Joypad (`JOYP`), and Timer (`TMI`) interrupts are WIP.
 
@@ -77,8 +77,4 @@ The noise channel's sound is completely off, the documented frequency calculatio
 `DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated. The timer interrupt `TMI` is not yet implemented.
 
 ### Blargg's tests
-`cpu_instrs.gb` reports 11 out of 11 tests failed.
-Explanation:
-In many tests (all of them?), the mechanism through which correctness is checked, is CRC checksums. These are pretty strict, and any emulation error will most probably make calculations deviate from expected and such, the resulting checksum might be wildly wrong, even if what's being tested is actually correct.
-
-I think this because the `06` test reports that every `ld r, r` instruction is wrong, if that was the case, most probably nothing would even work!
+`cpu_instrs.gb` passes all 11 tests!
