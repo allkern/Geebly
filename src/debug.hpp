@@ -13,6 +13,7 @@
 #include "devices/hram.hpp"
 #include "devices/ppu/memory.hpp"
 #include "devices/timer.hpp"
+#include "devices/ic.hpp"
 
 #ifdef _WIN32
 #include "devices/sound.hpp"
@@ -163,6 +164,10 @@ namespace gameboy {
                         Text("HL: %04x", gpr[3]->operator gameboy::u16()); NextColumn();
                         Text("H: %02x", *gpr[3]->high); NextColumn();
                         Text("L: %02x", *gpr[3]->low); NextColumn();
+
+                        Text("IF: %02x", ic::read(MMIO_IF, 1)); NextColumn();
+                        Text("IE: %02x", ic::read(MMIO_IE, 1)); NextColumn();
+                        Text("IME: %s", cpu::registers::ime ? "true" : "false"); NextColumn();
 
                         EndTabItem();
                     }

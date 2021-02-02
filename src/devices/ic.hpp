@@ -5,6 +5,10 @@
 #define MMIO_IF 0xff0f
 #define MMIO_IE 0xffff
 
+#define VBL_INT   0x1
+#define STAT_INT  0x2
+#define TIMER_INT 0x4
+
 namespace gameboy {
     namespace ic {
         u8 dummy;

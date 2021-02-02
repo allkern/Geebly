@@ -62,7 +62,6 @@ namespace gameboy {
                 cp = int(t) % tpc,
                 hf = tpc / 2;
 
-            //_log(debug, "done");
             if (cp < hf) return 0x7fff * a;
 
             return 0;
