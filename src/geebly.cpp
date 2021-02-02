@@ -64,7 +64,7 @@ int main(int argc, const char* argv[]) {
     cli::parse();
 
     // This should probably be either automatic, or somewhere else
-    settings::inaccessible_vram_emulation_enabled = cli::setting("vram-access-emulation");
+    settings::inaccessible_vram_emulation_enabled = !cli::setting("no-vram-access-emulation");
     settings::bios_checks_enabled                 = !cli::setting("no-bios-checks");
     settings::debugger_enabled                    = cli::setting("debug");
     settings::skip_bootrom                        = cli::setting("bootrom-skip");

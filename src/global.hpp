@@ -6,7 +6,7 @@ namespace gameboy {
     namespace settings {
         bool debugger_enabled = false,
              bios_checks_enabled = false,
-             inaccessible_vram_emulation_enabled = false,
+             inaccessible_vram_emulation_enabled = true,
              skip_bootrom = false,
              cgb_mode = false;
     }
