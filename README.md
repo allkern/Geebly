@@ -61,7 +61,7 @@ RTC and Rumble functions are not supported.
 ### Graphics (PPU/GPU)
 Color is supported! in CGB mode, there's two switchable VRAM banks, but the second one should contain a Background Tile Attribute Map that enables selecting CGB palettes in a per-tile basis, among other things like X/Y flipping tiles, etc.
 
-All three layers are implemented, with full scrolling support for both background and window, though a bug seems to make negative X scrolling values offset `SCY` and/or `WY` by 1 character (8 pixels).
+All three layers are implemented, with full scrolling support for both background and window.
 
 The OAM DMA controller is also implemented, it will log warnings when invalid transfers are attempted. The HDMA/GDMA CGB controllers are not yet supported, but short-term planned.
 
