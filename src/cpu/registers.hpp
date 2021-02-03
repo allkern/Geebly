@@ -18,9 +18,10 @@ namespace gameboy {
             size_t pc_increment = 0x0;
         } s;
 
-        std::atomic <bool> step;
-        std::atomic <bool> run;
-        std::atomic <bool> done;
+        // Debugging
+        std::atomic <bool> step, run, done;
+
+        bool halted, stopped;
 
         namespace registers {
             struct pair {

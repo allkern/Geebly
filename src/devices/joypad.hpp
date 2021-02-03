@@ -3,6 +3,9 @@
 #include "../aliases.hpp"
 #include "../global.hpp"
 
+#include "ic.hpp"
+#include "../cpu/registers.hpp"
+
 #ifdef __linux__
 #include "SFML/Window.hpp"
 #endif
@@ -31,17 +34,28 @@ namespace gameboy {
         bool button, direct;
         u8 buttons = 0xff;
 
+        int delay = 0;
+        bool irq = false;
+
         void keydown(sf::Keyboard::Key k) {
             switch (k) {
-                case sf::Keyboard::Enter: { buttons &= ~JOYP_START;  } break;
-                case sf::Keyboard::Q    : { buttons &= ~JOYP_SELECT; } break;
-                case sf::Keyboard::S    : { buttons &= ~JOYP_B;      } break;
-                case sf::Keyboard::A    : { buttons &= ~JOYP_A;      } break;
-                case sf::Keyboard::Right: { buttons &= ~JOYP_RIGHT;  } break;
-                case sf::Keyboard::Left : { buttons &= ~JOYP_LEFT;   } break;
-                case sf::Keyboard::Up   : { buttons &= ~JOYP_UP;     } break;
-                case sf::Keyboard::Down : { buttons &= ~JOYP_DOWN;   } break;
+                case sf::Keyboard::Enter: { buttons &= ~JOYP_START;  irq = true; } break;
+                case sf::Keyboard::Q    : { buttons &= ~JOYP_SELECT; irq = true; } break;
+                case sf::Keyboard::S    : { buttons &= ~JOYP_B;      irq = true; } break;
+                case sf::Keyboard::A    : { buttons &= ~JOYP_A;      irq = true; } break;
+                case sf::Keyboard::Right: { buttons &= ~JOYP_RIGHT;  irq = true; } break;
+                case sf::Keyboard::Left : { buttons &= ~JOYP_LEFT;   irq = true; } break;
+                case sf::Keyboard::Up   : { buttons &= ~JOYP_UP;     irq = true; } break;
+                case sf::Keyboard::Down : { buttons &= ~JOYP_DOWN;   irq = true; } break;
                 default: break;
+            }
+
+            if (irq) stopped = false;
+
+            if (settings::enable_joyp_irq_delay) {
+                if (irq) delay = rand() % 1000;
+            } else {
+                ic::ref(MMIO_IF) |= JOYP_INT;
             }
         }
 
@@ -72,6 +86,15 @@ namespace gameboy {
             if (direct) return 0xe0 | (buttons >> 4);
 
             return 0xff;
+        }
+
+        void update() {
+            if (irq) {
+                if (!(delay--)) {
+                    ic::ref(MMIO_IF) |= JOYP_INT;
+                    delay = 0; irq = 0;
+                }
+            }
         }
     }
 }

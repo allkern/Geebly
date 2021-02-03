@@ -53,7 +53,7 @@ namespace gameboy {
 
             if (tima & 0xff00) { 
                 tima = tma;
-                ic::ia |= 0x4;
+                ic::ia |= TIMER_INT;
             }
 
             if (((div >> 3) & mask[tac.f]) && tac.enable) tima++;

@@ -58,8 +58,7 @@ namespace gameboy {
             }
         }
         
-        bool halted = false,
-             halt_bug = false,
+        bool halt_bug = false,
              halt_ime_state = false,
              ei_issued = false;
         int  ei_delay = 0;
@@ -70,11 +69,9 @@ namespace gameboy {
         inline void handle_interrupts() {
             using namespace registers;
 
-            if (ei_issued) {
-                if (!(ei_delay--)) {
-                    ime = true;
-                    ei_issued = false;
-                }
+            if (ei_issued && !(ei_delay--)) {
+                ime = true;
+                ei_issued = false;
             }
             
             u8& ie = bus::ref(0xffff),
@@ -122,7 +119,7 @@ namespace gameboy {
                 if (!run) { while (step) { GEEBLY_PERF_SLEEP } }
             }
 
-            if (halted) goto skip;
+            if (halted || stopped) goto skip;
             
             switch (opcode) {
                 // nop

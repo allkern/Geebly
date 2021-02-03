@@ -8,6 +8,7 @@
 #define VBL_INT   0x1
 #define STAT_INT  0x2
 #define TIMER_INT 0x4
+#define JOYP_INT  0x10
 
 namespace gameboy {
     namespace ic {

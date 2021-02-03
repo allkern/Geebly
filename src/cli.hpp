@@ -77,6 +77,8 @@ namespace cli {
             DEFINE_SETTING("--scale", "-s", "scale");
 
             DEFINE_SWITCH("--debug", "-d", "debug");
+            DEFINE_SWITCH("--enable-joyp-irq-delay", "-Ejoyp-irq-delay", "joyp-irq-delay");
+            DEFINE_SWITCH("--disable-joyp-irq-delay", "-Eno-joyp-irq-delay", "no-joyp-irq-delay");
             DEFINE_SWITCH("--cgb-mode", "-Ecgb", "cgb-mode");
             DEFINE_SWITCH("--patch-bios-checks", "-Bno-checks", "no-bios-checks");
             DEFINE_SWITCH("--no-patch-bios-checks", "-Bchecks", "bios-checks");

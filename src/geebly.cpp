@@ -64,8 +64,9 @@ int main(int argc, const char* argv[]) {
     cli::parse();
 
     // This should probably be either automatic, or somewhere else
-    settings::inaccessible_vram_emulation_enabled = !cli::setting("no-vram-access-emulation");
     settings::bios_checks_enabled                 = !cli::setting("no-bios-checks");
+    settings::enable_joyp_irq_delay               = !cli::setting("no-joyp-irq-delay");
+    settings::inaccessible_vram_emulation_enabled = cli::setting("vram-access-emulation");
     settings::debugger_enabled                    = cli::setting("debug");
     settings::skip_bootrom                        = cli::setting("bootrom-skip");
     settings::cgb_mode                            = cli::setting("cgb-mode");
@@ -120,13 +121,14 @@ int main(int argc, const char* argv[]) {
 
         if (settings::debugger_enabled) {
             if (cpu::done) {
-                ppu::cycle();
-                timer::update();
+                if (!cpu::stopped) ppu::cycle();
+                if (!cpu::stopped) timer::update();
                 cpu::done = false;
             }
         } else {
-            ppu::cycle();
-            timer::update();
+            if (!cpu::stopped) ppu::cycle();
+            if (!cpu::stopped) timer::update();
+            if (settings::enable_joyp_irq_delay) joypad::update();
         }
 
         if (settings::debugger_enabled) {
