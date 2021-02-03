@@ -75,7 +75,7 @@ Both square channels support volume envelope, trigger, sound length, but not swe
 The noise channel's sound is completely off, the documented frequency calculation formula gave out really high frequencies that were inaudible, and so I had to workaround scaling them so something could be heard, this resulted in a high pitched sound being audible alongside the noise, which is undesirable, but at least we get to hear noise stabs or percussion-like sounds.
 
 ### Timers
-`DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated..
+`DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated.
 
 ### Blargg's tests
 `cpu_instrs.gb` passes all 11 tests!
