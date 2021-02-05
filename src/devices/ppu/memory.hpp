@@ -26,18 +26,22 @@ namespace gameboy {
         typedef std::array <u8, 0x40>   cgb_palette_ram_t;
         typedef std::array <u8, 0xc>    ppu_registers_t;
 
-        u8 cgb_palette_idx = 0, dummy = 0;
+        u8 cgb_bg_palette_idx = 0,
+           cgb_spr_palette_idx = 0,
+           dummy = 0;
 
         std::array <vram_bank_t, 2> vram;
         
         ppu_registers_t   r = { 0 };
         oam_t             oam  = { 0 };
-        cgb_palette_ram_t cgb_palette = { 0 };
+        cgb_palette_ram_t cgb_bg_palette = { 0 };
+        cgb_palette_ram_t cgb_spr_palette = { 0 };
 
         size_t current_bank_idx = 0;
         vram_bank_t* current_bank = &vram[current_bank_idx];
 
-        bool auto_inc = false;
+        bool bg_auto_inc = false,
+             spr_auto_inc = false;
 
         int clk;
     }

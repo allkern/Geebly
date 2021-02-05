@@ -6,12 +6,12 @@
 #include "ic.hpp"
 #include "../cpu/registers.hpp"
 
-#ifdef __linux__
-#include "SFML/Window.hpp"
+#ifdef _WIN32
+#include "SDL.h"
 #endif
 
-#ifdef _WIN32
-#include "SFML\Window.hpp"
+#ifdef __linux__
+#include "SDL2/SDL.h"
 #endif
 
 #include <unordered_map>
@@ -37,16 +37,16 @@ namespace gameboy {
         int delay = 0;
         bool irq = false;
 
-        void keydown(sf::Keyboard::Key k) {
+        void keydown(SDL_Keycode k) {
             switch (k) {
-                case sf::Keyboard::Enter: { buttons &= ~JOYP_START;  irq = true; } break;
-                case sf::Keyboard::Q    : { buttons &= ~JOYP_SELECT; irq = true; } break;
-                case sf::Keyboard::S    : { buttons &= ~JOYP_B;      irq = true; } break;
-                case sf::Keyboard::A    : { buttons &= ~JOYP_A;      irq = true; } break;
-                case sf::Keyboard::Right: { buttons &= ~JOYP_RIGHT;  irq = true; } break;
-                case sf::Keyboard::Left : { buttons &= ~JOYP_LEFT;   irq = true; } break;
-                case sf::Keyboard::Up   : { buttons &= ~JOYP_UP;     irq = true; } break;
-                case sf::Keyboard::Down : { buttons &= ~JOYP_DOWN;   irq = true; } break;
+                case SDLK_RETURN: { buttons &= ~JOYP_START;  irq = true; } break;
+                case SDLK_q     : { buttons &= ~JOYP_SELECT; irq = true; } break;
+                case SDLK_s     : { buttons &= ~JOYP_B;      irq = true; } break;
+                case SDLK_a     : { buttons &= ~JOYP_A;      irq = true; } break;
+                case SDLK_RIGHT : { buttons &= ~JOYP_RIGHT;  irq = true; } break;
+                case SDLK_LEFT  : { buttons &= ~JOYP_LEFT;   irq = true; } break;
+                case SDLK_UP    : { buttons &= ~JOYP_UP;     irq = true; } break;
+                case SDLK_DOWN  : { buttons &= ~JOYP_DOWN;   irq = true; } break;
                 default: break;
             }
 
@@ -59,16 +59,16 @@ namespace gameboy {
             }
         }
 
-        void keyup(sf::Keyboard::Key k) {
+        void keyup(SDL_Keycode k) {
             switch (k) {
-                case sf::Keyboard::Enter: { buttons |= JOYP_START;  } break;
-                case sf::Keyboard::Q    : { buttons |= JOYP_SELECT; } break;
-                case sf::Keyboard::S    : { buttons |= JOYP_B;      } break;
-                case sf::Keyboard::A    : { buttons |= JOYP_A;      } break;
-                case sf::Keyboard::Right: { buttons |= JOYP_RIGHT;  } break;
-                case sf::Keyboard::Left : { buttons |= JOYP_LEFT;   } break;
-                case sf::Keyboard::Up   : { buttons |= JOYP_UP;     } break;
-                case sf::Keyboard::Down : { buttons |= JOYP_DOWN;   } break;
+                case SDLK_RETURN: { buttons |= JOYP_START;  } break;
+                case SDLK_q     : { buttons |= JOYP_SELECT; } break;
+                case SDLK_s     : { buttons |= JOYP_B;      } break;
+                case SDLK_a     : { buttons |= JOYP_A;      } break;
+                case SDLK_RIGHT : { buttons |= JOYP_RIGHT;  } break;
+                case SDLK_LEFT  : { buttons |= JOYP_LEFT;   } break;
+                case SDLK_UP    : { buttons |= JOYP_UP;     } break;
+                case SDLK_DOWN  : { buttons |= JOYP_DOWN;   } break;
                 default: break;
             }
             

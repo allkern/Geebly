@@ -12,7 +12,7 @@
 #include "devices/clock.hpp"
 
 // Sound emulation is not yet supported on Linux platforms
-#ifdef _WIN32
+#ifdef XD
 #include "devices/sound.hpp"
 #endif
 
@@ -126,7 +126,7 @@ namespace gameboy {
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
 #ifdef _WIN32
-            if (addr >= SOUND_BEGIN && addr <= SOUND_END) { sound::write(addr, value, size); }
+            //if (addr >= SOUND_BEGIN && addr <= SOUND_END) { sound::write(addr, value, size); }
 #endif
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
 

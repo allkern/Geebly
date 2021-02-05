@@ -53,7 +53,7 @@ namespace cli {
         return is_defined(key);
     }
 
-    void init(size_t argc, const char* argv[]) {
+    void init(size_t argc, char* argv[]) {
         if (argc) {
             cli.reserve(argc-1);
 

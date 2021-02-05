@@ -1,65 +1,16 @@
-#define SFML_DEFINE_DISCRETE_GPU_PREFERENCE
-
 #include "aliases.hpp"
-#include "cpu/thread.hpp"
+//#include "cpu/thread.hpp"
 #include "cpu/cpu.hpp"
 #include "cpu/mnemonics.hpp"
 #include "log.hpp"
 
 #include "global.hpp"
-#include "debug.hpp"
+//#include "debug.hpp"
 #include "cli.hpp"
-
-#include <csignal>
 
 using namespace gameboy;
 
-void sigsegv_handler(int sig) {
-    #ifdef __linux__
-        char buf[256];
-
-        sprintf(
-            &buf[0],
-            "zenity --error --width 300 --text \"SIGSEGV (%i) raised.\npc=%04x,\nsp=%04x,\naf=%04x,\nbc=%04x,\nde=%04x,\nhl=%04x,\ni=\'%s\' (%02x),\nimm=%04x,\nimm8=%02x,\nj=%i\"",
-            sig,
-            cpu::registers::pc,
-            cpu::registers::sp,
-            (u16)cpu::registers::af,
-            (u16)cpu::registers::bc,
-            (u16)cpu::registers::de,
-            (u16)cpu::registers::hl,
-            mnemonics[cpu::s.opcode].c_str(),
-            cpu::s.opcode,
-            cpu::s.imm,
-            cpu::s.imm8,
-            cpu::s.jump
-        );
-
-        int i = system(&buf[0]);
-    #endif
-
-    #ifndef __linux__
-        _log(error,
-            "SIGSEGV (%i) raised. pc=%04x, sp=%04x, af=%04x, bc=%04x, de=%04x, hl=%04x, i=%s (%02x), imm=%04x, imm8=%02x, j=%i",
-            sig,
-            cpu::registers::pc,
-            cpu::registers::sp,
-            (u16)cpu::registers::af,
-            (u16)cpu::registers::bc,
-            (u16)cpu::registers::de,
-            (u16)cpu::registers::hl,
-            mnemonics[cpu::s.opcode].c_str(),
-            cpu::s.opcode,
-            cpu::s.imm,
-            cpu::s.imm8,
-            cpu::s.jump
-        );
-    #endif
-    
-    std::exit(1);
-}
-
-int main(int argc, const char* argv[]) {
+int main(int argc, char *argv[]) {
     cli::init(argc, argv);
     cli::parse();
 
@@ -74,7 +25,7 @@ int main(int argc, const char* argv[]) {
     _log::init("geebly");
 
     // Clean this up
-    std::signal(SIGSEGV, sigsegv_handler);
+    //std::signal(SIGSEGV, sigsegv_handler);
 
     if (!settings::skip_bootrom)
         bios::init(cli::setting("bios", settings::cgb_mode ? "cgb_bios.bin" : "bios.bin"));
@@ -94,6 +45,7 @@ int main(int argc, const char* argv[]) {
     wram::init();
     
     hram::init();
+    
 
     ppu::init(std::stoi(cli::setting("scale", "1")));
 
@@ -104,12 +56,12 @@ int main(int argc, const char* argv[]) {
     clock::init(cpu::registers::last_instruction_cycles);
 
 #ifdef _WIN32
-    sound::init();
+    //sound::init();
 #endif
 
     if (settings::debugger_enabled) {
-        debug::init();
-        cpu_thread::init();
+        //debug::init();
+        //cpu_thread::init();
     }
 
     int counter = 1000;
@@ -132,16 +84,20 @@ int main(int argc, const char* argv[]) {
         }
 
         if (settings::debugger_enabled) {
-            if (debug::run) {
-                if (!(counter--)) {
-                    debug::update();
-                    counter = 1000;
-                }
-            } else {
-                debug::update();
-            }
+            // if (debug::run) {
+            //     if (!(counter--)) {
+            //         debug::update();
+            //         counter = 1000;
+            //     }
+            // } else {
+            //     debug::update();
+            // }
         }
     }
 
+    ppu::close();
+
     cart::create_sav_file();
+
+    return 0;
 }
