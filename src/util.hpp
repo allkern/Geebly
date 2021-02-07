@@ -8,7 +8,7 @@ namespace gameboy {
     namespace utility {
         struct ttas_lock {
         private:
-            std::atomic<bool> lock_ = {false};
+            std::atomic<bool> lock_ = { false };
 
         public:
             void unlock() { lock_.store(false, std::memory_order_release); }

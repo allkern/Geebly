@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
     clock::init(cpu::registers::last_instruction_cycles);
 
 #ifdef _WIN32
-    //sound::init();
+    spu::init();
 #endif
 
     if (settings::debugger_enabled) {
@@ -75,11 +75,17 @@ int main(int argc, char *argv[]) {
             if (cpu::done) {
                 if (!cpu::stopped) ppu::cycle();
                 if (!cpu::stopped) timer::update();
+                #ifdef _WIN32
+                    if (!cpu::stopped) spu::update();
+                #endif
                 cpu::done = false;
             }
         } else {
             if (!cpu::stopped) ppu::cycle();
             if (!cpu::stopped) timer::update();
+            #ifdef _WIN32
+                if (!cpu::stopped) spu::update();
+            #endif
             if (settings::enable_joyp_irq_delay) joypad::update();
         }
 

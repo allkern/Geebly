@@ -19,18 +19,36 @@ namespace gameboy {
          tilted_cartridge = false;
 
     namespace utility {
-        inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t region_offset = 0) {
+        /**
+         *  \brief Read from the specified buffer
+         *
+         *  \param buffer Pointer to a memory buffer
+         *  \param addr   Address to read from
+         *  \param size   Amount of bytes to read
+         *  \param offset Offset of this buffer in the memory map
+         * 
+         *  \return LE representation of requested bytes
+         */
+        inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t offset = 0) {
             u32 d = 0;
             while (size) {
-                d |= buffer[(addr+(size-1))-region_offset] << (((size--)-1)*8);
+                d |= buffer[(addr+(size-1))-offset] << (((size--)-1)*8);
             }
             return d;
         }
         
-        inline void default_mb_write(u8* buffer, u16 addr, u16 value, size_t size, size_t region_offset) {
+        /**
+         *  \brief Write to the specified buffer
+         *
+         *  \param buffer Pointer to a memory buffer
+         *  \param addr   The address to write to
+         *  \param size   The amount of bytes to write (normally 1 or 2)
+         *  \param offset Offset of this buffer in the memory map
+         */
+        inline void default_mb_write(u8* buffer, u16 addr, u16 value, size_t size, size_t offset) {
             while (size--) {
                 //buffer[(addr+size)-region_offset] = (value & (0xff << size*8)) >> (size*8);
-                buffer[(addr+size)-region_offset] = value >> (size*8);
+                buffer[(addr+size)-offset] = value >> (size*8);
             }
         }
     }

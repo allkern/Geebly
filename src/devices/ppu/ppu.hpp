@@ -155,7 +155,7 @@ namespace gameboy {
         }
 
         void init(int scale) {
-            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
 
             frame.init(PPU_WIDTH, PPU_HEIGHT, lgw::argb(color_palette[3]));
 
@@ -600,3 +600,5 @@ namespace gameboy {
         }
     }
 }
+
+#undef TEST_REG
