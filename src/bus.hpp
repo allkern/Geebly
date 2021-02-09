@@ -13,7 +13,9 @@
 
 // Sound emulation is not yet supported on Linux platforms
 #ifdef _WIN32
-#include "devices/spu.hpp"
+#ifndef GEEBLY_NO_SOUND
+#include "devices/spu/spu.hpp"
+#endif
 #endif
 
 // Clean this whole file up
@@ -126,7 +128,9 @@ namespace gameboy {
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
 #ifdef _WIN32
+#ifndef GEEBLY_NO_SOUND
             if (addr >= SPU_BEGIN && addr <= SPU_END) { spu::write(addr, value, size); }
+#endif
 #endif
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
 

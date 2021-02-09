@@ -1,3 +1,5 @@
+//#define GEEBLY_NO_SOUND
+
 #include "aliases.hpp"
 //#include "cpu/thread.hpp"
 #include "cpu/cpu.hpp"
@@ -46,7 +48,6 @@ int main(int argc, char *argv[]) {
     
     hram::init();
     
-
     ppu::init(std::stoi(cli::setting("scale", "1")));
 
     cpu::init();
@@ -56,7 +57,9 @@ int main(int argc, char *argv[]) {
     clock::init(cpu::registers::last_instruction_cycles);
 
 #ifdef _WIN32
+#ifndef GEEBLY_NO_SOUND
     spu::init();
+#endif
 #endif
 
     if (settings::debugger_enabled) {
@@ -76,7 +79,9 @@ int main(int argc, char *argv[]) {
                 if (!cpu::stopped) ppu::cycle();
                 if (!cpu::stopped) timer::update();
                 #ifdef _WIN32
+                #ifndef GEEBLY_NO_SOUND
                     if (!cpu::stopped) spu::update();
+                #endif
                 #endif
                 cpu::done = false;
             }
@@ -84,7 +89,9 @@ int main(int argc, char *argv[]) {
             if (!cpu::stopped) ppu::cycle();
             if (!cpu::stopped) timer::update();
             #ifdef _WIN32
+            #ifndef GEEBLY_NO_SOUND
                 if (!cpu::stopped) spu::update();
+            #endif
             #endif
             if (settings::enable_joyp_irq_delay) joypad::update();
         }

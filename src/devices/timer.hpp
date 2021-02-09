@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../aliases.hpp"
+#include "../cpu/registers.hpp"
+
 #include "clock.hpp"
 #include "ic.hpp"
 
@@ -53,7 +55,7 @@ namespace gameboy {
 
             if (tima & 0xff00) { 
                 tima = tma;
-                ic::ia |= TIMER_INT;
+                //ic::ia |= IRQ_TIMER;
             }
 
             if (((div >> 3) & mask[tac.f]) && tac.enable) tima++;

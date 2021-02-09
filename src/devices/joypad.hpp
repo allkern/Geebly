@@ -55,7 +55,7 @@ namespace gameboy {
             if (settings::enable_joyp_irq_delay) {
                 if (irq) delay = rand() % 1000;
             } else {
-                ic::ref(MMIO_IF) |= JOYP_INT;
+                ic::ref(MMIO_IF) |= IRQ_JOYP;
             }
         }
 
@@ -80,8 +80,6 @@ namespace gameboy {
         }
 
         u8 read() {
-            u8 r = 0;
-
             if (button) return 0xd0 | (buttons & 0xf);
             if (direct) return 0xe0 | (buttons >> 4);
 
@@ -91,7 +89,7 @@ namespace gameboy {
         void update() {
             if (irq) {
                 if (!(delay--)) {
-                    ic::ref(MMIO_IF) |= JOYP_INT;
+                    ic::ref(MMIO_IF) |= IRQ_JOYP;
                     delay = 0; irq = 0;
                 }
             }

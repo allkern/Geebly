@@ -77,14 +77,16 @@ namespace gameboy {
             u8& ie = bus::ref(0xffff),
               & ia = bus::ref(0xff0f);
 
+
             u8 i = GEEBLY_PERF_FFS(ie & ia & 0x1f);
 
             if (!i) return;
 
             if (ime) {
+                ime = false;
                 if (halted) registers::last_instruction_cycles = 4;
                 ia &= ~(1 << (i-1));
-                ime = false;
+                
                 call(0x40 + (0x8 * (i - 1)));
             }
 
