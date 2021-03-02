@@ -1,8 +1,3 @@
-@font-face {
-  font-family: 'cascadia';
-  src: url('fonts/CascadiaCode.ttf') format('truetype');
-}
-
 html, body {
   height: 100%;
 }
@@ -65,19 +60,19 @@ html, body {
   margin-left: 25px;
   font-family: "Source Code Pro", monospace;
   font-size: 30px;
-  letter-spacing: -2px;
+  letter-spacing: -3px;
 }
 
 .download-button-version-info-title {
   margin-left: 25px;
-  letter-spacing: -2px;
+  letter-spacing: -3px;
   font-family: "Source Code Pro", monospace;
   font-size: 55px;
 }
 
 .download-button-version-info-release-date {
   margin-left: 25px;
-  letter-spacing: -2px;
+  letter-spacing: -3px;
   font-family: "Source Code Pro", monospace;
   font-size: 30px;
   opacity: 70%;
