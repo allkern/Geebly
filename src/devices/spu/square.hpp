@@ -9,18 +9,18 @@ namespace gameboy {
         int16_t generate_square_sample(double t, double f, double a, double dc) {
             if ((!dc) || (!f) || (!a)) return 0x0;
 
-            double c = (SPU_SAMPLERATE * 2) / f,
+            double c = SPU_SAMPLERATE / f,
                    h = c / dc;
                    
-            if (!((u32)std::floor(c))) return 0x0;
+            if (!((u32)std::round(c))) return 0x0;
 
-            double s = detail::sign(((u32)std::floor(t) % (u32)std::floor(c)) - h);
+            double s = detail::sign(((u32)std::round(t) % (u32)std::round(c)) - h);
             return s * (a * 0x7fff);
-            //t /= SPU_SAMPLERATE;
-            //return detail::sign(std::sin((2.0 * M_PI) * f * t)) * (a * 0x7fff);
         }
         
         struct square_t {
+            double clk = 0.0;
+
             u8* nr = nullptr;
 
             struct current_sound_t {
@@ -58,10 +58,9 @@ namespace gameboy {
                         }
 
                         return sample;
-
-                        if (SDL_GetQueuedAudioSize(dev) > 0x10000) SDL_ClearQueuedAudio(dev);
                     } else {
                         cs.playing = false;
+                        return 0;
                     }
                 } else {
                     return 0;
@@ -83,12 +82,13 @@ namespace gameboy {
                            envl = ((double)envc / 64.0) * SPU_SAMPLERATE;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
+                    // Prevent SIGFPE
                     double envs = 1 / (double)(envc ? envc : 1);
 
                     size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_SAMPLERATE;
 
                     double dc = duty_cycles[nr[SPUNR_LENC & LENC_WDUTY] >> 6];
-                                
+
                     cs = {
                         true,   // cs.playing
                         i,      // cs.infinite
@@ -103,6 +103,22 @@ namespace gameboy {
                         a,      // cs.current_amp
                         dc      // cs.dc
                     };
+
+                    //_log(debug,
+                    //    "full ch1/ch2 channel state:\n\tplaying=%s\n\ti=%s\n\tenvc=%s\n\tlen=%llu\n\tenvc=%llu\n\tenvl=%llu\n\tenvr=%llu\n\tenvs=%f\n\tenvd=%s\n\tf=%f\n\ta=%f\n\tdc=%f",
+                    //    cs.playing ? "true" : "false",
+                    //    cs.infinite ? "true" : "false",
+                    //    cs.env_enabled ? "true" : "false",
+                    //    cs.remaining_samples,
+                    //    cs.env_step_count,
+                    //    cs.env_step_length,
+                    //    cs.env_step_remaining,
+                    //    cs.env_step,
+                    //    cs.env_direction ? "up" : "down",
+                    //    cs.current_freq,
+                    //    cs.current_amp,
+                    //    cs.dc
+                    //);
                 }
             }
 

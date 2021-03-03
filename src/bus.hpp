@@ -5,9 +5,14 @@
 #include "devices/cart.hpp"
 #include "devices/wram.hpp"
 #include "devices/hram.hpp"
+
+
 #include "devices/ppu/ppu.hpp"
+
+
 #include "devices/ic.hpp"
 #include "devices/dma/dma.hpp"
+#include "devices/dma/hdma.hpp"
 #include "devices/timer.hpp"
 #include "devices/clock.hpp"
 
@@ -63,6 +68,7 @@ namespace gameboy {
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { return timer::read(addr, size); }
 
             if (addr == MMIO_DMA_TRANSFER) { return dma::read(addr, size); }
+            if (addr >= HDMA_BEGIN && addr <= HDMA_END) { return hdma::read(addr, size); }
             if (addr == MMIO_KEY1) { return clock::read(addr, size); }
             if (addr == MMIO_SVBK) { return wram::read(addr, size); }
 
@@ -94,6 +100,7 @@ namespace gameboy {
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::ref(addr); }
 
             if (addr == MMIO_DMA_TRANSFER) { return dma::ref(addr); }
+            if (addr >= HDMA_BEGIN && addr <= HDMA_END) { return hdma::ref(addr); }
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { return timer::ref(addr); }
 
@@ -125,6 +132,7 @@ namespace gameboy {
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
 
             if (addr == MMIO_JOYP) { ppu::write(addr, value, size); return; }
+            
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
 #ifdef _WIN32
@@ -133,13 +141,13 @@ namespace gameboy {
 #endif
 #endif
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
+            if (addr >= HDMA_BEGIN && addr <= HDMA_END) { hdma::write(addr, value, size); return; }
 
-            // Handle a WRITE to a PPU register
+            // Handle a write to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { ppu::write(addr, value, size); return; }
-            if ((addr >= 0xff68 && addr <= 0xff69) || addr == 0xff4f) { ppu::write(addr, value, size); return; }
+            if ((addr >= 0xff68 && addr <= 0xff6b) || addr == 0xff4f) { ppu::write(addr, value, size); return; }
             if (addr == MMIO_KEY1) { clock::write(addr, value, size); return; }
             if (addr == MMIO_SVBK) { wram::write(addr, value, size); return; }
-            
 
             if (addr == MMIO_DISABLE_BOOTROM) { bootrom_enabled = false; return; }
 

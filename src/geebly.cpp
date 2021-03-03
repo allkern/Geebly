@@ -49,12 +49,14 @@ int main(int argc, char *argv[]) {
     hram::init();
     
     ppu::init(std::stoi(cli::setting("scale", "1")));
-
+    
     cpu::init();
 
     bus::init();
 
     clock::init(cpu::registers::last_instruction_cycles);
+
+    //screen::init(&ppu::frame, std::stoi(cli::setting("scale", "1")));
 
 #ifdef _WIN32
 #ifndef GEEBLY_NO_SOUND
@@ -93,7 +95,7 @@ int main(int argc, char *argv[]) {
                 if (!cpu::stopped) spu::update();
             #endif
             #endif
-            if (settings::enable_joyp_irq_delay) joypad::update();
+            //if (settings::enable_joyp_irq_delay) joypad::update();
         }
 
         if (settings::debugger_enabled) {

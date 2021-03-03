@@ -9,6 +9,7 @@ namespace gameboy {
              inaccessible_vram_emulation_enabled = false,
              skip_bootrom = false,
              cgb_mode = false,
+             cgb_dmg_mode = false,
              enable_joyp_irq_delay = false;
     }
 

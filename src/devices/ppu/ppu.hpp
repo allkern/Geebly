@@ -37,6 +37,14 @@
 #define PPU_WIDTH  160
 #define PPU_HEIGHT 144
 
+//#define GEEBLY_NES_MODE
+
+#ifdef GEEBLY_NES_MODE
+#define GEEBLY_SDL_RENDERER_SETTINGS SDL_RENDERER_ACCELERATED
+#define PPU_WIDTH 0xff
+#define PPU_HEIGHT 0xef
+#endif
+
 // PPU register indexes
 #define PPU_LCDC    0x0
 #define PPU_STAT    0x1
@@ -78,7 +86,6 @@
 #define SPATTR_TVBK 0b00001000
 #define SPATTR_PALN 0b00000111
 
-
 namespace gameboy {
     namespace ppu {
         namespace sdl {
@@ -89,7 +96,7 @@ namespace gameboy {
             bool window_is_open = false;
         }
 
-        lgw::framebuffer <160, 144> frame;
+        lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> frame;
 
         u32 color_palette[] = {
             0xfffffffful,
@@ -124,7 +131,7 @@ namespace gameboy {
 
         inline void init_window(size_t scale, bool fullscreen = false) {
             sdl::window = SDL_CreateWindow(
-                "Geebly SDL2 Test",
+                "Geebly",
                 SDL_WINDOWPOS_UNDEFINED,
                 SDL_WINDOWPOS_UNDEFINED,
                 PPU_WIDTH * scale, PPU_HEIGHT * scale,
@@ -148,6 +155,7 @@ namespace gameboy {
         // Fix JOYP emulation
         inline void update_window() {
             SDL_Event event;
+            
             if (SDL_PollEvent(&event)) {
                 switch (event.type) {
                     case SDL_QUIT: { window_closed = true; } break;
@@ -197,10 +205,19 @@ namespace gameboy {
             bool vram_bank, xflip, yflip, priority;
         } bg_attr;
 
-        u8 counter = 0;
+#ifdef GEEBLY_NES_MODE
+        u8 counter = 1;
+#endif
 
         // Maybe should probably implement this as a state machine later on?
         void render_scanline() {
+#ifdef GEEBLY_NES_MODE
+            if (counter--) {
+                return;
+            } else {
+                counter = 1;
+            }
+#endif
             bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]);
 
             u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
@@ -275,7 +292,7 @@ namespace gameboy {
                             char_base = CHAR_OFFSET;
 
                             if (settings::cgb_mode) {
-                                u8 bg_attr_byte = vram[1][TILE_OFFSET];
+                                u8 bg_attr_byte = vram[1][((tm_off & 0xff00) | ((tm_off & 0xff) % 0x20)) + ((y >> 3) << 5)];
 
                                 bg_attr.bgp       = (bg_attr_byte & 0x7);
                                 bg_attr.vram_bank = (bool)(bg_attr_byte & 0x8);
@@ -308,10 +325,10 @@ namespace gameboy {
                 
                 u8 by = oam[addr++],
                    bx = oam[addr++],
-                   t = oam[addr++] & (TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 0xfe : 0xff),
+                   t = oam[addr++],
                    attr = oam[addr++];
 
-                if (settings::cgb_mode && (attr & SPATTR_TVBK)) spr_bank = &vram[1];
+                //if (settings::cgb_mode && !(attr & SPATTR_TVBK)) spr_bank = &vram[1];
 
                 bool x_flip = (attr & SPATTR_XFLP),
                      y_flip = (attr & SPATTR_YFLP);
@@ -321,9 +338,17 @@ namespace gameboy {
 
                 for (int y = y_start; y_flip ? y > y_end : y < y_end;) {
                     int y_off = y_flip ? ((spsize-1) - (y % spsize)) : (y % spsize);
+
+                    //if (TEST_REG(PPU_LCDC, LCDC_SPSIZE)) {
+                    //    if (y > 8) {
+                    //        t |= 0x1;
+                    //    } else {
+                    //        t &= 0xfe;
+                    //    }
+                    //}
                     
-                    u8 l = (*spr_bank)[(t * 16) + (y_off * 2)],
-                       h = (*spr_bank)[(t * 16) + (y_off * 2) + 1];
+                    u8 l = spr_bank->at((t * 16) + (y_off * 2)),
+                       h = spr_bank->at((t * 16) + (y_off * 2) + 1);
 
                     for (int x = x_start; x_flip ? x > x_end : x < x_end;) {
                         int px = x_flip ? (x % 8) : (7 - (x % 8));
@@ -363,7 +388,8 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             // Handle JOYP reads
             if (addr == 0xff00) { return joypad::read(); }
-            if (addr == 0xff4f) { return current_bank_idx; }
+            if (addr == 0xff4f) { return 0xfe | (current_bank_idx & 0x1); }
+
             if (addr == 0xff69) {
                 return utility::default_mb_read(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, size);
             }
@@ -391,6 +417,10 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
+#ifdef GEEBLY_NES_MODE
+            if ((addr == 0xff42) || (addr == 0xff43)) return;
+#endif
+
             if (addr == 0xff00) { joypad::write(value); }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
@@ -500,7 +530,7 @@ namespace gameboy {
                             r[PPU_STAT] &= ~0x4;
                         }
 
-                        if (r[PPU_LY] == 0x90) {
+                        if (r[PPU_LY] == PPU_HEIGHT) {
                             // Switch state to Vblank
                             r[PPU_STAT] &= 0xfc;
                             r[PPU_STAT] |= 1;
@@ -597,7 +627,7 @@ namespace gameboy {
                 }
             }
             
-            clk += clock::get();
+            clk += clock::get() >> 2;
         }
     }
 }

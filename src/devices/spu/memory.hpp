@@ -17,8 +17,6 @@ namespace gameboy {
 
         duty_cycles_t duty_cycles = { 8.0, 4.0, 2.0, 1.5 };
 
-        double clk = 0.0;
-
         nr_t nr = {
             0x80, 0xbf, 0xf3, 0xff, 0x3f, 0xff,
             0x3f, 0x00, 0xff, 0xbf,
