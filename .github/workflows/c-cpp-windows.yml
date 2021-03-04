@@ -15,3 +15,5 @@ jobs:
       uses: egor-tensin/setup-mingw@v2
       with:
         platform: x64
+    - name: Build
+      run: ./build-win.bat
