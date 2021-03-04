@@ -11,5 +11,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - uses: suisei-cn/actions-download-file@v1
+      id: sdl2-package  # Remember to give an ID if you need the output filename
+      name: Download the file
+      with:
+        url: "https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz"
+        target: public/
     - name: Prepare Tools
-      run: choco install tartool
+      run: |
+           c++ --version
+           7z e SDL2-devel-2.0.14-mingw.tar.gz
