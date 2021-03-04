@@ -2,7 +2,7 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ sdl2 ]
+    branches: [ main ]
 
 jobs:
   build:
