@@ -11,9 +11,12 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Download and setup SDL2
+    - name: Setup dependencies
       run: |
-           tar --version
+           Invoke-WebRequest https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz -o sdl2-package.tar.gz
+           tar xzvf sdl2-package.tar.gz
+           dir
+           git clone https://github.com/Lycoder/lgw
     - name: Prepare tools
       run: |
            c++ --version
