@@ -11,9 +11,5 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Set up MinGW
-      uses: egor-tensin/setup-mingw@v2
-      with:
-        platform: x64
-    - name: Build
-      run: ./build-win.bat
+    - name: Prepare Tools
+      run: choco install tartool
