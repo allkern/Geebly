@@ -11,5 +11,11 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: install-lgw
+      run: |
+           git clone https://github.com/Lycoder/lgw
+           cd lgw
+           make install
+           cd ..
     - name: make
       run: make
