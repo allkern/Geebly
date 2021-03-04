@@ -1,0 +1,23 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: install-deps
+      run: |
+           sudo apt update
+           sudo apt install libsdl2-dev
+           git clone https://github.com/Lycoder/lgw
+           cd lgw
+           make install
+           cd ..
+    - name: make
+      run: make
