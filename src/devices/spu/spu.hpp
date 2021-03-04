@@ -32,7 +32,7 @@ namespace gameboy {
             desired.freq        = SPU_SAMPLERATE;
             desired.format      = AUDIO_S16SYS;
             desired.channels    = 1;
-            desired.samples     = 0xc00; // 64 ms buffer
+            desired.samples     = 1024;
             desired.callback    = nullptr;
             desired.userdata    = nullptr;
 

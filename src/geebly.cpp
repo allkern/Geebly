@@ -30,7 +30,7 @@ int main(int argc, char *argv[]) {
     //std::signal(SIGSEGV, sigsegv_handler);
 
     if (!settings::skip_bootrom)
-        bios::init(cli::setting("bios", settings::cgb_mode ? "cgb_bios.bin" : "bios.bin"));
+        bios::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
 
     // Patch infinite loops for 2 NOPs
     if (!settings::bios_checks_enabled) {

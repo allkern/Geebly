@@ -8,7 +8,7 @@
     #include "SDL2/SDL_audio.h"
 #endif
 
-#define SPU_SAMPLERATE 48000
+#define SPU_SAMPLERATE 65536
 #define SPU_BEGIN 0xff10
 #define SPU_END 0xff3f
 

@@ -73,7 +73,7 @@ namespace cli {
         if (cli.size()) {
             int i = 0;
             
-            DEFINE_SETTING("--bios", "-b", "bios");
+            DEFINE_SETTING("--boot", "-b", "boot");
             DEFINE_SETTING("--scale", "-s", "scale");
 
             DEFINE_SWITCH("--debug", "-d", "debug");
