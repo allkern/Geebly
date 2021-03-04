@@ -16,32 +16,33 @@ jobs:
            Invoke-WebRequest https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz -o sdl2-package.tar.gz
            tar xzvf sdl2-package.tar.gz
            git clone https://github.com/Lycoder/lgw
+    
     - name: Build
       run: |
            ./build-win-workflow "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
+    
     - name: Package
       run: |
-           $compress = @{Path = "build/geebly.exe", "SDL2-2.0.14/x86_64-w64-mingw32/bin/SDL2.dll", "README.md"
-           CompressionLevel = "Fastest"
-	         DestinationPath = "geebly-release-07b-50e4056.zip"}
-           Compress-Archive @compress
+           Compress-Archive -Path "build/geebly.exe", "SDL2-2.0.14/x86_64-w64-mingw32/bin/SDL2.dll", "README.md" -DestinationPath "geebly-release-07b-50e4056.zip" -CompressionLevel "Fastest"
+    
     - name: Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          draft: true
-          prerelease: true
-      - name: Upload
-        id: upload-release-asset 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-          asset_path: ./geebly-release-07b-50e4056.zip
-          asset_name: geebly-release-07b-50e4056.zip
-          asset_content_type: application/zip
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        draft: true
+        prerelease: true
+	
+    - name: Upload
+      id: upload-release-asset 
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./geebly-release-07b-50e4056.zip
+        asset_name: geebly-release-07b-50e4056.zip
+        asset_content_type: application/zip
