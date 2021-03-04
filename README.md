@@ -22,12 +22,13 @@ Here's all the settings currently present in the CLI:
 |Setting|Shorthand|Description|Default|
 |--|--|--|--|
 |`--debug`|`-d`|Enable the Geebly Debugger|Disabled
-|`--boot`|`-b`|Specify a Boot ROM|`"dmg_boot.bin"`
+|`--boot`|`-b`|Specify a boot ROM|`"dmg_boot.bin"`
 |`--scale`|`-s`|Set the display scale|1
 |`--no-patch-bios-checks`/`--patch-bios-checks`|`-Bchecks`/`-Bno-checks`|Patch Boot ROM checks|No patches
 |`--no-skip-bootrom`/`--skip-bootrom`|`-Bno-skip`/`-Bskip`|Skip the scrolling boot logo|No skip
 |`--vram-access-emulation`/`--no-vram-access-emulation`|`Evram-access`/`-Eno-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Disabled
-|`--cgb-mode`|`-Ecgb`|Hardware identifies itself as CGB (GBC) when enabled|Disabled
+|`--cgb-mode`|`-Ecgb`|Switches to CGB (Game Boy Color) mode|Disabled
+|`--enable-joyp-irq-delay/--disable-joyp-irq-delay`|`-Ejoyp-irq-delay/-Eno-joyp-irq-delay`|Enable/disable JOYP IRQ delay|Enabled
 
 ## Current state
 ### Game Boy Color Emulation
@@ -41,9 +42,9 @@ Out of nowhere, there's now Game Boy Color emulation! This mostly comprises addi
 - `BCPD/BGPD`
 
 ### CPU
-The CPU is fully implemented, with the exception of `stop`, which is emulated as a NOP.
+The CPU is fully implemented.
 
-Interrupts are partially supported, Vblank (`VBL`) is the only one that's currently implemented, Joypad (`JOYP`), and Timer (`TMI`) interrupts are WIP.
+Almost all IRQs are supported, with the exception of `SC` (no Serial support yet), plus `STAT` might be broken, but testing points to it being close to perfectly emulated.
 
 ### Mapper/cartridge type support
 Most common mappers are fully implemented, that is:
@@ -60,7 +61,7 @@ RTC and Rumble functions are not supported.
 ### Graphics (PPU/GPU)
 Color is supported! in CGB mode, there's two switchable VRAM banks, but the second one should contain a Background Tile Attribute Map that enables selecting CGB palettes in a per-tile basis, among other things like X/Y flipping tiles, etc.
 
-All three layers are implemented, with full scrolling support for both background and window, though a bug seems to make negative X scrolling values offset `SCY` and/or `WY` by 1 character (8 pixels).
+All three layers are implemented, with full scrolling support for both background and window.
 
 The OAM DMA controller is also implemented, it will log warnings when invalid transfers are attempted. The HDMA/GDMA CGB controllers are not yet supported, but short-term planned.
 
@@ -74,7 +75,7 @@ Both square channels support volume envelope, trigger, sound length, but not swe
 The noise channel's sound is completely off, the documented frequency calculation formula gave out really high frequencies that were inaudible, and so I had to workaround scaling them so something could be heard, this resulted in a high pitched sound being audible alongside the noise, which is undesirable, but at least we get to hear noise stabs or percussion-like sounds.
 
 ### Timers
-`DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated. The timer interrupt `TMI` is not yet implemented.
+`DIV` and `TIMA` (`TAC` and `TMA` aswell) are accurately emulated.
 
 ### Blargg's tests
 `cpu_instrs.gb` passes all 11 tests!
