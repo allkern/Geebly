@@ -37,6 +37,9 @@
 #define PPU_WIDTH  160
 #define PPU_HEIGHT 144
 
+#define TO_STRING(m) STR(m)
+#define STR(m) #m
+
 //#define GEEBLY_NES_MODE
 
 #ifdef GEEBLY_NES_MODE
@@ -131,7 +134,8 @@ namespace gameboy {
 
         inline void init_window(size_t scale, bool fullscreen = false) {
             sdl::window = SDL_CreateWindow(
-                "Geebly",
+                "Geebly " TO_STRING(GEEBLY_VERSION_MAJOR) "." TO_STRING(GEEBLY_VERSION_MINOR) TO_STRING(GEEBLY_VERSION_CLASS) " "
+                TO_STRING(GEEBLY_COMMIT_ID),
                 SDL_WINDOWPOS_UNDEFINED,
                 SDL_WINDOWPOS_UNDEFINED,
                 PPU_WIDTH * scale, PPU_HEIGHT * scale,
@@ -501,6 +505,8 @@ namespace gameboy {
              hbl_stat_fired = false;
         
         void cycle() {
+            if (stopped) r[PPU_LCDC] &= ~LCDC_SWITCH;
+            
             switch (r[PPU_STAT] & 3) {
                 // HBlank mode
                 case 0: {

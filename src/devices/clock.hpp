@@ -13,7 +13,7 @@ namespace gameboy {
         u8* clock;
 
         bool do_switch() {
-            if (switch_wait) {
+            if (switch_wait && settings::cgb_mode) {
                 switch_wait = false;
                 double_speed = !double_speed;
                 scale *= double_speed ? 2 : 0.5;
