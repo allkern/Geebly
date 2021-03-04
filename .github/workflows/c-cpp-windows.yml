@@ -18,4 +18,4 @@ jobs:
            git clone https://github.com/Lycoder/lgw
     - name: Build
       run: |
-           ./build-win-workflow "SDL2-2.0.14/include" "SDL2-2.0.14/lib" "lgw/"
+           ./build-win-workflow "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
