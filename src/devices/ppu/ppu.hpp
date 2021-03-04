@@ -6,13 +6,7 @@
 
 #include "lgw/framebuffer.hpp"
 
-#ifdef _WIN32
-#include "SDL.h"
-#endif
-
-#ifdef __linux__
 #include "SDL2/SDL.h"
-#endif
 
 #include "../../aliases.hpp"
 #include "../../global.hpp"

@@ -1,12 +1,6 @@
 #pragma once
 
-#ifdef _WIN32
-    #include "SDL_audio.h"
-#endif
-
-#ifdef __linux__
-    #include "SDL2/SDL_audio.h"
-#endif
+#include "SDL2/SDL_audio.h"
 
 #define SPU_SAMPLERATE 65536
 #define SPU_BEGIN 0xff10

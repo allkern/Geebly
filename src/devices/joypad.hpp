@@ -6,13 +6,7 @@
 #include "ic.hpp"
 #include "../cpu/registers.hpp"
 
-#ifdef _WIN32
-#include "SDL.h"
-#endif
-
-#ifdef __linux__
 #include "SDL2/SDL.h"
-#endif
 
 #include <unordered_map>
 
