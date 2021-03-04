@@ -16,7 +16,7 @@ jobs:
            Invoke-WebRequest https://www.libsdl.org/release/SDL2-devel-2.0.14-VC.zip -o sdl2-package.tar.gz
            tar xzvf sdl2-package.tar.gz
            git clone https://github.com/Lycoder/lgw
-           dir SDL2-2.0.14/x86_64-w64-mingw32/lib/x64
+           dir SDL2-2.0.14/lib/x64
     - name: Build
       run: |
-           ./build-win-workflow "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib/x64" "lgw/"
+           ./build-win-workflow "SDL2-2.0.14/include" "SDL2-2.0.14/lib/x64" "lgw/"
