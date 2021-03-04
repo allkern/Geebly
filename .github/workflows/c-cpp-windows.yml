@@ -17,6 +17,6 @@ jobs:
            tar xzvf sdl2-package.tar.gz
            dir
            git clone https://github.com/Lycoder/lgw
-    - name: Prepare tools
+    - name: Build
       run: |
-           c++ --version
+           ./build-win-workflow SDL2-2.0.14\x86_64-w64-mingw32\include SDL2-2.0.14\x86_64-w64-mingw32\lib\x64 lgw\
