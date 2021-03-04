@@ -11,8 +11,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Download SDL2
-      run: Get-Location
-    - name: Prepare Tools
+    - name: Download and setup SDL2
+      run: |
+           wget https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz -o sdl2-package.tar.gz
+           tar --version
+    - name: Prepare tools
       run: |
            c++ --version
