@@ -1,6 +1,8 @@
 #pragma once
 
 #include "../aliases.hpp"
+#include "../cpu/registers.hpp"
+
 #include "clock.hpp"
 #include "ic.hpp"
 
@@ -13,16 +15,18 @@
 
 namespace gameboy {
     namespace timer {
+        enum frequency_t {
+            f4khz,
+            f262khz,
+            f65khz,
+            f16khz
+        };
+
         u8 dummy;
         u16 div = 0x4, tima = 0x0, tma = 0x0;
 
         struct tac_t {
-            enum frequency {
-                f4khz,
-                f262khz,
-                f65khz,
-                f16khz
-            } f : 2;
+            frequency_t f : 2;
             bool enable : 1;
         } tac;
 
@@ -39,7 +43,7 @@ namespace gameboy {
             if (addr == MMIO_DIV ) { div = 0x0; return; }
             if (addr == MMIO_TIMA) { tima = value & 0xff; return; }
             if (addr == MMIO_TMA ) { tma = value & 0xff; return; }
-            if (addr == MMIO_TAC ) { tac.f = (tac_t::frequency)(value & 0x2); tac.enable = (value & 0x4); return; }
+            if (addr == MMIO_TAC ) { tac.f = (frequency_t)(value & 0x2); tac.enable = (value & 0x4); return; }
         }
 
         u8& ref(u16 addr) {
@@ -53,7 +57,7 @@ namespace gameboy {
 
             if (tima & 0xff00) { 
                 tima = tma;
-                ic::ia |= TIMER_INT;
+                //ic::ia |= IRQ_TIMER;
             }
 
             if (((div >> 3) & mask[tac.f]) && tac.enable) tima++;

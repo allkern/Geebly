@@ -5,10 +5,10 @@
 #define MMIO_IF 0xff0f
 #define MMIO_IE 0xffff
 
-#define VBL_INT   0x1
-#define STAT_INT  0x2
-#define TIMER_INT 0x4
-#define JOYP_INT  0x10
+#define IRQ_VBL   0x1
+#define IRQ_STAT  0x2
+#define IRQ_TIMER 0x4
+#define IRQ_JOYP  0x10
 
 namespace gameboy {
     namespace ic {

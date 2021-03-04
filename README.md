@@ -22,7 +22,7 @@ Here's all the settings currently present in the CLI:
 |Setting|Shorthand|Description|Default|
 |--|--|--|--|
 |`--debug`|`-d`|Enable the Geebly Debugger|Disabled
-|`--bios`|`-b`|Specify a Boot ROM|`"dmg_boot.bin"`
+|`--boot`|`-b`|Specify a boot ROM|`"dmg_boot.bin"`
 |`--scale`|`-s`|Set the display scale|1
 |`--no-patch-bios-checks`/`--patch-bios-checks`|`-Bchecks`/`-Bno-checks`|Patch Boot ROM checks|No patches
 |`--no-skip-bootrom`/`--skip-bootrom`|`-Bno-skip`/`-Bskip`|Skip the scrolling boot logo|No skip

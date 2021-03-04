@@ -2,7 +2,18 @@
 
 #include <iostream>
 
-#include "../../lgw/framebuffer.hpp"
+#define LGW_FORMAT_ARGB8888
+
+#include "lgw/framebuffer.hpp"
+
+#ifdef _WIN32
+#include "SDL.h"
+#endif
+
+#ifdef __linux__
+#include "SDL2/SDL.h"
+#endif
+
 #include "../../aliases.hpp"
 #include "../../global.hpp"
 #include "../joypad.hpp"
@@ -13,8 +24,26 @@
 #include <cstdlib>
 #include <array>
 
+#ifdef _WIN32
+#define GEEBLY_SDL_RENDERER_FLAG SDL_WINDOW_VULKAN
+#define GEEBLY_SDL_RENDERER_SETTINGS (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
+#endif
+
+#ifdef __linux__
+#define GEEBLY_SDL_RENDERER_FLAG SDL_WINDOW_OPENGL
+#define GEEBLY_SDL_RENDERER_SETTINGS SDL_RENDERER_PRESENTVSYNC
+#endif
+
 #define PPU_WIDTH  160
 #define PPU_HEIGHT 144
+
+//#define GEEBLY_NES_MODE
+
+#ifdef GEEBLY_NES_MODE
+#define GEEBLY_SDL_RENDERER_SETTINGS SDL_RENDERER_ACCELERATED
+#define PPU_WIDTH 0xff
+#define PPU_HEIGHT 0xef
+#endif
 
 // PPU register indexes
 #define PPU_LCDC    0x0
@@ -53,28 +82,34 @@
 #define SPATTR_XFLP 0b00100000
 #define SPATTR_PALL 0b00010000
 
+// CGB mode
+#define SPATTR_TVBK 0b00001000
+#define SPATTR_PALN 0b00000111
+
 namespace gameboy {
     namespace ppu {
-        sf::RenderWindow window(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly", sf::Style::Titlebar | sf::Style::Close);
-        lgw::framebuffer frame;
+        namespace sdl {
+            SDL_Window*   window   = nullptr;
+            SDL_Renderer* renderer = nullptr;
+            SDL_Texture*  texture  = nullptr;
 
+            bool window_is_open = false;
+        }
 
-        bool fullscreen = false;
-        double fullscreen_scale = 0;
-        size_t original_scale = 1;
+        lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> frame;
 
         u32 color_palette[] = {
             0xfffffffful,
-            0xaaaaaafful,
-            0x555555fful,
-            0x000000fful
+            0xffaaaaaaul,
+            0xff555555ul,
+            0xff000000ul
         };
 
         //u32 color_palette[] = {
-        //    0xe0f8d0fful,
-        //    0x88c070fful,
-        //    0x346856fful,
-        //    0x081820fful
+        //    0xffe0f8d0ul,
+        //    0xff88c070ul,
+        //    0xff346856ul,
+        //    0xff081820ul
         //};
 
         //u32 color_palette[] = {
@@ -95,70 +130,52 @@ namespace gameboy {
         #define TEST_REG(reg, mask) (r[reg] & mask)
 
         inline void init_window(size_t scale, bool fullscreen = false) {
-            window.setFramerateLimit(60);
+            sdl::window = SDL_CreateWindow(
+                "Geebly",
+                SDL_WINDOWPOS_UNDEFINED,
+                SDL_WINDOWPOS_UNDEFINED,
+                PPU_WIDTH * scale, PPU_HEIGHT * scale,
+                GEEBLY_SDL_RENDERER_FLAG
+            );
 
-            // Holding a key would act like a turbo button otherwise
-            window.setKeyRepeatEnabled(false);
+            sdl::renderer = SDL_CreateRenderer(
+                sdl::window,
+                -1,
+                GEEBLY_SDL_RENDERER_SETTINGS
+            );
 
-            if (!fullscreen) window.setSize(sf::Vector2u(PPU_WIDTH*scale, PPU_HEIGHT*scale));
+            sdl::texture = SDL_CreateTexture(
+                sdl::renderer,
+                SDL_PIXELFORMAT_ARGB8888,
+                SDL_TEXTUREACCESS_STREAMING,
+                PPU_WIDTH, PPU_HEIGHT
+            );
         }
 
         // Fix JOYP emulation
         inline void update_window() {
-            sf::Event event;
-            if (window.pollEvent(event)) {
+            SDL_Event event;
+            
+            if (SDL_PollEvent(&event)) {
                 switch (event.type) {
-                    case sf::Event::Closed: { window.close(); window_closed = true; return; } break;
-                    case sf::Event::KeyPressed: {
-                        if (event.key.code == sf::Keyboard::Escape) {
-                            if (fullscreen) {
-                                window.create(sf::VideoMode(PPU_WIDTH, PPU_HEIGHT), "Geebly", sf::Style::Titlebar | sf::Style::Close);
-
-                                auto f = frame.get_drawable();
-
-                                f->setPosition(0, 0);
-                                f->setScale(1, 1);
-
-                                fullscreen = false;
-
-                                init_window(original_scale, fullscreen);
-                            } else {
-                                window.create(sf::VideoMode::getFullscreenModes().at(0), "Geebly", sf::Style::Fullscreen);
-                                fullscreen = true;
-
-                                init_window(original_scale, fullscreen);
-
-                                auto f = frame.get_drawable();
-                                auto ws = window.getSize();
-
-                                //f->setPosition((ws.x / 2) - ((PPU_WIDTH * original_scale) / 2), 0);
-                                f->setScale((1080.0/(double)PPU_HEIGHT), (1080.0/(double)PPU_HEIGHT));
-
-                                auto nws = f->getGlobalBounds();
-                                f->setPosition((ws.x / 2) - (nws.width / 2), 0);
-                            }
-                        }
-                        joypad::keydown(event.key.code);
-                    } break;
-                    case sf::Event::KeyReleased: { joypad::keyup(event.key.code); } break;
+                    case SDL_QUIT: { window_closed = true; } break;
+                    case SDL_KEYDOWN: { if (!event.key.repeat) joypad::keydown(event.key.keysym.sym); } break;
+                    case SDL_KEYUP: { joypad::keyup(event.key.keysym.sym); } break;
                     default: break;
                 }
             }
         }
 
         void init(int scale) {
-            frame.init(PPU_WIDTH, PPU_HEIGHT, sf::Color(color_palette[3]));
-
-            original_scale = scale;
-
-            fullscreen_scale = sf::VideoMode::getFullscreenModes().at(0).height / PPU_WIDTH;
+            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
 
             init_window(scale);
 
-            // Fill VRAM and OAM with random values 
+            // Initialize VRAM bank 0 and 1, OAM, and CGB palettes with random values
             srand(time(NULL));
 
-            for (auto& b : cgb_palette) { b = rand() % 0xff; }
+            for (auto& b : cgb_bg_palette) { b = rand() % 0xff; }
+            for (auto& b : cgb_spr_palette) { b = rand() % 0xff; }
             for (auto& b : vram[0]) { b = rand() % 0xff; }
             for (auto& b : vram[1]) { b = rand() % 0xff; }
             for (auto& b : oam) { b = rand() % 0xff; }
@@ -188,8 +205,19 @@ namespace gameboy {
             bool vram_bank, xflip, yflip, priority;
         } bg_attr;
 
+#ifdef GEEBLY_NES_MODE
+        u8 counter = 1;
+#endif
+
         // Maybe should probably implement this as a state machine later on?
         void render_scanline() {
+#ifdef GEEBLY_NES_MODE
+            if (counter--) {
+                return;
+            } else {
+                counter = 1;
+            }
+#endif
             bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]);
 
             u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
@@ -201,8 +229,7 @@ namespace gameboy {
                 u8 y = r[PPU_LY] + (window ? (-r[scrolly]) : r[scrolly]);
 
                 // Get tilemap and tileset offsets based off bits 3 and 4 of LCDC
-                u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800),
-                    tileset_offset = (TEST_REG(PPU_LCDC, LCDC_BGWTSS) ? 0x0 : 0x800);
+                u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800);
                 
                 #define TILE_OFFSET (tilemap_offset + ((y >> 3) << 5) + (r[scrollx] >> 3))
 
@@ -245,17 +272,17 @@ namespace gameboy {
                         if (settings::cgb_mode) {
                             color = pal_offset;
                             u8 off = (bg_attr.bgp << 3) + (color << 1);
-                            u16 p = cgb_palette[off] | (cgb_palette[off+1] << 8);
+                            u16 p = cgb_bg_palette[off] | (cgb_bg_palette[off+1] << 8);
                             u8 r = (p & 0x1f) << 3,
                                g = (((p >> 0x5) & 0x1f) << 3),
                                b = (((p >> 0xa) & 0x1f) << 3);
-                            out = ((u32)r << 0x18) | ((u32)g << 0x10) | ((u32)b << 0x8) | 0xff;
+                            out = lgw::rgb(r, g, b);
                         } else {
                             color = (r[PPU_BGP] >> (pal_offset * 2)) & 0x3;
                             out = color_palette[color];
                         }
 
-                        frame.draw(x, r[PPU_LY], sf::Color(out));
+                        frame.draw(x, r[PPU_LY], out);
 
                         // Recalculate offsets and settings when reaching tile boundaries
                         if (px == 0) {
@@ -265,7 +292,7 @@ namespace gameboy {
                             char_base = CHAR_OFFSET;
 
                             if (settings::cgb_mode) {
-                                u8 bg_attr_byte = vram[1][TILE_OFFSET];
+                                u8 bg_attr_byte = vram[1][((tm_off & 0xff00) | ((tm_off & 0xff) % 0x20)) + ((y >> 3) << 5)];
 
                                 bg_attr.bgp       = (bg_attr_byte & 0x7);
                                 bg_attr.vram_bank = (bool)(bg_attr_byte & 0x8);
@@ -286,9 +313,9 @@ namespace gameboy {
         void render_sprites() {
             u16 addr = 0;
 
-            u32 draw_color = 0;
-
             int spsize = TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 16 : 8;
+
+            vram_bank_t* spr_bank = &vram[0];
 
             while (addr <= 0x9f) {
                 int y_start = 0,
@@ -298,8 +325,10 @@ namespace gameboy {
                 
                 u8 by = oam[addr++],
                    bx = oam[addr++],
-                   t = oam[addr++] & (TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 0xfe : 0xff),
+                   t = oam[addr++],
                    attr = oam[addr++];
+
+                //if (settings::cgb_mode && !(attr & SPATTR_TVBK)) spr_bank = &vram[1];
 
                 bool x_flip = (attr & SPATTR_XFLP),
                      y_flip = (attr & SPATTR_YFLP);
@@ -310,8 +339,16 @@ namespace gameboy {
                 for (int y = y_start; y_flip ? y > y_end : y < y_end;) {
                     int y_off = y_flip ? ((spsize-1) - (y % spsize)) : (y % spsize);
 
-                    u8 l = vram[0][(t * 16) + (y_off * 2)],
-                       h = vram[0][(t * 16) + (y_off * 2) + 1];
+                    //if (TEST_REG(PPU_LCDC, LCDC_SPSIZE)) {
+                    //    if (y > 8) {
+                    //        t |= 0x1;
+                    //    } else {
+                    //        t &= 0xfe;
+                    //    }
+                    //}
+                    
+                    u8 l = spr_bank->at((t * 16) + (y_off * 2)),
+                       h = spr_bank->at((t * 16) + (y_off * 2) + 1);
 
                     for (int x = x_start; x_flip ? x > x_end : x < x_end;) {
                         int px = x_flip ? (x % 8) : (7 - (x % 8));
@@ -319,10 +356,26 @@ namespace gameboy {
                         u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
 
                         if (pal_offset) {
-                            u8 color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
+                            u8 color = 0;
+                            u32 out = 0;
 
-                            if ((x + (bx) < PPU_WIDTH) && (y + (by) < PPU_HEIGHT))
-                                frame.draw(x + (bx-8), y + (by-16), sf::Color(color_palette[color]));
+                            if (settings::cgb_mode) {
+                                color = pal_offset;
+                                u8 off = ((attr & SPATTR_PALN) << 3) + (color << 1);
+                                u16 p = cgb_spr_palette[off] | (cgb_spr_palette[off+1] << 8);
+                                //_log(debug, "p=%04x", p);
+                                u8 r = (p & 0x1f) << 3,
+                                   g = (((p >> 0x5) & 0x1f) << 3),
+                                   b = (((p >> 0xa) & 0x1f) << 3);
+
+                                out = lgw::rgb(r, g, b);
+                            } else {
+                                color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
+                                out = color_palette[color];
+                            }
+
+                            if ((x + (bx-8) < PPU_WIDTH) && (y + (by-16) < PPU_HEIGHT))
+                                frame.draw(x + (bx-8), y + (by-16), out);
                         }
 
                         if (x_flip) { x--; } else { x++; }
@@ -335,9 +388,13 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             // Handle JOYP reads
             if (addr == 0xff00) { return joypad::read(); }
-            if (addr == 0xff4f) { return current_bank_idx; }
+            if (addr == 0xff4f) { return 0xfe | (current_bank_idx & 0x1); }
+
             if (addr == 0xff69) {
-                return utility::default_mb_read(cgb_palette.data(), cgb_palette_idx >= 0x40 ? 0x40 : cgb_palette_idx, size);
+                return utility::default_mb_read(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, size);
+            }
+            if (addr == 0xff6b) {
+                return utility::default_mb_read(cgb_spr_palette.data(), cgb_spr_palette_idx >= 0x40 ? 0x40 : cgb_spr_palette_idx, size);
             }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
@@ -360,6 +417,10 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
+#ifdef GEEBLY_NES_MODE
+            if ((addr == 0xff42) || (addr == 0xff43)) return;
+#endif
+
             if (addr == 0xff00) { joypad::write(value); }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
@@ -372,16 +433,28 @@ namespace gameboy {
                 current_bank = &vram[current_bank_idx];
                 return;
             }
-
+            
             if (addr == 0xff68) {
-                cgb_palette_idx = value & 0x3f;
-                auto_inc = value & 0x80;
+                cgb_bg_palette_idx = value & 0x3f;
+                bg_auto_inc = value & 0x80;
                 return;
             }
 
             if (addr == 0xff69) {
-                utility::default_mb_write(cgb_palette.data(), cgb_palette_idx >= 0x40 ? 0x40 : cgb_palette_idx, value, size, 0);
-                if (auto_inc) cgb_palette_idx++;
+                utility::default_mb_write(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, value, size, 0);
+                if (bg_auto_inc) cgb_bg_palette_idx++;
+                return;
+            }
+
+            if (addr == 0xff6a) {
+                cgb_spr_palette_idx = value & 0x3f;
+                spr_auto_inc = value & 0x80;
+                return;
+            }
+
+            if (addr == 0xff6b) {
+                utility::default_mb_write(cgb_spr_palette.data(), cgb_spr_palette_idx >= 0x40 ? 0x40 : cgb_spr_palette_idx, value, size, 0);
+                if (spr_auto_inc) cgb_spr_palette_idx++;
                 return;
             }
 
@@ -414,6 +487,12 @@ namespace gameboy {
             return dummy;
         }
 
+        void close() {
+            SDL_DestroyWindow(sdl::window);
+            SDL_DestroyRenderer(sdl::renderer);
+            SDL_Quit();
+        }
+
         // Clean this up
         bool vbl_pure_fired = false,
              lyc_stat_fired = false,
@@ -428,7 +507,7 @@ namespace gameboy {
                     if (clk >= 204) {
                         if (TEST_REG(PPU_STAT, STAT_MODE00)) {
                             if (!hbl_stat_fired) {
-                                ic::ref(0xff0f) |= STAT_INT;
+                                ic::ref(0xff0f) |= IRQ_STAT;
                                 hbl_stat_fired = true;
                             }
                         }
@@ -439,7 +518,7 @@ namespace gameboy {
                         if (r[PPU_LY] == r[PPU_LYC]) {
                             if (TEST_REG(PPU_STAT, STAT_LYCNSD)) {
                                 if (!lyc_stat_fired) {
-                                    ic::ref(0xff0f) |= STAT_INT;
+                                    ic::ref(0xff0f) |= IRQ_STAT;
                                     lyc_stat_fired = true;
                                 }
                             }
@@ -451,22 +530,32 @@ namespace gameboy {
                             r[PPU_STAT] &= ~0x4;
                         }
 
-                        if (r[PPU_LY] == 0x90) {
+                        if (r[PPU_LY] == PPU_HEIGHT) {
                             // Switch state to Vblank
                             r[PPU_STAT] &= 0xfc;
                             r[PPU_STAT] |= 1;
                             
                             // Draw frame
+                            SDL_RenderClear(sdl::renderer);
+
                             if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
                                 if (TEST_REG(PPU_LCDC, LCDC_SPDISP)) render_sprites();
 
-                                window.draw(*frame.get_drawable());
+                                SDL_UpdateTexture(
+                                    sdl::texture,
+                                    NULL,
+                                    frame.get_buffer(),
+                                    PPU_WIDTH * sizeof(uint32_t)
+                                );
+                                
+                                SDL_RenderCopy(sdl::renderer, sdl::texture, NULL, NULL);
+                                
                                 frame.clear();
                             }
 
                             update_window();
 
-                            window.display();
+                            SDL_RenderPresent(sdl::renderer);
                         } else {
                             // Switch to OAM read
                             r[PPU_STAT] &= 0xfc;
@@ -481,13 +570,13 @@ namespace gameboy {
                     if (clk >= 456) {
                         // Fire interrupt
                         if (!vbl_pure_fired) {
-                            ic::ref(0xff0f) |= VBL_INT;
+                            ic::ref(0xff0f) |= IRQ_VBL;
                             vbl_pure_fired = true;
                         }
 
                         if (TEST_REG(PPU_STAT, STAT_MODE01)) {
                             if (!vbl_stat_fired) {
-                                ic::ref(0xff0f) |= STAT_INT;
+                                ic::ref(0xff0f) |= IRQ_STAT;
                                 vbl_stat_fired = true;
                             }
                         }
@@ -511,7 +600,7 @@ namespace gameboy {
 
                     if (TEST_REG(PPU_STAT, STAT_MODE02)) {
                         if (!oam_stat_fired) {
-                            ic::ref(0xff0f) |= STAT_INT;
+                            ic::ref(0xff0f) |= IRQ_STAT;
                             oam_stat_fired = true;
                         }
                     }
@@ -538,7 +627,9 @@ namespace gameboy {
                 }
             }
             
-            clk += clock::get();
+            clk += clock::get() >> 2;
         }
     }
 }
+
+#undef TEST_REG

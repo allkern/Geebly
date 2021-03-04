@@ -38,7 +38,6 @@ namespace gameboy {
         }
 
         u32 read(u16 addr, size_t size) {
-            u32 d = 0;
             if (addr == MMIO_SVBK) return settings::cgb_mode ? (0xf8 | current_bank_idx) : 0xff;
 
             if (addr >= WRA0_BEGIN && addr <= WRA0_END) {

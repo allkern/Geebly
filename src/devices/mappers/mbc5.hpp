@@ -34,7 +34,6 @@ namespace gameboy {
                     for (sram_bank_t& b : sram) {
                         sav->read((char*)b.data(), b.size());
                     }
-
                     sav->close();
                 }
             }
