@@ -11,8 +11,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: install-lgw
+    - name: install-deps
       run: |
+           sudo apt update
+           sudo apt install libsdl2-dev
            git clone https://github.com/Lycoder/lgw
            cd lgw
            make install
