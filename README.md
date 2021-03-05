@@ -1,9 +1,9 @@
-![workflow badge](https://github.com/Lycoder/Geebly/actions/workflows/windows-workflow.yml/badge.svg)
-![workflow badge](https://github.com/Lycoder/Geebly/actions/workflows/ubuntu-workflow.yml/badge.svg)
 <p align="center">
   <img src="https://user-images.githubusercontent.com/15825466/97769482-3c496d00-1b0a-11eb-8930-72a60e210d15.png">
 </p>
 
+![workflow badge](https://github.com/Lycoder/Geebly/actions/workflows/windows-workflow.yml/badge.svg)
+![workflow badge](https://github.com/Lycoder/Geebly/actions/workflows/ubuntu-workflow.yml/badge.svg)
 # Geebly
 A Gameboy/Color emulator written in C++, currently under development.
 <p align="center">
