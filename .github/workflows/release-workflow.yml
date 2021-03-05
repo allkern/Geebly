@@ -1,0 +1,13 @@
+name: Release CI
+
+on:
+  release:
+    branches: [ main ]
+
+jobs:
+  rel:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Release
+      run: dir
