@@ -9,9 +9,9 @@ namespace gameboy {
         int16_t r = 0;
 
         int16_t generate_noise_sample(double t, double f, double a) {
-            if ((!f) || (f >= SPU_SAMPLERATE) || (!a)) return 0x0;
+            if ((!f) || (f >= SPU_NATIVE_SAMPLERATE) || (!a)) return 0x0;
 
-            double c = SPU_SAMPLERATE / f;
+            double c = SPU_NATIVE_SAMPLERATE / f;
             
             if (!(((u32)std::round(t) % (u32)std::round(c)))) r = (rand() % 3) - 1;
 
@@ -80,12 +80,12 @@ namespace gameboy {
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
                     size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * SPU_SAMPLERATE;
+                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE / 4;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
                     double envs = 1 / (double)(envc ? envc : 1);
 
-                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_SAMPLERATE;
+                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_NATIVE_SAMPLERATE;
 
                     cs = {
                         true,   // cs.playing

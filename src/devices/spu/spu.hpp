@@ -29,14 +29,18 @@ namespace gameboy {
         }
 
         void init() {
-            desired.freq        = SPU_SAMPLERATE;
+            SDL_AudioSpec obtained;
+
+            desired.freq        = SPU_DEVICE_SAMPLERATE;
             desired.format      = AUDIO_S16SYS;
             desired.channels    = 1;
             desired.samples     = 1024;
             desired.callback    = nullptr;
             desired.userdata    = nullptr;
 
-            dev = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
+            dev = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
+
+            _log(debug, "obtained.freq=%llu", obtained.freq);
 
             ch1.init(nr[0x0]);
             ch2.init(nr[0x5]);
@@ -57,7 +61,7 @@ namespace gameboy {
             
             if (addr == 0xff14) ch1.update_state();
             if (addr == 0xff19) ch2.update_state();
-            //if (addr == 0xff1e) ch3.update_state();
+            if (addr == 0xff1e) ch3.update_state();
             if (addr == 0xff23) ch4.update_state();
         }
 

@@ -11,7 +11,7 @@ namespace gameboy {
         int16_t generate_wave_sample(u16& sample, double t, double f, double a) {
             if ((!f) || (!a)) return 0x0;
 
-            double c = ((double)SPU_SAMPLERATE / f),
+            double c = ((double)SPU_NATIVE_SAMPLERATE / f),
                    sl = c / 32;
 
             uint32_t sll = std::round(sl);
@@ -68,14 +68,17 @@ namespace gameboy {
 
                     u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & CTRL_FREQH) << 8)) & 0x7ff;
 
-                    int f = 4194304 / (64 * (2048 - rf));
+                    double f = 65536.0 / (2048.0 - rf);
+
+                    _log(debug, "f=%f, rf=%04x", f, rf);
+
                     // /double f = 65536 / (2048 - rf);
                     //_log(debug, "rf=%04x,f=%i", rf, f);
 
                     //_log(debug, "rf=%04x (%li), f=%f", rf, rf, f);
 
                     // (256-t1)*(1/256)
-                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * SPU_SAMPLERATE;
+                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * SPU_NATIVE_SAMPLERATE;
 
                     cs = {
                         true,   // cs.playing
