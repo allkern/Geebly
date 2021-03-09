@@ -11,6 +11,9 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: Prepare
+      run: |
+           last_commit_sha_s=$(git rev-parse --short HEAD)
     - name: Install dependencies
       run: |
            sudo apt update

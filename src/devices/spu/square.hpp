@@ -6,18 +6,6 @@
 
 namespace gameboy {
     namespace spu {
-        // int16_t generate_square_sample(double t, double f, double a, double dc) {
-        //     if ((!dc) || (!f) || (!a)) return 0x0;
-
-        //     double c = SPU_NATIVE_SAMPLERATE / f,
-        //            h = c / dc;
-                   
-        //     if (!((u32)std::round(c))) return 0x0;
-
-        //     double s = detail::sign(((u32)std::round(t) % (u32)std::round(c)) - h);
-        //     return s * (a * 0x7fff);
-        // }
-
         int16_t generate_square_sample(double t, double f, double a, double dc) {
             if ((!dc) || (!f) || (!a)) return 0x0;
 
@@ -91,13 +79,13 @@ namespace gameboy {
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
                     size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE;
+                           envl = ((double)envc / 64.0) * SPU_DEVICE_SAMPLERATE * 4;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
                     // Prevent SIGFPE
                     double envs = 1 / (double)(envc ? envc : 1);
 
-                    size_t l = ((64.0 - (double)(nr[SPUNR_LENC] & LENC_LENCT)) / 256.0) * SPU_NATIVE_SAMPLERATE;
+                    size_t l = ((64.0 - (double)(nr[SPUNR_LENC] & LENC_LENCT)) / 256.0) * SPU_DEVICE_SAMPLERATE * 4;
 
                     double dc = duty_cycles[nr[SPUNR_LENC & LENC_WDUTY] >> 6];
 

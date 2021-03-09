@@ -14,11 +14,9 @@ namespace gameboy {
             double c = ((double)SPU_NATIVE_SAMPLERATE / f),
                    sl = c / 32;
 
-            uint32_t sll = std::round(sl);
+            if (sl == 0) return 0x0;
 
-            if (!(sll)) return 0x0;
-
-            if (!((uint32_t)std::round(t) % sll)) {
+            if (!((uint32_t)std::round(t) % (uint32_t)sl)) {
                 sample++;
                 sample &= 0x1f;
                 s = (wave_ram.at(((sample & 0xfffe) >> 1)) >> ((1 - sample & 0x1) * 4)) & 0xf;
@@ -70,15 +68,7 @@ namespace gameboy {
 
                     double f = 65536.0 / (2048.0 - rf);
 
-                    _log(debug, "f=%f, rf=%04x", f, rf);
-
-                    // /double f = 65536 / (2048 - rf);
-                    //_log(debug, "rf=%04x,f=%i", rf, f);
-
-                    //_log(debug, "rf=%04x (%li), f=%f", rf, rf, f);
-
-                    // (256-t1)*(1/256)
-                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * SPU_NATIVE_SAMPLERATE;
+                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * SPU_DEVICE_SAMPLERATE * 2;
 
                     cs = {
                         true,   // cs.playing

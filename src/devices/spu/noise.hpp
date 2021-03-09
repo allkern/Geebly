@@ -80,12 +80,12 @@ namespace gameboy {
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
                     size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE / 4;
+                           envl = ((double)envc / 64.0) * SPU_DEVICE_SAMPLERATE;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
                     double envs = 1 / (double)(envc ? envc : 1);
 
-                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_NATIVE_SAMPLERATE;
+                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_DEVICE_SAMPLERATE;
 
                     cs = {
                         true,   // cs.playing

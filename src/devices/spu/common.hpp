@@ -2,8 +2,9 @@
 
 #include "SDL2/SDL_audio.h"
 
-#define SPU_NATIVE_SAMPLERATE 131072 * 2
-#define SPU_DEVICE_SAMPLERATE SPU_NATIVE_SAMPLERATE
+// SPU_NATIVE_SAMPLERATE in Hertz
+#define SPU_NATIVE_SAMPLERATE 384000 // 2 MHz
+#define SPU_DEVICE_SAMPLERATE 384000
 #define SPU_BEGIN 0xff10
 #define SPU_END 0xff3f
 
@@ -36,5 +37,7 @@ namespace gameboy {
                 return (T(0) < val) - (val < T(0));
             }
         }
+
+        SDL_AudioStream* stream = nullptr;
     }
 }
