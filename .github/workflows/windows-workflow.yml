@@ -19,8 +19,14 @@ jobs:
     - name: Setup version info
       id: version
       run: |
-           echo "::set-output name=version_tag::${git describe --always --tags --abbrev=0}"
-           echo "::set-output name=commit_hash::${git rev-parse --short HEAD}"
+           $version_tag=git describe --always --tags --abbrev=0
+           $commit_hash=git rev-parse --short HEAD
+           $asset_name="geebly-${version_tag}-${commit_hash}-windows.zip"
+           $asset_path=."/geebly-${version_tag}-${commit_hash}-windows.zip"
+           echo $asset_name
+           echo $asset_path
+           echo "::set-env name=version_tag::$version_tag"
+           echo "::set-env name=commit_hash::$commit_hash"
     - name: Build
       run: |
            ./build-win.ps1 "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
