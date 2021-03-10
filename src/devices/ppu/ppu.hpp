@@ -128,7 +128,7 @@ namespace gameboy {
 
         inline void init_window(size_t scale, bool fullscreen = false) {
             sdl::window = SDL_CreateWindow(
-                "Geebly " TO_STRING(GEEBLY_VERSION_TAG) TO_STRING(GEEBLY_COMMIT_HASH),
+                "Geebly " TO_STRING(GEEBLY_VERSION_TAG) " " TO_STRING(GEEBLY_COMMIT_HASH),
                 SDL_WINDOWPOS_UNDEFINED,
                 SDL_WINDOWPOS_UNDEFINED,
                 PPU_WIDTH * scale, PPU_HEIGHT * scale,
