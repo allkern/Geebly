@@ -11,14 +11,15 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Prepare
+    - name: Setup version info
+      id: version
       run: |
            commit_hash=$(git rev-parse --short HEAD)
            version_tag=$(git describe --always --tags --abbrev=0)
            asset_name="geebly-${version_tag}-${commit_hash}-ubuntu.zip"
            asset_path="./${asset_name}"
-           printf "${asset_name}"
-           printf "${asset_path}"
+           printf "${asset_name}\n"
+           printf "${asset_path}\n"
            printf "::set-output name=asset_path::${asset_path}"
            printf "::set-output name=asset_name::${asset_name}"
     - name: Install dependencies
