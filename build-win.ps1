@@ -1,7 +1,7 @@
 $SDL2_INCLUDE_DIR = $args[0]
 $SDL2_LIB_DIR = $args[1]
 $LGW_INCLUDE_DIR = $args[2]
-$VERSION_TAG = git describe --tags --abbrev=0
+$VERSION_TAG = git describe --always --tags --abbrev=0
 $COMMIT_HASH = git rev-parse --short HEAD
 
 md -Force -Path build > $null

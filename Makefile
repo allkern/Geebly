@@ -1,4 +1,4 @@
-VERSION_TAG := $(shell git describe --tags --abbrev=0)
+VERSION_TAG := $(shell git describe --always --tags --abbrev=0)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 build/geebly: build/geebly.o
