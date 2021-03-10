@@ -21,8 +21,10 @@ jobs:
       run: |
            $version_tag=git describe --always --tags --abbrev=0
            $commit_hash=git rev-parse --short HEAD
+           echo $version_tag
+           echo $commit_hash
            $asset_name="geebly-${version_tag}-${commit_hash}-windows.zip"
-           $asset_path=."/geebly-${version_tag}-${commit_hash}-windows.zip"
+           $asset_path="./geebly-${version_tag}-${commit_hash}-windows.zip"
            echo $asset_name
            echo $asset_path
            echo "::set-env name=version_tag::$version_tag"
