@@ -15,6 +15,12 @@ jobs:
       run: |
            commit_hash=$(git rev-parse --short HEAD)
            version_tag=$(git describe --always --tags --abbrev=0)
+           asset_name="geebly-${version_tag}-${commit_hash}-ubuntu.zip"
+           asset_path="./${asset_name}"
+           printf "${asset_name}"
+           printf "${asset_path}"
+           printf "::set-output name=asset_path::${asset_path}"
+           printf "::set-output name=asset_name::${asset_name}"
     - name: Install dependencies
       run: |
            sudo apt update
@@ -26,7 +32,11 @@ jobs:
     - name: Build
       run: make
     - name: Package
-      run: zip -r geebly-${version_tag}-${commit_hash}-ubuntu.zip build/geebly README.md
+      run: |
+           commit_hash=$(git rev-parse --short HEAD)
+           version_tag=$(git describe --always --tags --abbrev=0)
+           asset_name="geebly-${version_tag}-${commit_hash}-ubuntu.zip"
+           zip -r ${asset_name} build/geebly README.md
     - name: Release
       id: create_release
       uses: actions/create-release@v1
@@ -44,6 +54,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./geebly-${version_tag}-${commit_hash}-ubuntu.zip
-        asset_name: geebly-${version_tag}-${commit_hash}-ubuntu.zip
+        asset_path: ${{ steps.version.outputs.asset_path }}
+        asset_name: ${{ steps.version.outputs.asset_name }}
         asset_content_type: application/zip
