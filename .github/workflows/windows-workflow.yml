@@ -34,8 +34,10 @@ jobs:
            ./build-win.ps1 "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
     - name: Package
       run: |
+           $version_tag=git describe --always --tags $(git rev-list --tags --max-count=1)
+           $commit_hash=git rev-parse --short HEAD
+           $asset_name="geebly-${version_tag}-${commit_hash}-windows.zip"
            echo $asset_name
-           echo ${asset_name}
            
            Compress-Archive -Path "build/geebly.exe", "SDL2-2.0.14/x86_64-w64-mingw32/bin/SDL2.dll", "README.md" -DestinationPath ${asset_name} -CompressionLevel "Fastest"
     - name: Release
