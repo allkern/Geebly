@@ -34,7 +34,7 @@ jobs:
            ./build-win.ps1 "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
     - name: Package
       run: |
-           Compress-Archive -Path "build/geebly.exe", "SDL2-2.0.14/x86_64-w64-mingw32/bin/SDL2.dll", "README.md" -DestinationPath "geebly-release-07b-50e4056-windows.zip" -CompressionLevel "Fastest"
+           Compress-Archive -Path "build/geebly.exe", "SDL2-2.0.14/x86_64-w64-mingw32/bin/SDL2.dll", "README.md" -DestinationPath $asset_name -CompressionLevel "Fastest"
     - name: Release
       id: create_release
       uses: actions/create-release@v1
