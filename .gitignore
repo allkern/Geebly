@@ -66,3 +66,4 @@ build-win-debug.bat
 
 # Settings files
 *.json
+build-win-debug.ps1

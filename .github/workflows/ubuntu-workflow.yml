@@ -14,6 +14,7 @@ jobs:
     - name: Prepare
       run: |
            last_commit_sha_s=$(git rev-parse --short HEAD)
+           last_release_tag=$(git describe --tags --abbrev=0)
     - name: Install dependencies
       run: |
            sudo apt update
@@ -25,7 +26,7 @@ jobs:
     - name: Build
       run: make
     - name: Package
-      run: zip -r geebly-release-07b-50e4056-ubuntu.zip build/geebly README.md
+      run: zip -r geebly-${last_release_tag}-${last_commit_sha_s}-ubuntu.zip build/geebly README.md
     - name: Release
       id: create_release
       uses: actions/create-release@v1
@@ -43,6 +44,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./geebly-release-07b-50e4056-ubuntu.zip
-        asset_name: geebly-release-07b-50e4056-ubuntu.zip
+        asset_path: ./geebly-${last_release_tag}-${last_commit_sha_s}-ubuntu.zip
+        asset_name: geebly-${last_release_tag}-${last_commit_sha_s}-ubuntu.zip
         asset_content_type: application/zip
