@@ -19,7 +19,7 @@ jobs:
     - name: Setup version info
       id: version
       run: |
-           $version_tag=git describe --always --tags --abbrev=0
+           $version_tag=git describe --tags $(git rev-list --tags --max-count=1)
            $commit_hash=git rev-parse --short HEAD
            echo $version_tag
            echo $commit_hash
@@ -27,8 +27,8 @@ jobs:
            $asset_path="./geebly-${version_tag}-${commit_hash}-windows.zip"
            echo $asset_name
            echo $asset_path
-           echo "::set-env name=version_tag::$version_tag"
-           echo "::set-env name=commit_hash::$commit_hash"
+           echo "::set-output name=asset_name::$version_tag"
+           echo "::set-output name=asset_name::$commit_hash"
     - name: Build
       run: |
            ./build-win.ps1 "SDL2-2.0.14/x86_64-w64-mingw32/include" "SDL2-2.0.14/x86_64-w64-mingw32/lib" "lgw/"
@@ -52,6 +52,6 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./geebly-${version_tag}-${commit_hash}-windows.zip
-        asset_name: geebly-${version_tag}-${commit_hash}-windows.zip
+        asset_path: ${{ steps.version.outputs.asset_path }}
+        asset_name: ${{ steps.version.outputs.asset_name }}
         asset_content_type: application/zip
