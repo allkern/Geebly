@@ -18,10 +18,10 @@ jobs:
            version_tag=$(git describe --always --tags --abbrev=0)
            asset_name="geebly-${version_tag}-${commit_hash}-ubuntu.zip"
            asset_path="./${asset_name}"
-           printf "${asset_name}\n"
-           printf "${asset_path}\n"
-           printf "::set-output name=asset_path::${asset_path}"
-           printf "::set-output name=asset_name::${asset_name}"
+           echo "${asset_name}"
+           echo "${asset_path}"
+           echo "::set-output name=asset_path::${asset_path}"
+           echo "::set-output name=asset_name::${asset_name}"
     - name: Install dependencies
       run: |
            sudo apt update
