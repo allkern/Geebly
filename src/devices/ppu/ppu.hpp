@@ -55,6 +55,8 @@
 #define PPU_WY      0xa
 #define PPU_WX      0xb
 
+#define MMIO_VBK    0xff4f
+
 // LCDC masks
 #define LCDC_SWITCH 0b10000000
 #define LCDC_WNDTMS 0b01000000
@@ -385,7 +387,7 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             // Handle JOYP reads
             if (addr == 0xff00) { return joypad::read(); }
-            if (addr == 0xff4f) { return 0xfe | (current_bank_idx & 0x1); }
+            if (addr == MMIO_VBK) { return 0xfe | (current_bank_idx & 0x1); }
 
             if (addr == 0xff69) {
                 return utility::default_mb_read(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, size);
@@ -425,7 +427,7 @@ namespace gameboy {
                 return;
             }
 
-            if (addr == 0xff4f) {
+            if (addr == MMIO_VBK) {
                 current_bank_idx = value & 1;
                 current_bank = &vram[current_bank_idx];
                 return;
@@ -473,6 +475,8 @@ namespace gameboy {
         u8& ref(u16 addr) {
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return r[addr-PPU_R_BEGIN]; }
 
+            if (addr == MMIO_VBK) { return current_bank_idx; }
+
             if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return dummy; }
             
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return (*current_bank)[addr-VRAM_BEGIN]; }
@@ -499,6 +503,8 @@ namespace gameboy {
         
         void cycle() {
             if (stopped) r[PPU_LCDC] &= ~LCDC_SWITCH;
+
+            current_bank = &vram[current_bank_idx];
             
             switch (r[PPU_STAT] & 3) {
                 // HBlank mode

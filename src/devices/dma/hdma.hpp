@@ -43,10 +43,8 @@ namespace gameboy {
                 mode = value & 0x80;
                 len = ((value & 0x7f) + 1) << 4;
 
-                dst = 0x8000 + (dst & 0x1ff0);
                 src &= 0xfff0;
-
-                _log(debug, "hdma src=%04x,dst=%04x,mode=%s,len=%02x", src, dst, mode ? "hdma" : "gdma", len);
+                dst = 0x8000 + (dst & 0x1ff0);
 
                 u8 *src_ptr = dma::translate(src),
                    *dst_ptr = dma::translate(dst);

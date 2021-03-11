@@ -59,6 +59,7 @@ namespace gameboy {
 
         u8 cgb_bg_palette_idx = 0,
            cgb_spr_palette_idx = 0,
+           current_bank_idx = 0,
            dummy = 0;
 
         registers_t r = { 0 };
@@ -67,8 +68,6 @@ namespace gameboy {
 
         fifo_t background_fifo,
                sprite_fifo;
-
-        size_t current_bank_idx = 0;
 
         vram_bank_t* current_bank = &vram[current_bank_idx];
 

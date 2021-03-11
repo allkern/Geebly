@@ -91,7 +91,7 @@ namespace gameboy {
             if (addr >= SRAM_BEGIN && addr <= SRAM_END) { return cart::ref(addr); }
 
             // Handle a PPU (CRAM, VRAM) read
-            if (addr >= PPU_BEGIN && addr <= PPU_END) { return ppu::ref(addr); }
+            if (addr >= PPU_BEGIN && addr <= PPU_END) {  return ppu::ref(addr); }
 
             // Handle a WRAM read
             if (addr >= WRAM_BEGIN && addr <= WRAM_END) { return wram::ref(addr); }
@@ -106,6 +106,9 @@ namespace gameboy {
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::ref(addr); }
+
+            if ((addr >= 0xff68 && addr <= 0xff6b) || addr == 0xff4f) { return ppu::ref(addr); ; }
+
             if (addr == MMIO_SVBK) { return wram::ref(addr); }
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::ref(addr); }
