@@ -78,6 +78,10 @@ namespace gameboy {
             bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]);
 
             refetch();
+            
+            auto get_bit = [](u8 l, size_t s) -> u8 {
+                return (l >> s) & 0x1;
+            };
 
             do {
                 sx = cx + r[PPU_SCX];
@@ -86,7 +90,7 @@ namespace gameboy {
 
                 size_t s = 7 - (sx % 8);
 
-                u8 color = ((l >> s) & 0x1) | (((h >> s) & 0x1) << 1);
+                u8 color = (get_bit(h, s) << 1) | get_bit(l, s);
 
                 background_fifo.push({
                     color,
