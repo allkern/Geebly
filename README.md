@@ -6,6 +6,8 @@
   
 #### A Game Boy/Color (DMG/GBC) emulator written in C++
 
+---
+
 ![Geebly running Dangan GB](https://user-images.githubusercontent.com/15825466/117328287-dac3db80-ae69-11eb-9ef2-1e9ebf8e199e.gif)![Geebly running the Gejmbåj demo](https://user-images.githubusercontent.com/15825466/117328294-dd263580-ae69-11eb-87a2-942136e2e204.gif)![Geebly running Super Mario Bros. Deluxe](https://user-images.githubusercontent.com/15825466/117328291-dbf50880-ae69-11eb-9e9f-6388101d57ce.gif)![Geebly running Donkey Kong Country](https://user-images.githubusercontent.com/15825466/117328298-ddbecc00-ae69-11eb-8976-ec459c9ea3bb.gif)
 
 </div>
