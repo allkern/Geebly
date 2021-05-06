@@ -4,7 +4,7 @@
 
 <div align="center">
   
-#### A Game Boy/Color (DMG/GBC) emulator written in C++
+### A Game Boy/Color (DMG/GBC) emulator written in C++
 
 ---
 
