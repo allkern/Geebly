@@ -66,9 +66,6 @@ build-win-debug.ps1
 build-win-debug.ps1
 build-win-debug.bat
 
-# Temporarily ignore the Linux Makefile
-Makefile
-
 # Etc
 *.sna
 *.asm
@@ -79,3 +76,4 @@ imgui.ini
 build-win.bat
 .vscode/settings.json
 src/devices/ppu/naive_ppu.hpp
+.github/

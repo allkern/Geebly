@@ -20,9 +20,7 @@ namespace _log {
                    *info    = "\u001b[34;1m[i]",
                    *warning = "\u001b[35;1m[w]",
                    *error   = "\u001b[31;1m[e]";
-        #endif
-
-        #ifdef LOG_TARGET_POWERSHELL
+        #elif LOG_TARGET_POWERSHELL
         const char *none    = "[.]",
                    *debug   = "[d]",
                    *ok      = "[+]",
@@ -44,9 +42,7 @@ namespace _log {
 
         #ifdef LOG_TARGET_LINUX
         std::cout << t << "\u001b[0m " + app_name + ": " << buf << std::endl;
-        #endif
-
-        #ifdef LOG_TARGET_POWERSHELL
+        #elif LOG_TARGET_POWERSHELL
         std::cout << t << app_name << ": " << buf << std::endl;
         #else
         std::cout << app_name + ": " << buf << std::endl;

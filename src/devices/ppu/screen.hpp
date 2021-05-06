@@ -2,10 +2,12 @@
 
 #ifdef _WIN32
 #include "SDL2/SDL.h"
+#define GEEBLY_SDL_WINDOW_FLAGS SDL_WINDOW_VULKAN
 #endif
 
 #ifdef __linux__
 #include "SDL2/SDL.h"
+#define GEEBLY_SDL_WINDOW_FLAGS SDL_WINDOW_OPENGL
 #endif
 
 #define LGW_FORMAT_ARGB8888
@@ -48,7 +50,7 @@ namespace gameboy {
                 "Geebly",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                 PPU_WIDTH * window_scale, PPU_HEIGHT * window_scale,
-                SDL_WINDOW_VULKAN
+                GEEBLY_SDL_WINDOW_FLAGS
             );
 
             sdl::renderer = SDL_CreateRenderer(

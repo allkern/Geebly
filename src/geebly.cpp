@@ -9,7 +9,9 @@
 #include "gameboy.hpp"
 #include "cpu/mnemonics.hpp"
 
+#ifndef GEEBLY_NO_DEBUGGER
 #include "debug.hpp"
+#endif
 
 #include "log.hpp"
 
@@ -39,17 +41,22 @@ int main(int argc, char *argv[]) {
         bios::rom[0xea] = 0x00;
     }
 
+#ifndef GEEBLY_NO_DEBUGGER
     if (settings::debugger_enabled) debug::init();
+#endif
 
     gameboy::init();
 
     while (screen::is_open()) {
         gameboy::update();
 
+#ifndef GEEBLY_NO_DEBUGGER
         if (settings::debugger_enabled && debug::is_open()) debug::update();
+#endif
     }
-
+#ifndef GEEBLY_NO_DEBUGGER
     if (settings::debugger_enabled && debug::is_open()) debug::close();
+#endif
 
     screen::close();
 

@@ -12,11 +12,7 @@
 #include "devices/dma/hdma.hpp"
 #include "devices/timer.hpp"
 #include "devices/clock.hpp"
-
-// Sound emulation is not yet supported on Linux platforms
-#ifdef _WIN32
 #include "devices/spu/spu.hpp"
-#endif
 
 // Clean this whole file up
 #define MMIO_DISABLE_BOOTROM 0xff50
@@ -133,19 +129,12 @@ namespace gameboy {
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
 
-#ifdef GEEBLY_OLD_PPU
-            if (addr == MMIO_JOYP) { ppu::write(addr, value, size); return; }
-#else
             if (addr == MMIO_JOYP) { joypad::write(value); return; }
-#endif
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
-#ifdef _WIN32
-#ifndef GEEBLY_NO_SOUND
             if (addr >= SPU_BEGIN && addr <= SPU_END) { spu::write(addr, value, size); }
-#endif
-#endif
+
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
             if (addr >= HDMA_BEGIN && addr <= HDMA_END) { hdma::write(addr, value, size); return; }
 
