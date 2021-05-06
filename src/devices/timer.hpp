@@ -23,7 +23,9 @@ namespace gameboy {
         };
 
         u8 dummy;
-        u16 div = 0x4, tima = 0x0, tma = 0x0;
+        
+        u32 div = 0x4, divi = div;
+        u16 tima = 0x0, tma = 0x0;
 
         struct tac_t {
             frequency_t f : 2;
@@ -43,7 +45,7 @@ namespace gameboy {
             if (addr == MMIO_DIV ) { div = 0x0; return; }
             if (addr == MMIO_TIMA) { tima = value & 0xff; return; }
             if (addr == MMIO_TMA ) { tma = value & 0xff; return; }
-            if (addr == MMIO_TAC ) { tac.f = (frequency_t)(value & 0x2); tac.enable = (value & 0x4); return; }
+            if (addr == MMIO_TAC ) { tac.f = (frequency_t)(value & 0x3); tac.enable = (value & 0x4); return; }
         }
 
         u8& ref(u16 addr) {
@@ -53,14 +55,31 @@ namespace gameboy {
         void update() {
             static const u8 mask[4] = { 0x40, 0x1, 0x4, 0x10 };
 
-            div += clock::get() >> 1;
+            div += clock::get();
 
-            if (tima & 0xff00) { 
+            if (tima & 0xc000) { 
                 tima = tma;
-                //ic::ia |= IRQ_TIMER;
+                ic::ia |= IRQ_TIMER;
             }
 
             if (((div >> 3) & mask[tac.f]) && tac.enable) tima++;
+
+            // To-do: Fix timer
+            // static const u32 mask[4] = { 0x400, 0x10, 0x40, 0x100 };
+
+            // div += clock::get();
+
+            // if (tima & 0xf000) {
+            //     tima = tma;
+            //     ic::ia |= IRQ_TIMER;
+            // }
+
+            // if ((divi & mask[tac.f]) && tac.enable) {
+            //     divi = 0;
+            //     tima++;
+            // } else {
+            //     divi += clock::get();
+            // }
         }
     }
 }

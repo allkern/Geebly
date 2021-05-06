@@ -14,7 +14,7 @@ namespace gameboy {
             std::array <sram_bank_t, 8> sram;
             std::vector <rom_bank_t> rom;
 
-            u8 current_rom_bank_idx = 0;
+            u8 current_rom_bank_idx = 0, sram_bank_count = 0;
 
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
@@ -24,16 +24,20 @@ namespace gameboy {
                  sram_battery_backed = false;
 
         public:
-            mbc3(bool has_sram = false, std::ifstream* sav = nullptr) {
+            mbc3(u8 sram_bc = 0, bool has_sram = false, std::ifstream* sav = nullptr) {
                 sram_present = has_sram;
                 sram_battery_backed = sram_present && (sav != nullptr);
+                sram_bank_count = sram_bc;
 
                 if (!sram_battery_backed) return;
 
                 if (sav->is_open()) {
                     for (sram_bank_t& b : sram) {
+                        if (!(sram_bc--)) break;
+
                         sav->read((char*)b.data(), b.size());
                     }
+
                     sav->close();
                 }
             }
@@ -49,9 +53,12 @@ namespace gameboy {
 
                 if (sav.is_open()) {
                     for (sram_bank_t& b : sram) {
+                        if (!(sram_bank_count--)) break;
+
                         sav.write((char*)b.data(), b.size());
                     }
                 }
+
                 sav.close();
 
                 return true;
@@ -68,7 +75,7 @@ namespace gameboy {
                     while (!f->eof()) {
                         f->read((char*)b.data(), b.size());
                         rom.push_back(b);
-                        b.fill(0);
+                        b.fill(0xff);
                     }
 
                     // Drop last bank, misread (fix?)
@@ -112,6 +119,8 @@ namespace gameboy {
             }
 
             u8& ref(u16 addr) {
+                if (addr >= 0x150 && addr <= 0x3fff) { return rom[0].at(addr-0x150); }
+                if (addr >= 0x4000 && addr <= 0x7fff) { return current_rom_bank->at(addr-0x4000); }
                 if (addr >= 0xa000 && addr <= 0xbfff) { return current_sram_bank->at(addr-0xa000); }
 
                 return dummy;

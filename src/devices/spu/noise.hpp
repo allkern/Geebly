@@ -80,12 +80,12 @@ namespace gameboy {
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
                     size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * SPU_DEVICE_SAMPLERATE;
+                           envl = ((double)envc / 64.0) * (SPU_NATIVE_SAMPLERATE << 2);
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
                     double envs = 1 / (double)(envc ? envc : 1);
 
-                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_DEVICE_SAMPLERATE;
+                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * (SPU_NATIVE_SAMPLERATE << 2);
 
                     cs = {
                         true,   // cs.playing
@@ -100,26 +100,19 @@ namespace gameboy {
                         f,      // cs.current_freq
                         a       // cs.current_amp
                     };
-
-                    //_log(debug,
-                    //    "full ch4 state:\n\tplaying=%s\n\ti=%s\n\tenvc=%s\n\tlen=%llu\n\tenvc=%llu\n\tenvl=%llu\n\tenvr=%llu\n\tenvs=%f\n\tenvd=%s\n\tf=%f\n\ta=%f",
-                    //    cs.playing ? "true" : "false",
-                    //    cs.infinite ? "true" : "false",
-                    //    cs.env_enabled ? "true" : "false",
-                    //    cs.remaining_samples,
-                    //    cs.env_step_count,
-                    //    cs.env_step_length,
-                    //    cs.env_step_remaining,
-                    //    cs.env_step,
-                    //    cs.env_direction ? "up" : "down",
-                    //    cs.current_freq,
-                    //    cs.current_amp
-                    //);
                 }
             }
 
             void init(u8& nr){
                 this->nr = &nr;
+            }
+
+            void reset() {
+                std::memset(&cs, 0, sizeof(current_sound_t));
+
+                r = 0;
+
+                for (size_t i = 0; i < 5; i++) nr[i] = 0xff;
             }
         } ch4;
     }

@@ -24,13 +24,12 @@ namespace gameboy {
 
         u8 dummy;
 
-        u16 src = 0x0, dst = 0x0;
-        u8 len = 0x0;
+        u16 src = 0x0, dst = 0x0, len = 0x0;
 
         bool mode = mode_t::gdma;
 
         u32 read(u16 addr, size_t size) {
-            return 0x0;
+            return 0xff;
         }
 
         void write(u16 addr, u16 value, size_t size) {
@@ -51,7 +50,7 @@ namespace gameboy {
 
                 if (!src_ptr) _log(warning, "%s transfer failure, source invalid", mode ? "HDMA" : "GDMA");
                 if (!dst_ptr) _log(warning, "%s transfer failure, destination invalid", mode ? "HDMA" : "GDMA");
-                
+
                 if (src_ptr && dst_ptr) std::memcpy(dst_ptr, src_ptr, len);
             }
         }

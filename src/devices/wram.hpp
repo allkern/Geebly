@@ -23,8 +23,7 @@ namespace gameboy {
 
         std::array <wram_bank_t, 8> wram;
 
-        wram_bank_t* current_bank = &wram[1];
-        size_t current_bank_idx = 1;
+        u8 current_bank_idx = 1;
 
         void init() {
             srand(time(NULL));
@@ -45,7 +44,7 @@ namespace gameboy {
             }
                 
             if (addr >= WRAX_BEGIN && addr <= WRAX_END) {
-                return utility::default_mb_read(current_bank->data(), addr, size, WRAX_BEGIN);
+                return utility::default_mb_read(wram[(!current_bank_idx) ? 1 : current_bank_idx].data(), addr, size, WRAX_BEGIN);
             }
             return 0;
         }
@@ -54,7 +53,6 @@ namespace gameboy {
             if (settings::cgb_mode) {
                 if (addr == MMIO_SVBK) {
                     current_bank_idx = value & 0x7;
-                    current_bank = &wram[value == 0 ? 1 : current_bank_idx];
                     return;
                 }
             }
@@ -65,14 +63,16 @@ namespace gameboy {
             }
 
             if (addr >= WRAX_BEGIN && addr <= WRAX_END) {
-                utility::default_mb_write(current_bank->data(), addr, value, size, WRAX_BEGIN);
+                utility::default_mb_write(wram[(!current_bank_idx) ? 1 : current_bank_idx].data(), addr, value, size, WRAX_BEGIN);
                 return;
             }
         }
 
         u8& ref(u16 addr) {
+            if (addr == MMIO_SVBK) return current_bank_idx;
+
             if (addr >= WRA0_BEGIN && addr <= WRA0_END) { return wram[0][addr-WRA0_BEGIN]; }
-            if (addr >= WRAX_BEGIN && addr <= WRAX_END) { return current_bank->at(addr-WRAX_BEGIN); }
+            if (addr >= WRAX_BEGIN && addr <= WRAX_END) { return wram[(!current_bank_idx) ? 1 : current_bank_idx].at(addr-WRAX_BEGIN); }
             return dummy;
         }
     }

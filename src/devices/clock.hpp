@@ -16,9 +16,10 @@ namespace gameboy {
             if (switch_wait && settings::cgb_mode) {
                 switch_wait = false;
                 double_speed = !double_speed;
-                scale *= double_speed ? 2 : 0.5;
+                scale *= (double_speed ? 2 : 0.5);
                 return true;
             }
+
             return false;
         }
 
@@ -40,7 +41,7 @@ namespace gameboy {
         } 
 
         inline u8 get(size_t scale_override = 0) {
-            return (*clock) * (scale_override ? scale_override : scale);
+            return (*clock) >> (double_speed ? 2 : 0);
         }
     }
 }

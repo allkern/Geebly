@@ -1,7 +1,7 @@
 #pragma once
 
 #ifdef _WIN32
-#include "SDL.h"
+#include "SDL2/SDL.h"
 #endif
 
 #ifdef __linux__
@@ -12,6 +12,7 @@
 
 #include "lgw/framebuffer.hpp"
 
+#include <functional>
 #include <chrono>
 
 #define PPU_WIDTH  160
@@ -25,6 +26,12 @@ namespace gameboy {
             SDL_Texture* texture = nullptr;
         }
 
+        typedef std::function<void(SDL_Keycode)> key_event_callback_t;
+        typedef std::function<void(std::string)> rom_drop_callback_t;
+
+        key_event_callback_t keydown_cb, keyup_cb;
+        rom_drop_callback_t rom_drop_cb;
+
         // FPS tracking stuff
         auto start = std::chrono::high_resolution_clock::now();
         size_t frames_rendered = 0, fps = 0;
@@ -34,13 +41,14 @@ namespace gameboy {
         framebuffer_t* frame = nullptr;
 
         void init(framebuffer_t* f_ptr, size_t window_scale) {
+            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
             frame = f_ptr;
 
             sdl::window = SDL_CreateWindow(
-                "Accurate PPU Test",
+                "Geebly",
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
                 PPU_WIDTH * window_scale, PPU_HEIGHT * window_scale,
-                SDL_WINDOW_OPENGL
+                SDL_WINDOW_VULKAN
             );
 
             sdl::renderer = SDL_CreateRenderer(
@@ -57,6 +65,19 @@ namespace gameboy {
             );
         }
 
+        inline void register_keydown_cb(const key_event_callback_t& kd) {
+            keydown_cb = kd;
+        }
+
+        inline void register_keyup_cb(const key_event_callback_t& ku) {
+            keyup_cb = ku;
+        }
+
+        // To-do: Make ROM dropping better
+        inline void register_rom_dropped_cb(const rom_drop_callback_t& rd) {
+            rom_drop_cb = rd;
+        }
+
         bool open = true;
 
         inline bool is_open() {
@@ -65,6 +86,16 @@ namespace gameboy {
 
         inline size_t get_fps() {
             return fps;
+        }
+
+        void close() {
+            open = false;
+            
+            SDL_DestroyTexture(sdl::texture);
+            SDL_DestroyRenderer(sdl::renderer);
+            SDL_DestroyWindow(sdl::window);
+
+            SDL_Quit();
         }
 
         void update() {
@@ -89,28 +120,22 @@ namespace gameboy {
 
             SDL_RenderCopy(sdl::renderer, sdl::texture, NULL, NULL);
 
-
             SDL_RenderPresent(sdl::renderer);
 
             frames_rendered++;
 
             SDL_Event event;
 
-            if (SDL_PollEvent(&event)) {
+            while (SDL_PollEvent(&event)) {
                 switch (event.type) {
-                    case SDL_QUIT: { open = false; } break;
+                    case SDL_DROPFILE: { rom_drop_cb(std::string(event.drop.file)); } break;
+                    case SDL_QUIT: { close(); } break;
+                    case SDL_KEYDOWN: { keydown_cb(event.key.keysym.sym); } break;
+                    case SDL_KEYUP: { keyup_cb(event.key.keysym.sym); } break;
                 }
             }
 
             frame->clear();
-        }
-
-        void close() {
-            SDL_DestroyTexture(sdl::texture);
-            SDL_DestroyRenderer(sdl::renderer);
-            SDL_DestroyWindow(sdl::window);
-
-            SDL_Quit();
         }
     }
 }

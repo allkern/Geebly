@@ -44,8 +44,16 @@ namespace gameboy {
             return 0;
         }
         #endif
+
         void init() {
             using namespace registers;
+
+            pc = 0x0;
+            sp = 0x0;
+            af = 0x0;
+            bc = 0x0;
+            de = 0x0;
+            hl = 0x0;
 
             if (settings::skip_bootrom) {
                 pc = 0x100;
@@ -54,7 +62,6 @@ namespace gameboy {
                 bc = 0x0013;
                 de = 0x00d8;
                 hl = 0x014d;
-                bus::ref(0xff0f) = 0x1;
             }
         }
         
@@ -65,7 +72,6 @@ namespace gameboy {
 
         u8 fired = 0;
 
-        // Basic interrupt handler
         inline void handle_interrupts() {
             using namespace registers;
 
@@ -91,6 +97,7 @@ namespace gameboy {
             }
 
             halted = false;
+            //stopped = false;
         }
 
         inline void enable_interrupts() {
@@ -111,17 +118,19 @@ namespace gameboy {
             s.imm8 = s.imm & 0xff;
         }
 
-        // Properly implement halt and stop
         bool execute(u8 override = 0x0) {
             using namespace registers;
 
             u8 opcode = override ? override : s.opcode;
 
-            if (settings::debugger_enabled) {
-                if (!run) { while (step) { GEEBLY_PERF_SLEEP } }
-            }
+            //if (settings::debugger_enabled) {
+            //    if (!run) { while (step) { GEEBLY_PERF_SLEEP } }
+            //}
 
-            if (halted || stopped) goto skip;
+            if (halted || stopped) {
+                update(0, 4);
+                goto skip;
+            }
             
             switch (opcode) {
                 // nop
@@ -137,14 +146,16 @@ namespace gameboy {
                 // stop #i8
                 case 0x10: {
                     if (!clock::do_switch()) {
-                        stopped = true;
+                        //stopped = true;
                     }
                     update(2, 4);
                 } break;
 
                 // inc *%hl, dec *%hl;
                 case 0x34: case 0x35: {
-                    op_idc(bus::ref(hl), opcode & 1);
+                    u8 temp = bus::read(hl, 1);
+                    op_idc(temp, opcode & 1);
+                    bus::write(hl, temp, 1);
                     update(1, 12);
                 } break;
 
@@ -436,7 +447,9 @@ namespace gameboy {
                         case 0x56: case 0x5e:
                         case 0x66: case 0x6e:
                         case 0x76: case 0x7e: {
-                            op_bit(bus::ref(hl), (opcode >> 3) & 0x7);
+                            u8 temp = bus::read(hl, 1);
+                            op_bit(temp, (opcode >> 3) & 0x7);
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
@@ -465,7 +478,9 @@ namespace gameboy {
                         case 0xa6: case 0xae: case 0xb6: case 0xbe:
                         case 0xc6: case 0xce: case 0xd6: case 0xde:
                         case 0xe6: case 0xee: case 0xf6: case 0xfe: {
-                            op_rst(bus::ref(hl), (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            u8 temp = bus::read(hl, 1);
+                            op_rst(temp, (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
@@ -476,7 +491,9 @@ namespace gameboy {
                         } break;
 
                         case 0x06: case 0x16: {
-                            op_rlc(bus::ref(hl), opcode&0x10, true);
+                            u8 temp = bus::read(hl, 1);
+                            op_rlc(temp, opcode&0x10, true);
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
                         
@@ -487,7 +504,9 @@ namespace gameboy {
                         } break;
 
                         case 0x0e: case 0x1e: {
-                            op_rrc(bus::ref(hl), opcode&0x10, true);
+                            u8 temp = bus::read(hl, 1);
+                            op_rrc(temp, opcode&0x10, true);
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
@@ -497,7 +516,9 @@ namespace gameboy {
                         } break;
 
                         case 0x26: {
-                            op_sla(bus::ref(hl));
+                            u8 temp = bus::read(hl, 1);
+                            op_sla(temp);
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
@@ -508,7 +529,9 @@ namespace gameboy {
                         } break;
 
                         case 0x2e: case 0x3e: {
-                            op_sra(bus::ref(hl), (bool)(opcode&0x10));
+                            u8 temp = bus::read(hl, 1);
+                            op_sra(temp, (bool)(opcode&0x10));
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
@@ -518,7 +541,9 @@ namespace gameboy {
                         } break;
 
                         case 0x36: {
-                            op_swap(bus::ref(hl));
+                            u8 temp = bus::read(hl, 1);
+                            op_swap(temp);
+                            bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
                     }

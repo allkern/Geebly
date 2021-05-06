@@ -73,18 +73,21 @@ namespace cli {
         if (cli.size()) {
             int i = 0;
             
-            DEFINE_SETTING("--boot", "-b", "boot");
-            DEFINE_SETTING("--scale", "-s", "scale");
+            DEFINE_SETTING("--boot"         , "-b", "boot");
+            DEFINE_SETTING("--scale"        , "-s", "scale");
+            DEFINE_SETTING("--master-volume", "-v", "master-volume");
 
-            DEFINE_SWITCH("--debug", "-d", "debug");
-            DEFINE_SWITCH("--enable-joyp-irq-delay", "-Ejoyp-irq-delay", "joyp-irq-delay");
-            DEFINE_SWITCH("--disable-joyp-irq-delay", "-Eno-joyp-irq-delay", "no-joyp-irq-delay");
-            DEFINE_SWITCH("--cgb-mode", "-Ecgb", "cgb-mode");
-            DEFINE_SWITCH("--patch-bios-checks", "-Bno-checks", "no-bios-checks");
-            DEFINE_SWITCH("--no-patch-bios-checks", "-Bchecks", "bios-checks");
-            DEFINE_SWITCH("--vram-access-emulation", "-Evram-access", "vram-access-emulation");
-            DEFINE_SWITCH("--no-vram-access-emulation", "-Eno-vram-access", "no-vram-access-emulation");
-            DEFINE_SWITCH("--skip-bootrom", "-Bskip", "bootrom-skip");
+            DEFINE_SWITCH("--debug"                   , "-d"                 , "debug");
+            DEFINE_SWITCH("--enable-joyp-irq-delay"   , "-Ejoyp-irq-delay"   , "joyp-irq-delay");
+            DEFINE_SWITCH("--disable-joyp-irq-delay"  , "-Eno-joyp-irq-delay", "no-joyp-irq-delay");
+            DEFINE_SWITCH("--skip-bootrom"            , "-Bskip"             , "bootrom-skip");
+            DEFINE_SWITCH("--cgb-mode", "-Ecgb"       , "cgb-mode");
+            DEFINE_SWITCH("--patch-bios-checks"       , "-Bno-checks"        , "no-bios-checks");
+            DEFINE_SWITCH("--no-patch-bios-checks"    , "-Bchecks"           , "bios-checks");
+            DEFINE_SWITCH("--vram-access-emulation"   , "-Gvram-access"      , "vram-access-emulation");
+            DEFINE_SWITCH("--no-vram-access-emulation", "-Gno-vram-access"   , "no-vram-access-emulation");
+            DEFINE_SWITCH("--mono"                    , "-m"                 , "mono");
+            DEFINE_SWITCH("--sound-disabled"          , "-Sdisable"          , "sound-disabled");
 
             if (cli.size()) {
                 if (cli.at(0).size()) {

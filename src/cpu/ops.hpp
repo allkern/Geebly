@@ -125,7 +125,7 @@ namespace gameboy {
         }
 
         inline void op_sbc(u8& dst, u8 src, bool carry) {
-            u16 res = 0; int hcf = ((dst & 0xf)-(src & 0xf)-(int)carry);
+            u16 res = 0;
             res = dst - src - (int)carry;
             set_flags(Z, (res & 0xff) == 0);
             set_flags(N, true);
@@ -162,7 +162,6 @@ namespace gameboy {
         }
 
         inline void op_idc(u8& dst, bool dec) {
-            int hcf = 0;
             set_flags(H, (dst & 0xf) == (dec ? 0 : 0xf));
             if (dec) { dst--; } else { dst++; };
             set_flags(Z, !dst);

@@ -1,0 +1,40 @@
+## Geebly 0.8.0-dev Changelog
+Ok, I just finished polishing some details over this last version of Geebly, its been a while since the last release!
+
+I do plan on using this version as an absolute baseline for a functioning emulator, as I've implemented almost all the details I've refrained from working on since development started, and as such, I'm really happy with the state of the emulator right now, code and functionality wise.
+
+Everything is looking clearer, the PPU has been rewritten from scratch (literally!), the SPU is now properly implemented, etc.
+
+Below is a (non-exhaustive) list of important changes:
+
+### Changes
+#### CPU
+ - Bit operations (and other instructions that used `bus::ref`) now properly cause side effects on MMIO
+
+#### PPU
+The PPU has been rewritten from scratch. Now it runs on a much more accurate FIFO-based sub-scanline renderer, compared to the more naive scanline only renderer that was in place before.
+
+ - Sub-scanline renderer implemented
+ - Greatly improved timings
+ - Implemented sprite/background/window priorities (also for CGB mode)
+ - Fixed DMA-related issues (see DMA for more info)
+
+#### SPU/APU
+I've ditched the initial SPU implementation that relied on `SDL_QueueAudio`. The SPU now outputs samples at the Game Boy's real sample rate (2 MHz) and resamples them on-demand (`audio_update_cb`).
+
+ - Ditched `SDL_QueueAudio`, SPU is now callback based, this allowed the fixes below:
+ - Fixed "race conditions" between channels where one channel would empty the buffer for a new sound to play, while another channel might have been pushing samples to the buffer, resulting in the second channel's audio being cut prematurely
+ - The wave channel's pitch will no longer drift
+ - Correctly implemented SPU control registers
+ - Implemented stereo audio + stereo/mono setting
+ - Implemented a master volume setting
+
+#### DMA/HDMA (CGB DMA)
+ - Fixed an issue where WRAM addresses wouldn't have been correctly translated (CGB mode)
+ - `ff55` will always be set to `ff`, this fixes HDMA-related wait loop hanging. Its a hotfix though, I plan on correctly implementing HDMA so it isn't the same as GDMA
+
+#### Codebase
+There have been a lot of improvements to the codebase overall, this looks insignificant to the outside world, but a cleaner, simpler and more concise codebase directly impacts the performance of a project as a whole
+
+### To-do
+I plan on completely rewriting the debugger from the ground up, its already possible to see some advancements on the debug.hpp file. There are many more things to work on, but for now this is the one I'm going to be focusing on! Check the sources for more "To-do"s.

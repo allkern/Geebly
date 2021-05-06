@@ -63,6 +63,7 @@ namespace gameboy {
             }
 
             u8& ref(u16 addr) override {
+                if (addr >= 0x150 && addr <= 0x7fff) { return rom.at(addr-0x150); }
                 if (addr >= 0xa000 && addr <= 0xbfff) { return sram.at(addr-0xa000); }
 
                 return dummy;

@@ -1,177 +1,40 @@
+// PPU To-do: Split timing and rendering implementations in separate files
+
 #pragma once
 
-#include <iostream>
+#include "../../log.hpp"
 
-#define LGW_FORMAT_ARGB8888
+#include "memory.hpp"
+#include "screen.hpp"
 
-#include "lgw/framebuffer.hpp"
-
-#include "SDL2/SDL.h"
-
-#include "../../aliases.hpp"
-#include "../../global.hpp"
-#include "../joypad.hpp"
 #include "../clock.hpp"
 #include "../ic.hpp"
-#include "memory.hpp"
 
-#include <cstdlib>
+#define GEEBLY_OPTIMIZE_PPU
+
+#ifdef GEEBLY_OPTIMIZE_PPU
+    #define PPU_PIXEL_EXTRACT _pext_u32(((u16)h << 8) | l, 0x0101 << p)
+    #define PPU_SPRITE_PIXEL_EXTRACT _pext_u32(((u16)spr_h << 8) | spr_l, 0x0101 << spr_p)
+#else
+    #define PPU_PIXEL_EXTRACT ((l >> p) & 0x1) | ((h >> p) & 0x1) << 1))
+    #define PPU_SPRITE_PIXEL_EXTRACT ((spr_l >> spr_p) & 0x1) | ((spr_h >> spr_p) & 0x1) << 1))
+#endif
+
+#include <queue>
 #include <array>
-
-#ifdef _WIN32
-#define GEEBLY_SDL_RENDERER_FLAG SDL_WINDOW_VULKAN
-#define GEEBLY_SDL_RENDERER_SETTINGS (SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC)
-#endif
-
-#ifdef __linux__
-#define GEEBLY_SDL_RENDERER_FLAG SDL_WINDOW_OPENGL
-#define GEEBLY_SDL_RENDERER_SETTINGS SDL_RENDERER_PRESENTVSYNC
-#endif
-
-#define PPU_WIDTH  160
-#define PPU_HEIGHT 144
-
-#define TO_STRING(m) STR(m)
-#define STR(m) #m
-
-//#define GEEBLY_NES_MODE
-
-#ifdef GEEBLY_NES_MODE
-#define GEEBLY_SDL_RENDERER_SETTINGS SDL_RENDERER_ACCELERATED
-#define PPU_WIDTH 0xff
-#define PPU_HEIGHT 0xef
-#endif
-
-// PPU register indexes
-#define PPU_LCDC    0x0
-#define PPU_STAT    0x1
-#define PPU_SCY     0x2
-#define PPU_SCX     0x3
-#define PPU_LY      0x4
-#define PPU_LYC     0x5
-#define PPU_BGP     0x7
-#define PPU_OBP0    0x8
-#define PPU_OBP1    0x9
-#define PPU_WY      0xa
-#define PPU_WX      0xb
-
-#define MMIO_VBK    0xff4f
-
-// LCDC masks
-#define LCDC_SWITCH 0b10000000
-#define LCDC_WNDTMS 0b01000000
-#define LCDC_WNDSWI 0b00100000
-#define LCDC_BGWTSS 0b00010000
-#define LCDC_BGWTMS 0b00001000
-#define LCDC_SPSIZE 0b00000100
-#define LCDC_SPDISP 0b00000010 
-#define LCDC_BGWSWI 0b00000001
-
-// STAT masks
-#define STAT_LYCNSD 0b01000000
-#define STAT_MODE02 0b00100000
-#define STAT_MODE01 0b00010000
-#define STAT_MODE00 0b00001000
-#define STAT_CDFLAG 0b00000100
-#define STAT_CRMODE 0b00000011
-
-// Sprite attribute masks
-#define SPATTR_PRIO 0b10000000
-#define SPATTR_YFLP 0b01000000
-#define SPATTR_XFLP 0b00100000
-#define SPATTR_PALL 0b00010000
-
-// CGB mode
-#define SPATTR_TVBK 0b00001000
-#define SPATTR_PALN 0b00000111
+#include <cstdint>
+#include <algorithm>
 
 namespace gameboy {
     namespace ppu {
-        namespace sdl {
-            SDL_Window*   window   = nullptr;
-            SDL_Renderer* renderer = nullptr;
-            SDL_Texture*  texture  = nullptr;
+        void init() {
+            r[PPU_STAT] = 0x80;
+            r[PPU_BGP]  = 0xfc;
+            r[PPU_OBP0] = 0xff;
+            r[PPU_OBP1] = 0xff;
 
-            bool window_is_open = false;
-        }
-
-        lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> frame;
-
-        u32 color_palette[] = {
-            0xfffffffful,
-            0xffaaaaaaul,
-            0xff555555ul,
-            0xff000000ul
-        };
-
-        //u32 color_palette[] = {
-        //    0xffe0f8d0ul,
-        //    0xff88c070ul,
-        //    0xff346856ul,
-        //    0xff081820ul
-        //};
-
-        //u32 color_palette[] = {
-        //    0xe8fcccfful,
-        //    0xacd490fful,
-        //    0x548c70fful,
-        //    0x081820fful
-        //};
-
-        //u32 color_palette[] = {
-        //    0xffefcefful,
-        //    0xde944afful,
-        //    0xad2921fful,
-        //    0x311852fful,
-        //};
-
-        // Macro to test register bits
-        #define TEST_REG(reg, mask) (r[reg] & mask)
-
-        inline void init_window(size_t scale, bool fullscreen = false) {
-            sdl::window = SDL_CreateWindow(
-                "Geebly " TO_STRING(GEEBLY_VERSION_TAG) " " TO_STRING(GEEBLY_COMMIT_HASH),
-                SDL_WINDOWPOS_UNDEFINED,
-                SDL_WINDOWPOS_UNDEFINED,
-                PPU_WIDTH * scale, PPU_HEIGHT * scale,
-                GEEBLY_SDL_RENDERER_FLAG
-            );
-
-            sdl::renderer = SDL_CreateRenderer(
-                sdl::window,
-                -1,
-                GEEBLY_SDL_RENDERER_SETTINGS
-            );
-
-            sdl::texture = SDL_CreateTexture(
-                sdl::renderer,
-                SDL_PIXELFORMAT_ARGB8888,
-                SDL_TEXTUREACCESS_STREAMING,
-                PPU_WIDTH, PPU_HEIGHT
-            );
-        }
-
-        // Fix JOYP emulation
-        inline void update_window() {
-            SDL_Event event;
-            
-            if (SDL_PollEvent(&event)) {
-                switch (event.type) {
-                    case SDL_QUIT: { window_closed = true; } break;
-                    case SDL_KEYDOWN: { if (!event.key.repeat) joypad::keydown(event.key.keysym.sym); } break;
-                    case SDL_KEYUP: { joypad::keyup(event.key.keysym.sym); } break;
-                    default: break;
-                }
-            }
-        }
-
-        void init(int scale) {
-            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
-
-            init_window(scale);
-
-            // Initialize VRAM bank 0 and 1, OAM, and CGB palettes with random values
-            srand(time(NULL));
+            // Vblank is fired when first turning on the LCD
+            ic::ia |= 0x1;
 
             for (auto& b : cgb_bg_palette) { b = rand() % 0xff; }
             for (auto& b : cgb_spr_palette) { b = rand() % 0xff; }
@@ -179,8 +42,10 @@ namespace gameboy {
             for (auto& b : vram[1]) { b = rand() % 0xff; }
             for (auto& b : oam) { b = rand() % 0xff; }
 
-            // Start PPU on mode 2 (OAM read)
-            r[PPU_STAT] = 0x84;
+            for (size_t idx = 0; idx < sprites.size(); idx++)
+                sprites.at(idx) = reinterpret_cast<sprite_t*>(&oam.at(idx << 2));
+
+            queued_sprites.reserve(12);
 
             if (settings::skip_bootrom) {
                 r[PPU_LCDC] = 0x91;
@@ -189,450 +54,358 @@ namespace gameboy {
             }
         }
 
-        inline bool vram_disabled() {
-            // Disable VRAM on mode 3, and when LCDC bit 7 is low
-            return (r[PPU_STAT] & 3) == 3 && TEST_REG(PPU_LCDC, LCDC_SWITCH);
-        }
-        
-        inline bool oam_disabled() {
-            // Disable OAM on modes 2 & 3, and when LCDC bit 7 is low
-            return (r[PPU_STAT] & 3) >= 2 && TEST_REG(PPU_LCDC, LCDC_SWITCH);
-        }
+        void refetch(size_t size = 0) {
+            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]) && ((cx - size) >= (r[PPU_WX] - 7));
 
-        struct cgb_bg_attribute {
-            u8 bgp;
-            bool vram_bank, xflip, yflip, priority;
-        } bg_attr;
+            u8 scroll_x     = window ? (r[PPU_WX] - 7) : r[PPU_SCX],
+               scroll_y     = window ? r[PPU_WY] : r[PPU_SCY],
+               tilemap_mask = window ? LCDC_WNDTMS : LCDC_BGWTMS,
+               switch_mask  = window ? LCDC_WNDSWI : LCDC_BGWSWI;
 
-#ifdef GEEBLY_NES_MODE
-        u8 counter = 1;
-#endif
-
-        // Maybe should probably implement this as a state machine later on?
-        void render_scanline() {
-#ifdef GEEBLY_NES_MODE
-            if (counter--) {
+            if (!TEST_REG(PPU_LCDC, switch_mask)) {
+                l = 0x0;
+                h = 0x0;
                 return;
+            }
+
+            sx = cx + (window ? -scroll_x : scroll_x);
+            sy = window ? wiy : ((r[PPU_LY] + scroll_y) & 0xff);
+
+            tile_scx_off = (sx >> 3) & 0x1f;
+            tile_scy_off = ((sy >> 3) << 5);
+
+            u16 tile_off = (TEST_REG(PPU_LCDC, tilemap_mask) ? 0x1c00 : 0x1800) + tile_scx_off + tile_scy_off;
+
+            tile = vram[0][tile_off];
+
+            if (settings::cgb_mode) {
+                u8 bg_attr_byte = vram[1][tile_off];
+
+                bg_attr.bgp       = (bg_attr_byte & 0x7);
+                bg_attr.vram_bank = (bool)(bg_attr_byte & 0x8);
+                bg_attr.xflip     = (bool)(bg_attr_byte & 0x20);
+                bg_attr.yflip     = (bool)(bg_attr_byte & 0x40);
+                bg_attr.priority  = (bool)(bg_attr_byte & 0x80);
+            }
+
+            if (TEST_REG(PPU_LCDC, LCDC_BGWTSS)) {
+                coff = (tile << 4) + (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
             } else {
-                counter = 1;
+                coff = 0x1000 + ((int8_t)tile * 16) + (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
             }
-#endif
-            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]);
 
-            u8 sw_mask  = window ? LCDC_WNDSWI  : LCDC_BGWSWI,
-               scrolly  = window ? PPU_WY       : PPU_SCY,
-               scrollx  = window ? PPU_WX       : PPU_SCX,
-               tilemap  = window ? LCDC_WNDTMS  : LCDC_BGWTMS;
+            size_t bank = settings::cgb_mode ? ((int)bg_attr.vram_bank) : 0;
 
-            if (TEST_REG(PPU_LCDC, sw_mask)) {
-                u8 y = r[PPU_LY] + (window ? (-r[scrolly]) : r[scrolly]);
-
-                // Get tilemap and tileset offsets based off bits 3 and 4 of LCDC
-                u16 tilemap_offset = (TEST_REG(PPU_LCDC, tilemap) ? 0x1c00 : 0x1800);
-                
-                #define TILE_OFFSET (tilemap_offset + ((y >> 3) << 5) + (r[scrollx] >> 3))
-
-                // Signed mode requires a slightly different offset calculation
-                #define CHAR_OFFSET \
-                    (TEST_REG(PPU_LCDC, LCDC_BGWTSS)) ? \
-                        (tile * 16) + ((y % 8) * 2) : \
-                        0x1000 + (((s8)tile * 16) + ((y % 8) * 2))
-                
-                u16 tm_off = TILE_OFFSET;
-                u8 tile = vram[0][tm_off];
-
-                if (settings::cgb_mode) {
-                    u8 bg_attr_byte = vram[1][TILE_OFFSET];
-
-                    bg_attr = {
-                        (u8)(bg_attr_byte & 0x7),
-                        (bool)(bg_attr_byte & 0x8),
-                        (bool)(bg_attr_byte & 0x20),
-                        (bool)(bg_attr_byte & 0x40),
-                        (bool)(bg_attr_byte & 0x80)
-                    };
-                } 
-
-                u16 char_base = CHAR_OFFSET;
-
-                u8 l = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base],
-                   h = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base + 1];
-
-                // Start rendering the whole scanline
-                for (u8 x = 0; x < PPU_WIDTH; x++) {
-                    if (TEST_REG(PPU_LCDC, sw_mask)) {
-                        u8 px = 7 - ((x + ((r[scrollx] - (window ? 7 : 0)) % 8)) % 8);
-
-                        u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
-
-                        int color = 0;
-                        u32 out = 0;
-                    
-                        if (settings::cgb_mode) {
-                            color = pal_offset;
-                            u8 off = (bg_attr.bgp << 3) + (color << 1);
-                            u16 p = cgb_bg_palette[off] | (cgb_bg_palette[off+1] << 8);
-                            u8 r = (p & 0x1f) << 3,
-                               g = (((p >> 0x5) & 0x1f) << 3),
-                               b = (((p >> 0xa) & 0x1f) << 3);
-                            out = lgw::rgb(r, g, b);
-                        } else {
-                            color = (r[PPU_BGP] >> (pal_offset * 2)) & 0x3;
-                            out = color_palette[color];
-                        }
-
-                        frame.draw(x, r[PPU_LY], out);
-
-                        // Recalculate offsets and settings when reaching tile boundaries
-                        if (px == 0) {
-                            tilemap_offset++;
-                            u16 tm_off = TILE_OFFSET - ((y >> 3) << 5);
-                            tile = vram[0][((tm_off & 0xff00) | ((tm_off & 0xff) % 0x20)) + ((y >> 3) << 5)];
-                            char_base = CHAR_OFFSET;
-
-                            if (settings::cgb_mode) {
-                                u8 bg_attr_byte = vram[1][((tm_off & 0xff00) | ((tm_off & 0xff) % 0x20)) + ((y >> 3) << 5)];
-
-                                bg_attr.bgp       = (bg_attr_byte & 0x7);
-                                bg_attr.vram_bank = (bool)(bg_attr_byte & 0x8);
-                                bg_attr.xflip     = (bool)(bg_attr_byte & 0x20);
-                                bg_attr.yflip     = (bool)(bg_attr_byte & 0x40);
-                                bg_attr.priority  = (bool)(bg_attr_byte & 0x80);
-                            }
-
-                            l = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base];
-                            h = vram[settings::cgb_mode ? (int)bg_attr.vram_bank : 0][char_base + 1];
-                        }
-                    }
-                }
-            }
+            l = vram[bank][coff];
+            h = vram[bank][coff + 1];
         }
 
-        // Clean this up
         void render_sprites() {
-            u16 addr = 0;
+            bool pixel_pushed = false;
+            u16 spr_coff;
+            u8 spr_h, spr_l, spr_c;
+            size_t spr_p;
 
-            int spsize = TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 16 : 8;
+            for (sprite_t& spr : queued_sprites) {
+                if (((int)cx >= ((int)spr.x - 8)) && ((int)cx < (int)spr.x) && (!pixel_pushed)) {
+                    size_t yoff = (spr.a & 0x40) ? 
+                        ((TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 15 : 7) - (r[PPU_LY] - (spr.y - 16))) :
+                        (r[PPU_LY] - (spr.y - 16));
 
-            vram_bank_t* spr_bank = &vram[0];
+                    spr_coff = ((spr.t & (TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 0xfe : 0xff)) << 4) + (yoff << 1);
 
-            while (addr <= 0x9f) {
-                int y_start = 0,
-                    y_end = spsize,
-                    x_start = 0,
-                    x_end = 8;
-                
-                u8 by = oam[addr++],
-                   bx = oam[addr++],
-                   t = oam[addr++],
-                   attr = oam[addr++];
+                    size_t bank = settings::cgb_mode ? ((spr.a >> 3) & 0x1) : 0;
 
-                //if (settings::cgb_mode && !(attr & SPATTR_TVBK)) spr_bank = &vram[1];
+                    spr_l = vram[bank][spr_coff];
+                    spr_h = vram[bank][spr_coff + 1];
 
-                bool x_flip = (attr & SPATTR_XFLP),
-                     y_flip = (attr & SPATTR_YFLP);
+                    spr_p = ((int)cx - ((int)spr.x - 8));
+                    spr_p = (spr.a & 0x20) ? spr_p : (7 - spr_p);
 
-                if (x_flip) { std::swap(x_start, x_end); x_start--; x_end--; };
-                if (y_flip) { std::swap(y_start, y_end); y_start--; y_end--; };
+                    spr_c = PPU_SPRITE_PIXEL_EXTRACT;
 
-                for (int y = y_start; y_flip ? y > y_end : y < y_end;) {
-                    int y_off = y_flip ? ((spsize-1) - (y % spsize)) : (y % spsize);
+                    if (spr_c) pixel_pushed = true;
 
-                    //if (TEST_REG(PPU_LCDC, LCDC_SPSIZE)) {
-                    //    if (y > 8) {
-                    //        t |= 0x1;
-                    //    } else {
-                    //        t &= 0xfe;
-                    //    }
-                    //}
-                    
-                    u8 l = spr_bank->at((t * 16) + (y_off * 2)),
-                       h = spr_bank->at((t * 16) + (y_off * 2) + 1);
-
-                    for (int x = x_start; x_flip ? x > x_end : x < x_end;) {
-                        int px = x_flip ? (x % 8) : (7 - (x % 8));
-
-                        u8 pal_offset = ((l >> px) & 1) | (((h >> px) & 1) << 1);
-
-                        if (pal_offset) {
-                            u8 color = 0;
-                            u32 out = 0;
-
-                            if (settings::cgb_mode) {
-                                color = pal_offset;
-                                u8 off = ((attr & SPATTR_PALN) << 3) + (color << 1);
-                                u16 p = cgb_spr_palette[off] | (cgb_spr_palette[off+1] << 8);
-                                //_log(debug, "p=%04x", p);
-                                u8 r = (p & 0x1f) << 3,
-                                   g = (((p >> 0x5) & 0x1f) << 3),
-                                   b = (((p >> 0xa) & 0x1f) << 3);
-
-                                out = lgw::rgb(r, g, b);
-                            } else {
-                                color = ((attr & SPATTR_PALL ? r[PPU_OBP1] : r[PPU_OBP0]) >> (pal_offset * 2)) & 0x3;
-                                out = color_palette[color];
-                            }
-
-                            if ((x + (bx-8) < PPU_WIDTH) && (y + (by-16) < PPU_HEIGHT))
-                                frame.draw(x + (bx-8), y + (by-16), out);
-                        }
-
-                        if (x_flip) { x--; } else { x++; }
-                    }
-                    if (y_flip) { y--; } else { y++; }
+                    if (pixel_pushed) sprite_fifo.push({
+                        spr_c,
+                        settings::cgb_mode ? (spr.a & 0x7) : ((spr.a >> 4) & 0x1),
+                        0,
+                        (spr.a & 0x80)
+                    });
                 }
             }
+
+            if (!pixel_pushed) sprite_fifo.push({0, 0, 0, 0});
         }
 
-        u32 read(u16 addr, size_t size) {
-            // Handle JOYP reads
-            if (addr == 0xff00) { return joypad::read(); }
-            if (addr == MMIO_VBK) { return 0xfe | (current_bank_idx & 0x1); }
+        void render_row(size_t size) {
+            size--;
 
-            if (addr == 0xff69) {
-                return utility::default_mb_read(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, size);
-            }
-            if (addr == 0xff6b) {
-                return utility::default_mb_read(cgb_spr_palette.data(), cgb_spr_palette_idx >= 0x40 ? 0x40 : cgb_spr_palette_idx, size);
-            }
+            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]) && ((cx + size) >= (r[PPU_WX] - 7));
 
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
-                return utility::default_mb_read(r.data(), addr, size, PPU_R_BEGIN);
-            }
+            u8 scroll_x = window ? (r[PPU_WX] - 7): r[PPU_SCX],
+               scroll_y = window ? r[PPU_WY] : r[PPU_SCY];
 
-            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return 0xff; }
+            refetch();
 
-            if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                return utility::default_mb_read(current_bank->data(), addr, size, VRAM_BEGIN);
-            }
+            do {
+                if (!((sx + 1) % 8) || (window && ((cx + size) == (r[PPU_WX] - 7)))) refetch();
 
-            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return 0xff; }
+                sx = cx + (window ? -scroll_x : scroll_x);
+                sy = window ? wiy : ((r[PPU_LY] + scroll_y) & 0xff);
 
-            if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                return utility::default_mb_read(oam.data(), addr, size, OAM_BEGIN);
-            }
+                size_t p = bg_attr.xflip ? (sx % 8) : (7 - (sx % 8));
 
-            return 0;
+                u8 color = PPU_PIXEL_EXTRACT;
+
+                background_fifo.push({
+                    color,
+                    bg_attr.bgp,
+                    0,
+                    false
+                });
+
+                render_sprites();
+
+                cx++;
+            } while (size--);
         }
 
-        void write(u16 addr, u16 value, size_t size) {
-#ifdef GEEBLY_NES_MODE
-            if ((addr == 0xff42) || (addr == 0xff43)) return;
-#endif
+        bool vbl_triggered = false;
 
-            if (addr == 0xff00) { joypad::write(value); }
+        #define SWITCH_MODE(m) r[PPU_STAT] = (r[PPU_STAT] & ~(STAT_CRMODE)) | m
 
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
-                utility::default_mb_write(r.data(), addr, value, size, PPU_R_BEGIN);
-                return;
-            }
-
-            if (addr == MMIO_VBK) {
-                current_bank_idx = value & 1;
-                current_bank = &vram[current_bank_idx];
-                return;
-            }
-            
-            if (addr == 0xff68) {
-                cgb_bg_palette_idx = value & 0x3f;
-                bg_auto_inc = value & 0x80;
-                return;
-            }
-
-            if (addr == 0xff69) {
-                utility::default_mb_write(cgb_bg_palette.data(), cgb_bg_palette_idx >= 0x40 ? 0x40 : cgb_bg_palette_idx, value, size, 0);
-                if (bg_auto_inc) cgb_bg_palette_idx++;
-                return;
-            }
-
-            if (addr == 0xff6a) {
-                cgb_spr_palette_idx = value & 0x3f;
-                spr_auto_inc = value & 0x80;
-                return;
-            }
-
-            if (addr == 0xff6b) {
-                utility::default_mb_write(cgb_spr_palette.data(), cgb_spr_palette_idx >= 0x40 ? 0x40 : cgb_spr_palette_idx, value, size, 0);
-                if (spr_auto_inc) cgb_spr_palette_idx++;
-                return;
-            }
-
-            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return; }
-
-            if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                utility::default_mb_write(current_bank->data(), addr, value, size, VRAM_BEGIN);
-                return;
-            }
-
-            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return; }
-
-            if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
-                return;
-            }
-        }
-
-        u8& ref(u16 addr) {
-            if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return r[addr-PPU_R_BEGIN]; }
-
-            if (addr == MMIO_VBK) { return current_bank_idx; }
-
-            if (settings::inaccessible_vram_emulation_enabled) { if (vram_disabled()) return dummy; }
-            
-            if (addr >= VRAM_BEGIN && addr <= VRAM_END) { return (*current_bank)[addr-VRAM_BEGIN]; }
-
-            if (settings::inaccessible_vram_emulation_enabled) { if (oam_disabled()) return dummy; }
-
-            if (addr >= OAM_BEGIN && addr <= OAM_END) { return oam[addr-OAM_BEGIN]; }
-
-            return dummy;
-        }
-
-        void close() {
-            SDL_DestroyWindow(sdl::window);
-            SDL_DestroyRenderer(sdl::renderer);
-            SDL_Quit();
-        }
-
-        // Clean this up
         bool vbl_pure_fired = false,
              lyc_stat_fired = false,
              oam_stat_fired = false,
              vbl_stat_fired = false,
-             hbl_stat_fired = false;
-        
-        void cycle() {
-            if (stopped) r[PPU_LCDC] &= ~LCDC_SWITCH;
+             hbl_stat_fired = false,
+             already_fetched_sprites = false,
+             residual_cycles = false;
 
-            current_bank = &vram[current_bank_idx];
-            
-            switch (r[PPU_STAT] & 3) {
-                // HBlank mode
-                case 0: {
-                    if (clk >= 204) {
-                        if (TEST_REG(PPU_STAT, STAT_MODE00)) {
-                            if (!hbl_stat_fired) {
-                                ic::ref(0xff0f) |= IRQ_STAT;
-                                hbl_stat_fired = true;
-                            }
-                        }
+        u32 get_pixel_color(const fifo_pixel_t& pixel, bool sprite) {
+            cgb_palette_ram_t* palette_ram = sprite ? &cgb_spr_palette : &cgb_bg_palette;
 
-                        clk = 0;
-                        r[PPU_LY]++;
+            u8 off = (pixel.palette << 3) + (pixel.color << 1);
 
-                        if (r[PPU_LY] == r[PPU_LYC]) {
-                            if (TEST_REG(PPU_STAT, STAT_LYCNSD)) {
-                                if (!lyc_stat_fired) {
-                                    ic::ref(0xff0f) |= IRQ_STAT;
-                                    lyc_stat_fired = true;
-                                }
-                            }
-                            r[PPU_STAT] |= 0x4;
-                        } else {
-                            if (TEST_REG(PPU_STAT, STAT_LYCNSD)) {
-                                lyc_stat_fired = false;
-                            }
-                            r[PPU_STAT] &= ~0x4;
-                        }
+            u16 p = palette_ram->at(off) | (palette_ram->at(off+1) << 8);
 
-                        if (r[PPU_LY] == PPU_HEIGHT) {
-                            // Switch state to Vblank
-                            r[PPU_STAT] &= 0xfc;
-                            r[PPU_STAT] |= 1;
-                            
-                            // Draw frame
-                            SDL_RenderClear(sdl::renderer);
+            u8 r = (p & 0x1f) << 3,
+               g = ((p >> 0x5) & 0x1f) << 3,
+               b = ((p >> 0xa) & 0x1f) << 3;
 
-                            if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
-                                if (TEST_REG(PPU_LCDC, LCDC_SPDISP)) render_sprites();
+            return lgw::rgb(r, g, b);
+        }
 
-                                SDL_UpdateTexture(
-                                    sdl::texture,
-                                    NULL,
-                                    frame.get_buffer(),
-                                    PPU_WIDTH * sizeof(uint32_t)
-                                );
-                                
-                                SDL_RenderCopy(sdl::renderer, sdl::texture, NULL, NULL);
-                                
-                                frame.clear();
-                            }
+        inline void fire_lyc_irq() {
+            if (r[PPU_LY] == r[PPU_LYC]) {
+                r[PPU_STAT] |= 0x4;
+            } else {
+                r[PPU_STAT] &= ~0x4;
+            }
+            if (TEST_REG(PPU_STAT, STAT_LYCNSD) && (r[PPU_LY] == r[PPU_LYC]) && (!lyc_stat_fired)) {
+                ic::ia |= IRQ_STAT;
+                lyc_stat_fired = true;
+                r[PPU_STAT] |= 0x4;
+            }
+        }
 
-                            update_window();
+        inline void fire_oam_irq() {
+            if ((!oam_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE02)) {
+                ic::ia |= IRQ_STAT;
+                oam_stat_fired = true;
+            }
+        }
 
-                            SDL_RenderPresent(sdl::renderer);
-                        } else {
-                            // Switch to OAM read
-                            r[PPU_STAT] &= 0xfc;
-                            r[PPU_STAT] |= 2;
-                        }
-                    }
-                } break;
+        inline void fire_hbl_irq() {
+            if ((!hbl_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE00)) {
+                ic::ia |= IRQ_STAT;
+                hbl_stat_fired = true;
+            }
+        }
 
-                // VBlank mode
-                case 1: {
-                    // Trigger Vblank interrupt
-                    if (clk >= 456) {
-                        // Fire interrupt
-                        if (!vbl_pure_fired) {
-                            ic::ref(0xff0f) |= IRQ_VBL;
-                            vbl_pure_fired = true;
-                        }
+        inline void fire_stat_vbl_irq() {
+            if ((!vbl_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE01)) {
+                ic::ia |= IRQ_STAT;
+                vbl_stat_fired = true;
+            }
+        }
 
-                        if (TEST_REG(PPU_STAT, STAT_MODE01)) {
-                            if (!vbl_stat_fired) {
-                                ic::ref(0xff0f) |= IRQ_STAT;
-                                vbl_stat_fired = true;
-                            }
-                        }
+        inline void fire_pure_vbl_irq() {
+            if (!vbl_pure_fired) {
+                ic::ia |= IRQ_VBL;
+                vbl_pure_fired = true;
+            }
+        }
 
-                        clk = 0;
-                        r[PPU_LY]++;
-
-                        if (r[PPU_LY] >= 153) {
-                            r[PPU_STAT] &= 0xfc;
-                            r[PPU_STAT] |= 2;
-                            r[PPU_LY] = 0;
-                        }
-                    }
-                } break;
-
-                // OAM read period
-                case 2: {
-                    vbl_pure_fired = false;
-                    vbl_stat_fired = false;
-                    hbl_stat_fired = false;
-
-                    if (TEST_REG(PPU_STAT, STAT_MODE02)) {
-                        if (!oam_stat_fired) {
-                            ic::ref(0xff0f) |= IRQ_STAT;
-                            oam_stat_fired = true;
-                        }
+        inline void fetch_sprites() {
+            if ((!already_fetched_sprites) && (TEST_REG(PPU_LCDC, LCDC_SPDISP))) {
+                for (sprite_t* spr : sprites) {
+                    // Enforce 10 sprites per scanline limit
+                    if (queued_sprites.size() == 10) {
+                        std::sort(queued_sprites.begin(), queued_sprites.end(), [](sprite_t& a, sprite_t& b) {
+                            return a.x < b.x;
+                        });
+                        break;
                     }
 
-                    if (clk >= 80) {
-                        clk = 0;
-                        r[PPU_STAT] &= 0xfc;
-                        r[PPU_STAT] |= 3;
-                    }
-                } break;
+                    bool sprite_in_scanline =
+                        (r[PPU_LY] >= ((int)spr->y - 16)) &&
+                        (r[PPU_LY] < ((int)spr->y - (TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 0 : 8)));
 
-                // VRAM read period
-                case 3: {
-                    oam_stat_fired = false;
-
-                    if (clk >= 172) {
-                        clk = 0;
-                        r[PPU_STAT] &= 0xfc;
-
-                        if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
-                            render_scanline();
-                        }
-                    }
+                    if (((int)spr->y-16 >= -16) && sprite_in_scanline) queued_sprites.push_back(*spr);
                 }
             }
-            
-            clk += clock::get() >> 2;
+        }
+
+        void cycle() {
+            switch (r[PPU_STAT] & STAT_CRMODE) {
+                case MODE_SPR_SEARCH: {
+                    oam_disabled = true;
+
+                    // Test IRQs for this scanline
+                    fire_lyc_irq();
+                    fire_oam_irq();
+
+                    // Queue up 10 sprites max for this scanline
+                    fetch_sprites();
+
+                    if (clk >= 80) {
+                        // Reset sprite fetcher state for the next scanline
+                        already_fetched_sprites = false;
+
+                        oam_stat_fired = false;
+                        lyc_stat_fired = false;
+
+                        clk -= 80;
+
+                        if (clk) residual_cycles = true;
+
+                        SWITCH_MODE(MODE_DRAW);
+                    }
+                } break;
+
+                case MODE_DRAW: {
+                    vram_disabled = true;
+
+                    // Handle pixels drawn in residual cycles (solves black lines bug)
+                    if (residual_cycles) {
+                        clki += clk;
+                        residual_cycles = false;
+                    }
+
+                    render_row(clki);
+
+                    // Pop sprite and background/window pixels from the FIFO for mixing
+                    // given priorities, colors, etc.
+                    for (size_t i = 0; i < clki; i++) {
+                        fifo_pixel_t bg_pixel = background_fifo.front(),
+                                     spr_pixel = sprite_fifo.front();
+
+                        u8 bg_idx = 0x0, spr_idx = 0x0;
+                        u32 out = 0x0;
+
+                        if (!TEST_REG(PPU_LCDC, LCDC_SPDISP)) spr_pixel.color = 0;
+
+                        if (settings::cgb_mode) {
+                            u32 bg_out = get_pixel_color(bg_pixel, false),
+                                spr_out = get_pixel_color(spr_pixel, true);
+
+                            if (spr_pixel.bg_priority && TEST_REG(PPU_LCDC, LCDC_BGWSWI)) {
+                                out = bg_pixel.color ? bg_out : spr_out;
+                            } else {
+                                out = spr_pixel.color ? spr_out : bg_out;
+                            }
+                        } else {
+                            if (!TEST_REG(PPU_LCDC, LCDC_BGWSWI)) bg_pixel.color = 0;
+
+                            spr_idx = ((spr_pixel.palette ? r[PPU_OBP1] : r[PPU_OBP0]) >> (spr_pixel.color << 1)) & 0x3;
+                            bg_idx = (r[PPU_BGP] >> (bg_pixel.color << 1)) & 0x3;
+
+                            if (spr_pixel.bg_priority) {
+                                out = bg_pixel.color ? dmg_palette.at(bg_idx) : dmg_palette.at(spr_idx);
+                            } else {
+                                out = spr_pixel.color ? dmg_palette.at(spr_idx) : dmg_palette.at(bg_idx);
+                            }
+                        }
+                        
+                        if (fx < PPU_WIDTH) frame.draw(fx++, r[PPU_LY], out);
+
+                        sprite_fifo.pop();
+                        background_fifo.pop();
+                    }
+
+                    if (clk >= 172) {
+                        // Prepare the sprite FIFO for the next scanline
+                        queued_sprites.clear();
+
+                        clk -= 172;
+
+                        if (clk) residual_cycles = true;
+
+                        vram_disabled = false;
+                        oam_disabled = false;
+
+                        SWITCH_MODE(MODE_HBLANK);
+                    }
+                } break;
+
+                case MODE_HBLANK: {
+                    // Test HBL IRQ
+                    fire_hbl_irq();
+
+                    if (clk >= 204) {
+                        if ((r[PPU_LY] >= r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
+
+                        r[PPU_LY]++;
+
+                        clk -= 204;
+
+                        hbl_stat_fired = false;
+
+                        if (r[PPU_LY] == 144) {
+                            SWITCH_MODE(MODE_VBLANK);
+
+                            screen::update();
+                        } else {
+                            fx = 0;
+                            cx = 0;
+
+                            SWITCH_MODE(MODE_SPR_SEARCH);
+                        }
+                    }
+                } break;
+
+                case MODE_VBLANK: {
+                    // Test VBL IRQs
+                    fire_pure_vbl_irq();
+                    fire_stat_vbl_irq();
+                    fire_lyc_irq();
+
+                    if (clk >= 456) {
+                        r[PPU_LY]++;
+
+                        clk -= 456;
+
+                        if (r[PPU_LY] == 154) {
+                            vbl_stat_fired = false;
+                            vbl_pure_fired = false;
+                            lyc_stat_fired = false;
+                            
+                            wiy = 0;
+                            r[PPU_LY] = 0;
+                            fx = 0;
+                            cx = 0;
+
+                            SWITCH_MODE(MODE_SPR_SEARCH);
+                        }
+                    }
+                } break;
+            }
+
+            clki = clock::get();
+
+            clk += clki;
         }
     }
 }

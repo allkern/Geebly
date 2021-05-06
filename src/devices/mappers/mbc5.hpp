@@ -127,6 +127,8 @@ namespace gameboy {
             }
 
             u8& ref(u16 addr) {
+                if (addr >= 0x150 && addr <= 0x3fff) { return rom[0].at(addr-0x150); }
+                if (addr >= 0x4000 && addr <= 0x7fff) { return current_rom_bank->at(addr-0x4000); }
                 if (addr >= 0xa000 && addr <= 0xbfff) { return current_sram_bank->at(addr-0xa000); }
 
                 return dummy;

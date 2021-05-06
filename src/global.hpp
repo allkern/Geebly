@@ -13,11 +13,15 @@ namespace gameboy {
              enable_joyp_irq_delay = false;
     }
 
+    float master_volume = 1.0f;
+
     bool stopped = false,
          window_closed = false,
          written_to_sram = false,
          debug_run = false,
-         tilted_cartridge = false;
+         tilted_cartridge = false,
+         sound_disabled = true,
+         stereo = true;
 
     namespace utility {
         /**
@@ -47,10 +51,7 @@ namespace gameboy {
          *  \param offset Offset of this buffer in the memory map
          */
         inline void default_mb_write(u8* buffer, u16 addr, u16 value, size_t size, size_t offset) {
-            while (size--) {
-                //buffer[(addr+size)-region_offset] = (value & (0xff << size*8)) >> (size*8);
-                buffer[(addr+size)-offset] = value >> (size*8);
-            }
+            while (size--) buffer[(addr+size)-offset] = value >> (size*8);
         }
     }
 }

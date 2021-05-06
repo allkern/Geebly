@@ -5,11 +5,8 @@
 #include "devices/cart.hpp"
 #include "devices/wram.hpp"
 #include "devices/hram.hpp"
-
-
 #include "devices/ppu/ppu.hpp"
-
-
+#include "devices/joypad.hpp"
 #include "devices/ic.hpp"
 #include "devices/dma/dma.hpp"
 #include "devices/dma/hdma.hpp"
@@ -18,21 +15,21 @@
 
 // Sound emulation is not yet supported on Linux platforms
 #ifdef _WIN32
-#ifndef GEEBLY_NO_SOUND
 #include "devices/spu/spu.hpp"
-#endif
 #endif
 
 // Clean this whole file up
-
 #define MMIO_DISABLE_BOOTROM 0xff50
 
 namespace gameboy {
     namespace bus {
         bool bootrom_enabled = true;
+
         u8 ro_sink = 0;
 
         void init() {
+            bootrom_enabled = true;
+
             if (settings::skip_bootrom) {
                 bootrom_enabled = false;
             }
@@ -63,9 +60,11 @@ namespace gameboy {
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::read(addr, size); }
 
-            if (addr == MMIO_JOYP) { return ppu::read(addr, size); }
+            if (addr == MMIO_JOYP) { return joypad::read(); }
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { return timer::read(addr, size); }
+
+            if (addr >= SPU_BEGIN && addr <= SPU_END) { return spu::read(addr, size); }
 
             if (addr == MMIO_DMA_TRANSFER) { return dma::read(addr, size); }
             if (addr >= HDMA_BEGIN && addr <= HDMA_END) { return hdma::read(addr, size); }
@@ -134,8 +133,12 @@ namespace gameboy {
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
 
+#ifdef GEEBLY_OLD_PPU
             if (addr == MMIO_JOYP) { ppu::write(addr, value, size); return; }
-            
+#else
+            if (addr == MMIO_JOYP) { joypad::write(value); return; }
+#endif
+
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
 #ifdef _WIN32

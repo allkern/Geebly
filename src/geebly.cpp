@@ -1,14 +1,17 @@
-//#define GEEBLY_NO_SOUND
+#ifdef __linux__
+#define LOG_TARGET_LINUX
+#endif
 
-#include "aliases.hpp"
-//#include "cpu/thread.hpp"
-#include "cpu/cpu.hpp"
+#ifdef _WIN32
+#define LOG_TARGET_POWERSHELL
+#endif
+
+#include "gameboy.hpp"
 #include "cpu/mnemonics.hpp"
-#include "log.hpp"
 
-#include "global.hpp"
-//#include "debug.hpp"
-#include "cli.hpp"
+#include "debug.hpp"
+
+#include "log.hpp"
 
 using namespace gameboy;
 
@@ -23,16 +26,12 @@ int main(int argc, char *argv[]) {
     settings::debugger_enabled                    = cli::setting("debug");
     settings::skip_bootrom                        = cli::setting("bootrom-skip");
     settings::cgb_mode                            = cli::setting("cgb-mode");
+    master_volume                                 = std::stod(cli::setting("master-volume", "1.0"));
+    stereo                                        = !cli::setting("mono");
+    sound_disabled                                = cli::setting("sound-disabled");
     
     _log::init("geebly");
 
-    // Clean this up
-    //std::signal(SIGSEGV, sigsegv_handler);
-
-    if (!settings::skip_bootrom)
-        bios::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
-
-    // Patch infinite loops for 2 NOPs
     if (!settings::bios_checks_enabled) {
         bios::rom[0xfa] = 0x00;
         bios::rom[0xfb] = 0x00;
@@ -40,77 +39,19 @@ int main(int argc, char *argv[]) {
         bios::rom[0xea] = 0x00;
     }
 
-    if (!cli::is_defined("cartridge")) _log(warning, "No cartridge inserted, loading no_cart");
+    if (settings::debugger_enabled) debug::init();
 
-    cart::insert_cartridge(cli::setting("cartridge", "geebly-no-cart"));
+    gameboy::init();
 
-    wram::init();
-    
-    hram::init();
-    
-    ppu::init(std::stoi(cli::setting("scale", "1")));
-    
-    cpu::init();
+    while (screen::is_open()) {
+        gameboy::update();
 
-    bus::init();
-
-    clock::init(cpu::registers::last_instruction_cycles);
-
-    //screen::init(&ppu::frame, std::stoi(cli::setting("scale", "1")));
-
-#ifdef _WIN32
-#ifndef GEEBLY_NO_SOUND
-    spu::init();
-#endif
-#endif
-
-    if (settings::debugger_enabled) {
-        //debug::init();
-        //cpu_thread::init();
+        if (settings::debugger_enabled && debug::is_open()) debug::update();
     }
 
-    int counter = 1000;
+    if (settings::debugger_enabled && debug::is_open()) debug::close();
 
-    while (!window_closed) {
-        if (!settings::debugger_enabled) {
-            cpu::cycle();
-        }
-
-        if (settings::debugger_enabled) {
-            if (cpu::done) {
-                if (!cpu::stopped) ppu::cycle();
-                if (!cpu::stopped) timer::update();
-                #ifdef _WIN32
-                #ifndef GEEBLY_NO_SOUND
-                    if (!cpu::stopped) spu::update();
-                #endif
-                #endif
-                cpu::done = false;
-            }
-        } else {
-            if (!cpu::stopped) ppu::cycle();
-            if (!cpu::stopped) timer::update();
-            #ifdef _WIN32
-            #ifndef GEEBLY_NO_SOUND
-                if (!cpu::stopped) spu::update();
-            #endif
-            #endif
-            //if (settings::enable_joyp_irq_delay) joypad::update();
-        }
-
-        if (settings::debugger_enabled) {
-            // if (debug::run) {
-            //     if (!(counter--)) {
-            //         debug::update();
-            //         counter = 1000;
-            //     }
-            // } else {
-            //     debug::update();
-            // }
-        }
-    }
-
-    ppu::close();
+    screen::close();
 
     cart::create_sav_file();
 

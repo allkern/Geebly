@@ -10,6 +10,7 @@
 # Precompiled Headers
 *.gch
 *.pch
+precomp/
 
 # Compiled Dynamic libraries
 *.so
@@ -34,11 +35,6 @@
 # Ignore compiled executable
 geebly
 
-# Ignore external libraries
-src/lgw/
-src/imgui/
-src/sfml/
-
 # Ignore test suites
 tests/
 tearoom/
@@ -49,6 +45,7 @@ res/
 
 # Ignore debug build scripts
 build-win-debug.bat
+build-win-debug.ps1
 
 # Ignore all BIOSes/ROMs
 *.gb
@@ -67,3 +64,18 @@ build-win-debug.bat
 # Settings files
 *.json
 build-win-debug.ps1
+build-win-debug.bat
+
+# Temporarily ignore the Linux Makefile
+Makefile
+
+# Etc
+*.sna
+*.asm
+src/memory_editor.h
+src/devices/ppu/naive_ppu.h
+imgui.ini
+.vscode/
+build-win.bat
+.vscode/settings.json
+src/devices/ppu/naive_ppu.hpp
