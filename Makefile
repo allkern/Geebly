@@ -2,14 +2,18 @@ VERSION_TAG := $(shell git describe --always --tags --abbrev=0)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
 SRC   := src
+BIN   := bin
 BUILD := build
 
-$(BUILD)/geebly: $(BUILD)/geebly.o
-	c++ $(BUILD)/geebly.o -o $(BUILD)/geebly -Ofast -m64 -lSDL2
-	rm -f $(BUILD)/geebly.o
+.PHONY: geebly
+geebly: $(BIN)/geebly
+
+$(BIN)/geebly: $(BUILD)/geebly.o
+	c++ $(BUILD)/geebly.o -o $(BIN)/geebly -Ofast -m64 -lSDL2
 
 $(BUILD)/geebly.o: $(SRC)/geebly.cpp
 	mkdir -p $(BUILD)
+	mkdir -p $(BIN)
 
 	c++ -c $(SRC)/geebly.cpp -o $(BUILD)/geebly.o -Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing \
 		-D GEEBLY_NO_DEBUGGER \
@@ -18,6 +22,7 @@ $(BUILD)/geebly.o: $(SRC)/geebly.cpp
 
 clean:
 	rm -rf $(BUILD)
+	rm -rf $(BIN)
 
 install:
-	sudo cp -rf $(BUILD)/geebly /usr/bin/geebly
+	sudo cp -rf $(BIN)/geebly /usr/bin/geebly
