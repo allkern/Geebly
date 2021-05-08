@@ -12,6 +12,7 @@
 #include "../bus.hpp"
 #include "../log.hpp"
 #include "../devices/clock.hpp"
+#include "../utils.hpp"
 
 #include "registers.hpp"
 #include "ops.hpp"
@@ -56,7 +57,7 @@ namespace gameboy {
             hl = 0x0;
 
             if (settings::skip_bootrom) {
-                pc = 0x100;
+                pc = 0x0100;
                 sp = 0xfffe;
                 af = settings::cgb_mode ? 0x11b0 : 0x01b0;
                 bc = 0x0013;
@@ -115,7 +116,7 @@ namespace gameboy {
         void fetch() {
             s.opcode = bus::read(registers::pc, 1);
             s.imm = bus::read(registers::pc+1, 2);
-            s.imm8 = s.imm & 0xff;
+            s.imm8 = utils::low8(s.imm);
         }
 
         bool execute(u8 override = 0x0) {
@@ -139,7 +140,7 @@ namespace gameboy {
                 // inc %r8;
                 case 0x04: case 0x14: case 0x24: case 0x0c: case 0x1c: case 0x2c: case 0x3c:
                 case 0x05: case 0x15: case 0x25: case 0x0d: case 0x1d: case 0x2d: case 0x3d: {
-                    op_idc(r[(opcode >> 3) & 0x7], opcode & 1);
+                    op_idc(r[utils::mid3(opcode)], utils::bit(0, opcode));
                     update(1, 4);
                 } break;
 
@@ -154,7 +155,7 @@ namespace gameboy {
                 // inc *%hl, dec *%hl;
                 case 0x34: case 0x35: {
                     u8 temp = bus::read(hl, 1);
-                    op_idc(temp, opcode & 1);
+                    op_idc(temp, utils::bit(0, opcode));
                     bus::write(hl, temp, 1);
                     update(1, 12);
                 } break;
@@ -167,19 +168,19 @@ namespace gameboy {
                 case 0x60: case 0x61: case 0x62: case 0x63: case 0x64: case 0x65: case 0x67:
                 case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6f:
                 case 0x78: case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7f: {
-                    r[(opcode >> 3) & 7] = r[opcode & 7];
+                    r[utils::mid3(opcode)] = r[utils::low3(opcode)];
                     update(1, 4);
                 } break;
 
                 // rla; rlca;
                 case 0x07: case 0x17: {
-                    op_rlc(r[a], opcode&0x10);
+                    op_rlc(r[a], utils::bit(4, opcode));
                     update(1, 4);
                 } break;
 
                 // rra; rrca;
                 case 0x0f: case 0x1f: {
-                    op_rrc(r[a], opcode&0x10);
+                    op_rrc(r[a], utils::bit(4, opcode));
                     update(1, 4);
                 } break;
 
@@ -192,28 +193,28 @@ namespace gameboy {
 
                 // ld r8, (hl)
                 case 0x46: case 0x4e: case 0x56: case 0x5e: case 0x66: case 0x6e: case 0x7e: {
-                    r[(opcode >> 3) & 7] = bus::read(hl, 1);
+                    r[utils::mid3(opcode)] = bus::read(hl, 1);
                     update(1, 8);
                     break;
                 } break;
 
                 // ld (hl), r8
                 case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77: {
-                    bus::write(hl, r[opcode & 0x7], 1);
+                    bus::write(hl, r[utils::low3(opcode)], 1);
                     update(1, 8);
                 } break;
 
                 // add a, r8; adc a, r8
                 case 0x80: case 0x81: case 0x82: case 0x83: case 0x84: case 0x85: case 0x87:   
                 case 0x88: case 0x89: case 0x8a: case 0x8b: case 0x8c: case 0x8d: case 0x8f: {
-                    bool carry = (opcode & 8) && get_carry();
-                    op_adc(r[a], r[opcode & 7], carry);
+                    bool carry = utils::bit(3, opcode) && get_carry();
+                    op_adc(r[a], r[utils::low3(opcode)], carry);
                     update(1, 4);
                 } break;
 
                 // add a, *%hl; adc a, *%hl
                 case 0x86: case 0x8e: {
-                    bool carry = (opcode & 8) && get_carry();
+                    bool carry = utils::bit(3, opcode) && get_carry();
                     op_adc(r[a], bus::read((u16)hl, 1), carry);
                     update(1, 8);
                 } break;
@@ -221,20 +222,20 @@ namespace gameboy {
                 // sub a, r8; sbc a, r8
                 case 0x90: case 0x91: case 0x92: case 0x93: case 0x94: case 0x95: case 0x97:   
                 case 0x98: case 0x99: case 0x9a: case 0x9b: case 0x9c: case 0x9d: case 0x9f: {
-                    bool carry = (opcode & 8) && get_carry();
-                    op_sbc(r[a], r[opcode & 7], carry);
+                    bool carry = utils::bit(3, opcode) && get_carry();
+                    op_sbc(r[a], r[utils::low3(opcode)], carry);
                     update(1, 4);
                 } break;
 
                 case 0x96: case 0x9e: {
-                    bool carry = (opcode & 8) && get_carry();
+                    bool carry = utils::bit(3, opcode) && get_carry();
                     op_sbc(r[a], bus::read((u16)hl, 1), carry);
                     update(1, 8);
                 } break;
 
                 // and a, r8; and a, (hl)
                 case 0xa0: case 0xa1: case 0xa2: case 0xa3: case 0xa4: case 0xa5: case 0xa7: {
-                    op_and(r[a], r[opcode & 7]);
+                    op_and(r[a], r[utils::low3(opcode)]);
                     update(1, 4);
                 } break;
 
@@ -242,7 +243,7 @@ namespace gameboy {
 
                 // or a, r8; or a, (hl)
                 case 0xb0: case 0xb1: case 0xb2: case 0xb3: case 0xb4: case 0xb5: case 0xb7: {
-                    op_or(r[a], r[opcode & 7]);
+                    op_or(r[a], r[utils::low3(opcode)]);
                     update(1, 4);
                 } break;
 
@@ -250,7 +251,7 @@ namespace gameboy {
 
                 // xor a, r8; xor a, (hl)
                 case 0xa8: case 0xa9: case 0xaa: case 0xab: case 0xac: case 0xad: case 0xaf: {
-                    op_xor(r[a], r[opcode & 7]);
+                    op_xor(r[a], r[utils::low3(opcode)]);
                     update(1, 4);
                 } break;
 
@@ -258,20 +259,20 @@ namespace gameboy {
 
                 // cp a, r8; cp a, (hl)
                 case 0xb8: case 0xb9: case 0xba: case 0xbb: case 0xbc: case 0xbd: case 0xbf: {
-                    op_cp(r[a], r[opcode & 7]);
+                    op_cp(r[a], r[utils::low3(opcode)]);
                     update(1, 4);
                 } break;
 
                 case 0xbe: { op_cp(r[a], bus::read(hl, 1)); update(1, 8); } break;
 
                 case 0xc6: case 0xce: {
-                    bool carry = (opcode & 8) && get_carry();
+                    bool carry = utils::bit(4, opcode) && get_carry();
                     op_adc(r[a], s.imm8, carry);
                     update(2, 8);
                 } break;
 
                 case 0xd6: case 0xde: {
-                    bool carry = (opcode & 8) && get_carry();
+                    bool carry = utils::bit(4, opcode) && get_carry();
                     op_sbc(r[a], s.imm8, carry);
                     update(2, 8);
                 } break;
@@ -283,7 +284,7 @@ namespace gameboy {
 
                 // ld r8, d8; ld *%hl, d8;
                 case 0x06: case 0x16: case 0x26: case 0x0e: case 0x1e: case 0x2e: case 0x3e: {
-                    r[(opcode & 0x38) >> 3] = s.imm8;
+                    r[utils::mid3(opcode)] = s.imm8;
                     update(2, 8);
                 } break;
                 
@@ -292,7 +293,7 @@ namespace gameboy {
                 // rst #rst_vector;
                 case 0xc7: case 0xd7: case 0xe7: case 0xf7: case 0xcf: case 0xdf: case 0xef: case 0xff: {
                     push(pc+1);
-                    pc = opcode & 0x38;
+                    pc = utils::bits(3, 5, opcode) << 3;
                     update(1, 16, true);
                 } break;
 
@@ -370,8 +371,8 @@ namespace gameboy {
                     u16 res = sp + (s8)s.imm8;
                     hl = res;
                     set_flags(Z | N, false);
-                    set_flags(C, (res&0xff) < s.imm8);
-                    set_flags(H, (res&0xf) < (s.imm8&0xf));
+                    set_flags(C, utils::low8(res) < s.imm8);
+                    set_flags(H, utils::low4(res) < utils::low4(s.imm8));
                     update(2, 12);
                 } break;
 
@@ -388,8 +389,8 @@ namespace gameboy {
                 case 0xe8: {
                     sp += (s8)s.imm8;
                     set_flags(Z | N, false);
-                    set_flags(C, (sp&0xff) < s.imm8);
-                    set_flags(H, (sp&0xf) < (s.imm8&0xf));
+                    set_flags(C, utils::low8(sp) < s.imm8);
+                    set_flags(H, utils::low4(sp) < utils::low4(s.imm8));
                     update(2, 16);
                 } break;
 
@@ -439,7 +440,7 @@ namespace gameboy {
                         case 0x68: case 0x69: case 0x6a: case 0x6b: case 0x6c: case 0x6d: case 0x6f:
                         case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77:
                         case 0x78: case 0x79: case 0x7a: case 0x7b: case 0x7c: case 0x7d: case 0x7f: {
-                            op_bit(r[opcode&0x7], (opcode >> 3) & 0x7);
+                            op_bit(r[utils::low3(opcode)], utils::mid3(opcode));
                             update(1, 8);
                         } break;
 
@@ -448,7 +449,7 @@ namespace gameboy {
                         case 0x66: case 0x6e:
                         case 0x76: case 0x7e: {
                             u8 temp = bus::read(hl, 1);
-                            op_bit(temp, (opcode >> 3) & 0x7);
+                            op_bit(temp, utils::mid3(opcode));
                             bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
@@ -470,7 +471,7 @@ namespace gameboy {
                         case 0xe8: case 0xe9: case 0xea: case 0xeb: case 0xec: case 0xed: case 0xef:
                         case 0xf0: case 0xf1: case 0xf2: case 0xf3: case 0xf4: case 0xf5: case 0xf7:
                         case 0xf8: case 0xf9: case 0xfa: case 0xfb: case 0xfc: case 0xfd: case 0xff: {
-                            op_rst(r[opcode&0x7], (opcode >> 3) & 0x7, opcode & 0x40);
+                            op_rst(r[utils::low3(opcode)], utils::mid3(opcode), utils::bit(6, opcode));
                             update(1, 8);
                         } break;
 
@@ -479,39 +480,39 @@ namespace gameboy {
                         case 0xc6: case 0xce: case 0xd6: case 0xde:
                         case 0xe6: case 0xee: case 0xf6: case 0xfe: {
                             u8 temp = bus::read(hl, 1);
-                            op_rst(temp, (opcode >> 3) & 0x7, (bool)(opcode & 0x40));
+                            op_rst(temp, utils::mid3(opcode), utils::bit(6, opcode));
                             bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
                         case 0x00: case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x07:
                         case 0x10: case 0x11: case 0x12: case 0x13: case 0x14: case 0x15: case 0x17: {
-                            op_rlc(r[opcode&0x7], opcode&0x10, true);
+                            op_rlc(r[utils::low3(opcode)], utils::bit(4, opcode), true);
                             update(1, 8);
                         } break;
 
                         case 0x06: case 0x16: {
                             u8 temp = bus::read(hl, 1);
-                            op_rlc(temp, opcode&0x10, true);
+                            op_rlc(temp, utils::bit(4, opcode), true);
                             bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
                         
                         case 0x08: case 0x09: case 0x0a: case 0x0b: case 0x0c: case 0x0d: case 0x0f:
                         case 0x18: case 0x19: case 0x1a: case 0x1b: case 0x1c: case 0x1d: case 0x1f: {
-                            op_rrc(r[opcode&0x7], opcode&0x10, true);
+                            op_rrc(r[utils::low3(opcode)], utils::bit(4, opcode), true);
                             update(1, 8);
                         } break;
 
                         case 0x0e: case 0x1e: {
                             u8 temp = bus::read(hl, 1);
-                            op_rrc(temp, opcode&0x10, true);
+                            op_rrc(temp, utils::bit(4, opcode), true);
                             bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
                         case 0x20: case 0x21: case 0x22: case 0x23: case 0x24: case 0x25: case 0x27: {
-                            op_sla(r[opcode&0x7]);
+                            op_sla(r[utils::low3(opcode)]);
                             update(1, 8);
                         } break;
 
@@ -524,19 +525,19 @@ namespace gameboy {
 
                         case 0x28: case 0x29: case 0x2a: case 0x2b: case 0x2c: case 0x2d: case 0x2f:
                         case 0x38: case 0x39: case 0x3a: case 0x3b: case 0x3c: case 0x3d: case 0x3f: {
-                            op_sra(r[opcode&0x7], (bool)(opcode&0x10));
+                            op_sra(r[utils::low3(opcode)], utils::bit(4, opcode));
                             update(1, 8);
                         } break;
 
                         case 0x2e: case 0x3e: {
                             u8 temp = bus::read(hl, 1);
-                            op_sra(temp, (bool)(opcode&0x10));
+                            op_sra(temp, utils::bit(4, opcode));
                             bus::write(hl, temp, 1);
                             update(1, 16);
                         } break;
 
                         case 0x30: case 0x31: case 0x32: case 0x33: case 0x34: case 0x35: case 0x37: {
-                            op_swap(r[opcode&0x7]);
+                            op_swap(r[utils::low3(opcode)]);
                             update(1, 8);
                         } break;
 

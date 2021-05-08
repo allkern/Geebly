@@ -11,7 +11,7 @@ namespace gameboy {
 
         template <typename T>
         T bits(unsigned int n, unsigned int m, T num) {
-            T one_over = (m - n + 1) << 1;
+            T one_over = 1 << (m - n + 1);
             T mask = one_over - 1;
             return (num >> n) & mask;
         }
