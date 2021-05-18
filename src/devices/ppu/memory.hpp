@@ -107,6 +107,10 @@ namespace gameboy {
             bool vram_bank, xflip, yflip, priority;
         } bg_attr;
 
+        typedef void (*frame_ready_callback_t)(uint32_t*);
+
+        frame_ready_callback_t frame_ready_cb = nullptr;
+
         typedef std::array <u8, 0x2000>     vram_bank_t;
         typedef std::array <u8, 0xa0>       oam_t;
         typedef std::array <sprite_t*, 40>  sprite_array_t;
@@ -119,10 +123,10 @@ namespace gameboy {
 
         typedef lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> framebuffer_t;
 
+        queued_sprite_array_t queued_sprites;
+        sprite_array_t sprites;
         vram_t vram;
         oam_t oam;
-        sprite_array_t sprites;
-        queued_sprite_array_t queued_sprites;
 
         u8 bcps, ocps,
            current_bank_idx = 0,
@@ -154,6 +158,10 @@ namespace gameboy {
         bool vram_disabled = false, oam_disabled = false;
 
         u8 tile, l, h;
+
+        uint32_t* get_buffer() {
+            return frame.get_buffer();
+        }
 
         u32 read(u16 addr, size_t size) {
             switch (addr) {

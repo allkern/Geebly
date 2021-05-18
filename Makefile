@@ -1,28 +1,48 @@
 VERSION_TAG := $(shell git describe --always --tags --abbrev=0)
 COMMIT_HASH := $(shell git rev-parse --short HEAD)
 
-SRC   := src
-BIN   := bin
-BUILD := build
+EXE    := geebly
+SRC    := frontend
+BIN    := bin
+BUILD  := build
+IMGUI_DIR := imgui
+SOURCES := $(IMGUI_DIR)/imgui.cpp
+SOURCES += $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+SOURCES += $(IMGUI_DIR)/examples/libs/gl3w/GL/gl3w.c
 
-.PHONY: geebly
-geebly: $(BIN)/geebly
+.PHONY: $(EXE)
+geebly: $(BIN)/$(EXE)
 
-$(BIN)/geebly: $(BUILD)/geebly.o
-	c++ $(BUILD)/geebly.o -o $(BIN)/geebly -Ofast -m64 -lSDL2
+$(BIN)/$(EXE): $(BUILD)/$(EXE).o
+	c++ *.o $(BUILD)/$(EXE).o -o $(BIN)/$(EXE) -ldl -lGL -Ofast -m64 -lSDL2 -g
 
-$(BUILD)/geebly.o: $(SRC)/geebly.cpp
+	rm -f build/$(EXE).o
+
+$(BUILD)/$(EXE).o: $(SRC)/$(EXE).cpp
 	mkdir -p $(BUILD)
 	mkdir -p $(BIN)
 
-	c++ -c $(SRC)/geebly.cpp -o $(BUILD)/geebly.o -Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing \
+	c++ -c \
+		-I$(IMGUI_DIR)/examples/libs/gl3w \
+		-I$(IMGUI_DIR) \
+		-I/usr/include/SDL2 \
+		-ldl \
+		$(SOURCES)
+
+	c++ -c $(SRC)/$(EXE).cpp -o $(BUILD)/$(EXE).o -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMGUI_DIR)/examples/libs/gl3w \
+		-DIMGUI_IMPL_OPENGL_LOADER_GL3W \
 		-D GEEBLY_NO_DEBUGGER \
 		-D GEEBLY_VERSION_TAG=$(VERSION_TAG) \
-		-D GEEBLY_COMMIT_HASH=$(COMMIT_HASH)
+		-D GEEBLY_COMMIT_HASH=$(COMMIT_HASH) \
+		-Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing -g -ldl
 
 clean:
 	rm -rf $(BUILD)
 	rm -rf $(BIN)
 
 install:
-	sudo cp -rf $(BIN)/geebly /usr/bin/geebly
+	sudo cp -rf $(BIN)/$(EXE) /usr/bin/$(EXE)
+
+install-dev:
+	sudo cp -rf src/ /usr/include/geebly/

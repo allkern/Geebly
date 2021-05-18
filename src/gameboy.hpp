@@ -5,6 +5,7 @@
 
 #include "cpu/cpu.hpp"
 #include "cpu/mnemonics.hpp"
+#include "screen.hpp"
 #include "log.hpp"
 #include "cli.hpp"
 
@@ -18,7 +19,7 @@ namespace gameboy {
         hram::init();
     }
 
-    void reload_rom(std::string file) {
+    void reload_rom(const char* file) {
         reset();
 
         cart::insert_cartridge(file);
@@ -38,17 +39,26 @@ namespace gameboy {
         bus::init();
         clock::init(cpu::registers::last_instruction_cycles);
 
-        ppu::init();
-        screen::init(&ppu::frame, std::stoi(cli::setting("scale", "1")));
-        screen::register_keydown_cb(joypad::keydown);
-        screen::register_keyup_cb(joypad::keyup);
-        screen::register_rom_dropped_cb(&reload_rom);
+        ppu::init(screen::update);
+
+        if (!settings::debugger_enabled) screen::init(std::stoi(cli::setting("scale", "1")));
+        if (!settings::debugger_enabled) screen::register_keydown_cb(joypad::keydown);
+        if (!settings::debugger_enabled) screen::register_keyup_cb(joypad::keyup);
+        if (!settings::debugger_enabled) screen::register_rom_dropped_cb(reload_rom);
 
         if (!sound_disabled) spu::init();
     }
 
     void update() {
-        cpu::cycle();
+        if (!pause) {
+            cpu::cycle();
+        } else {
+            if (step) {
+                cpu::cycle();
+
+                step = false;
+            }
+        }
 
         if (!cpu::stopped) {
             ppu::cycle();

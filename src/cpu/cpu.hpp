@@ -17,9 +17,7 @@
 #include "ops.hpp"
 
 #ifdef __linux__
-#include <sys/unistd.h>
 #define GEEBLY_PERF_FFS __builtin_ffs
-#define GEEBLY_PERF_SLEEP usleep(1);
 #endif
 
 // Windows only:
@@ -30,9 +28,7 @@
 //    #include <windows.h>
 //#define N 0b01000000
 #define GEEBLY_PERF_FFS ffs
-#define GEEBLY_PERF_SLEEP // Sleep(0);
 #endif
-
 
 namespace gameboy {
     namespace cpu {
@@ -123,12 +119,9 @@ namespace gameboy {
 
             u8 opcode = override ? override : s.opcode;
 
-            //if (settings::debugger_enabled) {
-            //    if (!run) { while (step) { GEEBLY_PERF_SLEEP } }
-            //}
-
             if (halted || stopped) {
                 update(0, 4);
+
                 goto skip;
             }
             
@@ -564,10 +557,7 @@ namespace gameboy {
 
             skip:
 
-            if (settings::debugger_enabled && !cpu::run) step = true;
-
             jump = false;
-            done = true;
 
             return true;
         }

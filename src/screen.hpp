@@ -1,11 +1,15 @@
 #pragma once
 
 #ifdef _WIN32
+#define GEEBLY_NATIVE_VSYNC
 #include "SDL2/SDL.h"
 #define GEEBLY_SDL_WINDOW_FLAGS SDL_WINDOW_VULKAN
 #endif
 
 #ifdef __linux__
+#ifdef GEEBLY_NATIVE_VSYNC
+#undef GEEBLY_NATIVE_VSYNC
+#endif
 #include "SDL2/SDL.h"
 #define GEEBLY_SDL_WINDOW_FLAGS SDL_WINDOW_OPENGL
 #endif
@@ -14,11 +18,15 @@
 
 #include "lgw/framebuffer.hpp"
 
-#include <functional>
 #include <chrono>
+#include <unordered_map>
 
 #define PPU_WIDTH  160
 #define PPU_HEIGHT 144
+
+
+#define STR1(m) #m
+#define STR(m) STR1(m)
 
 namespace gameboy {
     namespace screen {
@@ -28,28 +36,38 @@ namespace gameboy {
             SDL_Texture* texture = nullptr;
         }
 
-        typedef std::function<void(SDL_Keycode)> key_event_callback_t;
-        typedef std::function<void(std::string)> rom_drop_callback_t;
+        typedef void (*key_event_callback_t) (SDL_Keycode);
+        typedef void (*rom_drop_callback_t) (const char*);
 
         key_event_callback_t keydown_cb, keyup_cb;
         rom_drop_callback_t rom_drop_cb;
 
         // FPS tracking stuff
-        auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now(), end = start;
         size_t frames_rendered = 0, fps = 0;
 
-        typedef lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> framebuffer_t;
+        std::unordered_map <SDL_Keycode, int> keymap = {
+            { SDLK_a     , JOYP_A },
+            { SDLK_s     , JOYP_B },
+            { SDLK_RETURN, JOYP_START },
+            { SDLK_q     , JOYP_SELECT },
+            { SDLK_UP    , JOYP_UP },
+            { SDLK_DOWN  , JOYP_DOWN },
+            { SDLK_LEFT  , JOYP_LEFT },
+            { SDLK_RIGHT , JOYP_RIGHT }
+        };
 
-        framebuffer_t* frame = nullptr;
+        void init(size_t scale) {
+            uint32_t SDL_INIT_FLAGS = SDL_INIT_VIDEO | SDL_INIT_EVENTS;
 
-        void init(framebuffer_t* f_ptr, size_t window_scale) {
-            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_EVENTS);
-            frame = f_ptr;
+            if (!sound_disabled) SDL_INIT_FLAGS |= SDL_INIT_AUDIO;
+
+            SDL_Init(SDL_INIT_FLAGS);
 
             sdl::window = SDL_CreateWindow(
-                "Geebly",
+                "Geebly " STR(GEEBLY_VERSION_TAG) " " STR(GEEBLY_COMMIT_HASH),
                 SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-                PPU_WIDTH * window_scale, PPU_HEIGHT * window_scale,
+                PPU_WIDTH * scale, PPU_HEIGHT * scale,
                 GEEBLY_SDL_WINDOW_FLAGS
             );
 
@@ -82,12 +100,20 @@ namespace gameboy {
 
         bool open = true;
 
-        inline bool is_open() {
+        bool is_open() {
             return open;
         }
 
-        inline size_t get_fps() {
+        size_t get_fps() {
             return fps;
+        }
+
+        bool fps_ready() {
+            end = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration <double> d = end - start;
+
+            return std::chrono::duration_cast<std::chrono::seconds>(d).count() == 1;
         }
 
         void close() {
@@ -100,23 +126,28 @@ namespace gameboy {
             SDL_Quit();
         }
 
-        void update() {
-            auto end = std::chrono::high_resolution_clock::now();
+        void update(uint32_t* buf) {
+            end = std::chrono::high_resolution_clock::now();
 
             std::chrono::duration <double> d = end - start;
 
-            if (std::chrono::duration_cast<std::chrono::seconds>(d).count() >= 1) {
+            if (std::chrono::duration_cast<std::chrono::seconds>(d).count() == 1) {
                 fps = frames_rendered;
                 frames_rendered = 0;
                 start = std::chrono::high_resolution_clock::now();
+                end = start;
             }
+
+#ifndef GEEBLY_NATIVE_VSYNC
+            int start = SDL_GetTicks();
+#endif
 
             SDL_RenderClear(sdl::renderer);
 
             SDL_UpdateTexture(
                 sdl::texture,
                 NULL,
-                frame->get_buffer(),
+                buf,
                 PPU_WIDTH * sizeof(uint32_t)
             );
 
@@ -130,14 +161,28 @@ namespace gameboy {
 
             while (SDL_PollEvent(&event)) {
                 switch (event.type) {
-                    case SDL_DROPFILE: { rom_drop_cb(std::string(event.drop.file)); } break;
+                    case SDL_DROPFILE: { rom_drop_cb(event.drop.file); } break;
                     case SDL_QUIT: { close(); } break;
-                    case SDL_KEYDOWN: { keydown_cb(event.key.keysym.sym); } break;
-                    case SDL_KEYUP: { keyup_cb(event.key.keysym.sym); } break;
+                    case SDL_KEYDOWN: { keydown_cb(keymap[event.key.keysym.sym]); } break;
+                    case SDL_KEYUP: { keyup_cb(keymap[event.key.keysym.sym]); } break;
                 }
             }
 
-            frame->clear();
+            // Shitty implementation of Vsync that doesn't actually Vsync.
+            // It just tries to keep a framerate close to 60 Hz
+            // Thankfully/disgracefully, this is probably only present on Linux hosts where
+            // there isn't native Vsync (X11).
+#ifndef GEEBLY_NATIVE_VSYNC
+            int time = SDL_GetTicks() - start;
+
+            if (time < 0) return;
+
+            int delay = 14 - time;
+
+            if (delay > 0) {
+                SDL_Delay(delay);
+            }
+#endif
         }
     }
 }

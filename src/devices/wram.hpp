@@ -8,6 +8,8 @@
 
 #define WRAM_BEGIN 0xc000
 #define WRAM_END 0xdfff
+#define ECHO_BEGIN 0xe000
+#define ECHO_END 0xfdff
 
 #define WRA0_BEGIN WRAM_BEGIN
 #define WRA0_END 0xcfff

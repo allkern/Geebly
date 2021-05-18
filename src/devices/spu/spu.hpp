@@ -22,7 +22,36 @@ namespace gameboy {
             return panned;
         }
 
-        int16_t left, right = 0x0;
+        int32_t get_sample() {
+            int16_t samples[] = {
+                ch1.get_sample(),
+                ch2.get_sample(),
+                ch3.get_sample(),
+                ch4.get_sample()
+            };
+
+            if (stereo) {
+                int32_t left, right;
+
+                for (int i = 0; i < 4; i++) {
+                    if (nr[0x15] & (0x10 << i)) left += samples[i];
+                    if (nr[0x15] & (0x1 << i)) right += samples[i];
+                }
+
+                left = ((left / 4) * so1_output_level) * master_volume;
+                right = ((right / 4) * so2_output_level) * master_volume;
+
+                return ((left & 0xffff) << 16) | (right & 0xffff);
+            } else {
+                int32_t sample;
+
+                for (int i = 0; i < 4; i++) sample += samples[i];
+
+                sample /= 4;
+
+                return (sample << 0x10) | (sample / 4);
+            }
+        }
 
         void audio_update_cb(void* ud, u8* buf, int size) {
             for (size_t i = 0; i < (SPU_RESAMPLER_FILL_SIZE * 2); i += 2) {
@@ -154,7 +183,7 @@ namespace gameboy {
             if (addr == 0xff26) {
                 if ((!(value & 0x80) && (nr[0x16] & 0x80)) || ((value & 0x80) && (!(nr[0x16] & 0x80)))) reset();
 
-                nr[0x16] = value;
+                nr[0x16] = value & 0x80;
             }
         }
 

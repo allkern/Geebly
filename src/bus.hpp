@@ -52,6 +52,7 @@ namespace gameboy {
 
             // Handle a WRAM read
             if (addr >= WRAM_BEGIN && addr <= WRAM_END) { return wram::read(addr, size); }
+            if (addr >= ECHO_BEGIN && addr <= ECHO_END) { return wram::read(addr-0x2000, size); }
 
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::read(addr, size); }
@@ -69,10 +70,13 @@ namespace gameboy {
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::read(addr, size); }
+            if (addr == MMIO_VBK) { return ppu::read(addr, size); }
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::read(addr, size); }
 
             if (addr == MMIO_IF || addr == MMIO_IE) { return ic::read(addr, size); }
+
+            _log(warning, "Unhandled bus read at addr=%04x", addr);
 
             return 0x0;
         }
@@ -90,6 +94,7 @@ namespace gameboy {
 
             // Handle a WRAM read
             if (addr >= WRAM_BEGIN && addr <= WRAM_END) { return wram::ref(addr); }
+            if (addr >= ECHO_BEGIN && addr <= ECHO_END) { return wram::ref(addr-0x2000); }
 
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::ref(addr); }
@@ -125,6 +130,7 @@ namespace gameboy {
 
             // Handle a WRAM read
             if (addr >= WRAM_BEGIN && addr <= WRAM_END) { wram::write(addr, value, size); return; }
+            if (addr >= ECHO_BEGIN && addr <= ECHO_END) { wram::write(addr-0x2000, value, size); return; }
 
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
@@ -133,7 +139,7 @@ namespace gameboy {
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
-            if (addr >= SPU_BEGIN && addr <= SPU_END) { spu::write(addr, value, size); }
+            if (addr >= SPU_BEGIN && addr <= SPU_END) { spu::write(addr, value, size); return; }
 
             if (addr == MMIO_DMA_TRANSFER) { dma::write(addr, value, size); return; }
             if (addr >= HDMA_BEGIN && addr <= HDMA_END) { hdma::write(addr, value, size); return; }
@@ -149,6 +155,8 @@ namespace gameboy {
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { hram::write(addr, value, size); return; }
 
             if (addr == MMIO_IF || addr == MMIO_IE) { ic::write(addr, value, size); return; }
+
+            //_log(warning, "Unhandled bus write at addr=%04x", addr);
         }
     }
 }

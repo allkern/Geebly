@@ -5,10 +5,11 @@
 #include "../../log.hpp"
 
 #include "memory.hpp"
-#include "screen.hpp"
 
 #include "../clock.hpp"
 #include "../ic.hpp"
+
+#include "immintrin.h"
 
 #define GEEBLY_OPTIMIZE_PPU
 
@@ -27,8 +28,16 @@
 
 namespace gameboy {
     namespace ppu {
-        void init() {
-            r[PPU_STAT] = 0x80;
+        /**
+		 *  \brief Initialize the PPU
+		 *  
+		 *  \param fr_cb A function that will be called every time a frame is ready.
+         *               Pass nullptr to disable the callback feature
+		 */
+        void init(frame_ready_callback_t fr_cb = nullptr) {
+            frame_ready_cb = fr_cb;
+
+            r[PPU_STAT] = 0x84;
             r[PPU_BGP]  = 0xfc;
             r[PPU_OBP0] = 0xff;
             r[PPU_OBP1] = 0xff;
@@ -366,7 +375,7 @@ namespace gameboy {
                         if (r[PPU_LY] == 144) {
                             SWITCH_MODE(MODE_VBLANK);
 
-                            screen::update();
+                            frame_ready_cb(frame.get_buffer());
                         } else {
                             fx = 0;
                             cx = 0;

@@ -1,17 +1,18 @@
 #ifdef __linux__
-#define LOG_TARGET_LINUX
+#define LOG_TARGET_LINUX 1
+#else
+#define LOG_TARGET_LINUX 0
 #endif
 
 #ifdef _WIN32
-#define LOG_TARGET_POWERSHELL
+#define LOG_TARGET_POWERSHELL 1
+#else
+#define LOG_TARGET_POWERSHELL 0
 #endif
 
 #include "gameboy.hpp"
 #include "cpu/mnemonics.hpp"
-
-#ifndef GEEBLY_NO_DEBUGGER
-#include "debug.hpp"
-#endif
+#include "debug/debug.hpp"
 
 #include "log.hpp"
 
@@ -41,22 +42,22 @@ int main(int argc, char *argv[]) {
         bios::rom[0xea] = 0x00;
     }
 
-#ifndef GEEBLY_NO_DEBUGGER
-    if (settings::debugger_enabled) debug::init();
-#endif
-
     gameboy::init();
+
+    if (settings::debugger_enabled) {
+        pause = true;
+        step = false;
+
+        debug::init();
+    }
 
     while (screen::is_open()) {
         gameboy::update();
 
-#ifndef GEEBLY_NO_DEBUGGER
         if (settings::debugger_enabled && debug::is_open()) debug::update();
-#endif
     }
-#ifndef GEEBLY_NO_DEBUGGER
+
     if (settings::debugger_enabled && debug::is_open()) debug::close();
-#endif
 
     screen::close();
 

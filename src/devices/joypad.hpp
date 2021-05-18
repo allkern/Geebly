@@ -6,8 +6,6 @@
 #include "ic.hpp"
 #include "../cpu/registers.hpp"
 
-#include "SDL2/SDL.h"
-
 #include <unordered_map>
 
 // JOYP masks
@@ -31,16 +29,16 @@ namespace gameboy {
         int delay = 0;
         bool irq = false;
 
-        void keydown(SDL_Keycode k) {
+        void keydown(int k) {
             switch (k) {
-                case SDLK_RETURN: { buttons &= ~JOYP_START;  irq = true; } break;
-                case SDLK_q     : { buttons &= ~JOYP_SELECT; irq = true; } break;
-                case SDLK_s     : { buttons &= ~JOYP_B;      irq = true; } break;
-                case SDLK_a     : { buttons &= ~JOYP_A;      irq = true; } break;
-                case SDLK_RIGHT : { buttons &= ~JOYP_RIGHT;  irq = true; } break;
-                case SDLK_LEFT  : { buttons &= ~JOYP_LEFT;   irq = true; } break;
-                case SDLK_UP    : { buttons &= ~JOYP_UP;     irq = true; } break;
-                case SDLK_DOWN  : { buttons &= ~JOYP_DOWN;   irq = true; } break;
+                case JOYP_START : { buttons &= ~JOYP_START;  irq = true; } break;
+                case JOYP_SELECT: { buttons &= ~JOYP_SELECT; irq = true; } break;
+                case JOYP_B     : { buttons &= ~JOYP_B;      irq = true; } break;
+                case JOYP_A     : { buttons &= ~JOYP_A;      irq = true; } break;
+                case JOYP_RIGHT : { buttons &= ~JOYP_RIGHT;  irq = true; } break;
+                case JOYP_LEFT  : { buttons &= ~JOYP_LEFT;   irq = true; } break;
+                case JOYP_UP    : { buttons &= ~JOYP_UP;     irq = true; } break;
+                case JOYP_DOWN  : { buttons &= ~JOYP_DOWN;   irq = true; } break;
                 default: break;
             }
 
@@ -53,19 +51,8 @@ namespace gameboy {
             }
         }
 
-        void keyup(SDL_Keycode k) {
-            switch (k) {
-                case SDLK_RETURN: { buttons |= JOYP_START;  } break;
-                case SDLK_q     : { buttons |= JOYP_SELECT; } break;
-                case SDLK_s     : { buttons |= JOYP_B;      } break;
-                case SDLK_a     : { buttons |= JOYP_A;      } break;
-                case SDLK_RIGHT : { buttons |= JOYP_RIGHT;  } break;
-                case SDLK_LEFT  : { buttons |= JOYP_LEFT;   } break;
-                case SDLK_UP    : { buttons |= JOYP_UP;     } break;
-                case SDLK_DOWN  : { buttons |= JOYP_DOWN;   } break;
-                default: break;
-            }
-            
+        void keyup(int k) {
+            buttons |= k;
         }
 
         void write(u8 value) {

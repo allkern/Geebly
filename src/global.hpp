@@ -1,6 +1,7 @@
 #pragma once
 
 #include "aliases.hpp"
+#include <atomic>
 
 namespace gameboy {
     namespace settings {
@@ -12,6 +13,8 @@ namespace gameboy {
              cgb_dmg_mode = false,
              enable_joyp_irq_delay = false;
     }
+
+    std::atomic_bool pause, step;
 
     float master_volume = 1.0f;
 

@@ -18,9 +18,6 @@ namespace gameboy {
             size_t pc_increment = 0x0;
         } s;
 
-        // Debugging
-        std::atomic <bool> step, run, done;
-
         bool halted, stopped;
 
         namespace registers {
