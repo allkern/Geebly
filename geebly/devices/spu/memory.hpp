@@ -12,11 +12,6 @@ namespace gameboy {
         typedef std::array <u8, 0x20> wave_ram_t;
         typedef std::array <double, 4> duty_cycles_t;
 
-        SDL_AudioDeviceID dev;
-        SDL_AudioSpec obtained, desired;
-
-        SDL_AudioStream* stream = nullptr;
-
         static const duty_cycles_t duty_cycles = { 8.0, 4.0, 2.0, 1.3 };
 
         double so1_output_level, so2_output_level;

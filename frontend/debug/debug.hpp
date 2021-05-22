@@ -10,10 +10,17 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 #include <cstdio>
+#include <thread>
 #include <SDL2/SDL.h>
 
-#include "../global.hpp"
+#include "geebly/global.hpp"
 #include "lgw/color.hpp"
+
+#include "global.hpp"
+#include "ppu.hpp"
+#include "cpu.hpp"
+
+#include "../dialog.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -43,7 +50,7 @@ using namespace gl;
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 
-namespace gameboy {
+namespace frontend {
     namespace debug {
         namespace sdl {
             SDL_Window* window = nullptr;
@@ -82,7 +89,7 @@ namespace gameboy {
             SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
             SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
-            sdl::window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+            sdl::window = SDL_CreateWindow("Debug", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
             sdl::gl_context = SDL_GL_CreateContext(sdl::window);
 
             SDL_GL_MakeCurrent(sdl::window, sdl::gl_context);
@@ -134,6 +141,10 @@ namespace gameboy {
             sdl::io->Fonts->AddFontDefault();
 
             cio.Fonts->AddFontFromFileTTF("ubuntu-mono.ttf", 16.0f);
+
+            ppu_panel::init();
+
+            ImGui::GetStyle().WindowBorderSize = 0.0f;
             
             open = true;
 
@@ -144,31 +155,7 @@ namespace gameboy {
             return open;
         }
 
-        namespace panels {
-            void show_cpu_panel() {
-                using namespace ImGui;
-
-                SetNextWindowSize(ImVec2(100, 100));
-                SetNextWindowPos(ImVec2(0, 0));
-
-                if (Begin("CPU", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoResize)) {
-                    step = Button("Step");
-                    pause = Button("Pause");
-
-                    End();
-                }
-            }
-        }
-
-        int counter = 10;
-
         void update() {
-            if (!pause) {
-                if (counter--) return;
-            }
-            
-            counter = 10;
-
             SDL_Event event;
 
             while (SDL_PollEvent(&event)) {
@@ -191,14 +178,40 @@ namespace gameboy {
 
             ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 
-            panels::show_cpu_panel();
+            if (ImGui::BeginMainMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    if (ImGui::MenuItem("Open...")) {
+                        std::string f = fd::open();
+
+                        if (f.size()) {
+                            _log(debug, "rom: %s", f.c_str());
+                        }
+                    }
+
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("Game Boy")) {
+                    if (ImGui::MenuItem("Reset"));
+                    if (ImGui::MenuItem("Shutdown"));
+
+                    ImGui::EndMenu();
+                }
+
+                ImGui::EndMainMenuBar();
+            }
+
+            ImGui::ShowDemoWindow();
+
+            //ppu_panel::render();
+            cpu_panel::render();
 
             ImGui::PopFont();
 
             // Rendering
             ImGui::Render();
             glViewport(0, 0, (int)sdl::io->DisplaySize.x, (int)sdl::io->DisplaySize.y);
-            glClearColor(20, 20, 20, 255);
+            glClearColor(0.1, 0.1, 0.1, 1);
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             SDL_GL_SwapWindow(sdl::window);
@@ -207,8 +220,6 @@ namespace gameboy {
         void close() {
             open = false;
 
-            ImGui::PopFont();
-
             // Cleanup
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplSDL2_Shutdown();
@@ -216,7 +227,27 @@ namespace gameboy {
 
             SDL_GL_DeleteContext(sdl::gl_context);
             SDL_DestroyWindow(sdl::window);
-            SDL_Quit();
+            //SDL_Quit();
+        }
+        
+        void update_proc() {
+            debug::init();
+
+            while (debug::is_open()) debug::update();
+
+            debug::close();
+        }
+
+        void start() {
+            std::thread debug_thread(update_proc);
+
+            debug_thread.detach();
+
+            _log(info, "Waiting for debug to fully initialize...");
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+            _log(ok, "Initialized debug");
         }
     }
 }

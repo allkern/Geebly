@@ -15,7 +15,7 @@ SOURCES += $(IMGUI_DIR)/examples/libs/gl3w/GL/gl3w.c
 geebly: $(BIN)/$(EXE)
 
 $(BIN)/$(EXE): $(BUILD)/$(EXE).o
-	c++ *.o $(BUILD)/$(EXE).o -o $(BIN)/$(EXE) -ldl -lGL -Ofast -m64 -lSDL2 -g
+	c++ *.o $(BUILD)/$(EXE).o -o $(BIN)/$(EXE) -ldl -lGL -Ofast -m64 -lSDL2 -g -pthread
 
 	rm -f build/$(EXE).o
 
@@ -32,9 +32,8 @@ $(BUILD)/$(EXE).o: $(SRC)/$(EXE).cpp
 
 	c++ -c $(SRC)/$(EXE).cpp -o $(BUILD)/$(EXE).o -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMGUI_DIR)/examples/libs/gl3w \
 		-DIMGUI_IMPL_OPENGL_LOADER_GL3W \
-		-D GEEBLY_NO_DEBUGGER \
-		-D GEEBLY_VERSION_TAG=$(VERSION_TAG) \
-		-D GEEBLY_COMMIT_HASH=$(COMMIT_HASH) \
+		-DGEEBLY_VERSION_TAG=$(VERSION_TAG) \
+		-DGEEBLY_COMMIT_HASH=$(COMMIT_HASH) \
 		-Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing -g -ldl
 
 clean:
@@ -45,4 +44,7 @@ install:
 	sudo cp -rf $(BIN)/$(EXE) /usr/bin/$(EXE)
 
 install-dev:
-	sudo cp -rf src/ /usr/include/geebly/
+	sudo cp -rf geebly /usr/include/geebly/
+
+clean-dev:
+	sudo rm -rf /usr/include/geebly/

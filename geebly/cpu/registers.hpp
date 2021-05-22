@@ -6,10 +6,10 @@
 
 namespace gameboy {
     namespace cpu {
-        #define Z 0b10000000
-        #define N 0b01000000
-        #define H 0b00100000
-        #define C 0b00010000
+        #define ZF 0b10000000
+        #define NF 0b01000000
+        #define HF 0b00100000
+        #define CF 0b00010000
 
         struct state {
             u8 opcode = 0x0, imm8 = 0x0;

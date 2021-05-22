@@ -20,13 +20,7 @@
 #define GEEBLY_PERF_FFS __builtin_ffs
 #endif
 
-// Windows only:
-// Undef and redef "N", causes macro conflicts inside windows.h (sigh)
 #ifdef _WIN32
-//#undef N
-//    #define WIN32_LEAN_AND_MEAN
-//    #include <windows.h>
-//#define N 0b01000000
 #define GEEBLY_PERF_FFS ffs
 #endif
 
@@ -331,11 +325,11 @@ namespace gameboy {
                 case 0x29: { op_addhl((u16)hl); update(1, 8); } break;
                 case 0x39: { op_addhl(sp); update(1, 8); } break;
 
-                case 0x20: { if (!test_flags(Z)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x30: { if (!test_flags(C)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x20: { if (!test_flags(ZF)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x30: { if (!test_flags(CF)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
                 case 0x18: { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } break;
-                case 0x28: { if ( test_flags(Z)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
-                case 0x38: { if ( test_flags(C)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x28: { if ( test_flags(ZF)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
+                case 0x38: { if ( test_flags(CF)) { pc += 2; pc += (s8)s.imm8; update(2, 12, true); } else { update(2, 8); } } break;
                 
                 case 0xc1: { bc = pop(); update(1, 12); } break;
                 case 0xd1: { de = pop(); update(1, 12); } break;
@@ -347,24 +341,24 @@ namespace gameboy {
                 case 0xe5: { push((u16)hl); update(1, 12); } break;
                 case 0xf5: { push((u16)af); update(1, 12); } break;
 
-                case 0xc0: { if (!test_flags(Z)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
-                case 0xd0: { if (!test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
-                case 0xc8: { if ( test_flags(Z)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
-                case 0xd8: { if ( test_flags(C)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
+                case 0xc0: { if (!test_flags(ZF)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
+                case 0xd0: { if (!test_flags(CF)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
+                case 0xc8: { if ( test_flags(ZF)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
+                case 0xd8: { if ( test_flags(CF)) { pc = pop(); update(1, 20, true); } else { update(1, 8); } } break;
                 case 0xc9: { pc = pop(); update(1, 16, true); } break;
                 
-                case 0xc2: { if (!test_flags(Z)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xd2: { if (!test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xca: { if ( test_flags(Z)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
-                case 0xda: { if ( test_flags(C)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xc2: { if (!test_flags(ZF)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xd2: { if (!test_flags(CF)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xca: { if ( test_flags(ZF)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
+                case 0xda: { if ( test_flags(CF)) { pc = s.imm; update(3, 16, true); } else { update(3, 12); } } break;
                 case 0xc3: { pc = s.imm; update(3, 16, true); } break;
 
                 case 0xf8: {
                     u16 res = sp + (s8)s.imm8;
                     hl = res;
-                    set_flags(Z | N, false);
-                    set_flags(C, (res&0xff) < s.imm8);
-                    set_flags(H, (res&0xf) < (s.imm8&0xf));
+                    set_flags(ZF | NF, false);
+                    set_flags(CF, (res&0xff) < s.imm8);
+                    set_flags(HF, (res&0xf) < (s.imm8&0xf));
                     update(2, 12);
                 } break;
 
@@ -380,9 +374,9 @@ namespace gameboy {
                 // TO-DO implement carry and halfcarry detection
                 case 0xe8: {
                     sp += (s8)s.imm8;
-                    set_flags(Z | N, false);
-                    set_flags(C, (sp&0xff) < s.imm8);
-                    set_flags(H, (sp&0xf) < (s.imm8&0xf));
+                    set_flags(ZF | NF, false);
+                    set_flags(CF, (sp&0xff) < s.imm8);
+                    set_flags(HF, (sp&0xf) < (s.imm8&0xf));
                     update(2, 16);
                 } break;
 
@@ -390,10 +384,10 @@ namespace gameboy {
                 case 0xe9: { pc = (u16)hl; update(1, 4, true); } break;
 
                 // call[z,c,nz,nc] #i16;
-                case 0xc4: { if (!test_flags(Z)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xd4: { if (!test_flags(C)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xcc: { if ( test_flags(Z)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
-                case 0xdc: { if ( test_flags(C)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xc4: { if (!test_flags(ZF)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xd4: { if (!test_flags(CF)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xcc: { if ( test_flags(ZF)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
+                case 0xdc: { if ( test_flags(CF)) { push(pc+3); pc = s.imm; update(3, 24, true); } else { update(3, 12); } } break;
                 
                 // call #i16;
                 case 0xcd: { push(pc+3); pc = s.imm; update(3, 24, true); } break;
@@ -414,7 +408,7 @@ namespace gameboy {
                 case 0xd9: { pc = pop(); ime = true; update(1, 16, true); } break;
 
                 // cpl
-                case 0x2f: { r[a] = ~r[a]; set_flags(N | H, true); update(1, 4); } break;
+                case 0x2f: { r[a] = ~r[a]; set_flags(NF | HF, true); update(1, 4); } break;
 
                 // daa
                 case 0x27: { op_daa(r[a]); update(1, 4); } break;
@@ -543,8 +537,8 @@ namespace gameboy {
                 } break;
 
                 // scf; ccf
-                case 0x37: { set_flags(C, true); set_flags(N | H, false); update(1, 4); }; break;
-                case 0x3f: { set_flags(C, !test_flags(C)); set_flags(N | H, false); update(1, 4); }; break;
+                case 0x37: { set_flags(CF, true); set_flags(NF | HF, false); update(1, 4); }; break;
+                case 0x3f: { set_flags(CF, !test_flags(CF)); set_flags(NF | HF, false); update(1, 4); }; break;
 
                 default: {
                     //_log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);

@@ -2,7 +2,15 @@
 
 #include "../../aliases.hpp"
 
+#ifdef GEEBLY_FRAMEBUFFER_FORMAT
+#if GEEBLY_FRAMEBUFFER_FORMAT == 1
 #define LGW_FORMAT_ARGB8888
+#elif GEEBLY_FRAMEBUFFER_FORMAT == 2
+#define LGW_FORMAT_RGBA8888
+#endif
+#else
+#define LGW_FORMAT_ARGB8888
+#endif
 
 #include "lgw/framebuffer.hpp"
 
@@ -141,12 +149,30 @@ namespace gameboy {
 
         framebuffer_t frame;
 
+#ifdef GEEBLY_FRAMEBUFFER_FORMAT
+#if GEEBLY_FRAMEBUFFER_FORMAT == 1
         dmg_palette_t dmg_palette = {
             0xfffffffful,
             0xffaaaaaaul,
             0xff555555ul,
             0xff000000ul
         };
+#elif GEEBLY_FRAMEBUFFER_FORMAT == 2
+        dmg_palette_t dmg_palette = {
+            0xfffffffful,
+            0xaaaaaafful,
+            0x555555fful,
+            0x000000fful
+        };
+#endif
+#else
+        dmg_palette_t dmg_palette = {
+            0xfffffffful,
+            0xffaaaaaaul,
+            0xff555555ul,
+            0xff000000ul
+        };
+#endif
 
         bool bg_auto_inc = false,
              spr_auto_inc = false;
@@ -158,6 +184,10 @@ namespace gameboy {
         bool vram_disabled = false, oam_disabled = false;
 
         u8 tile, l, h;
+
+        void set_frame_ready_callback(frame_ready_callback_t fr_cb) {
+            frame_ready_cb = fr_cb;
+        }
 
         uint32_t* get_buffer() {
             return frame.get_buffer();

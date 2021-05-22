@@ -69,8 +69,6 @@ namespace gameboy {
 
             void update_state() {
                 if (TEST_REG(SPUNR_CTRL, CTRL_RESTR)) {
-                    SDL_ClearQueuedAudio(dev);
-
                     bool i = !(nr[SPUNR_CTRL] & CTRL_LENCT);
 
                     double r = nr[SPUNR_FREQ] & 0x7,

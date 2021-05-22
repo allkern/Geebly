@@ -5,7 +5,6 @@
 
 #include "cpu/cpu.hpp"
 #include "cpu/mnemonics.hpp"
-#include "screen.hpp"
 #include "log.hpp"
 #include "cli.hpp"
 
@@ -39,12 +38,15 @@ namespace gameboy {
         bus::init();
         clock::init(cpu::registers::last_instruction_cycles);
 
-        ppu::init(screen::update);
+        pause = settings::debugger_enabled;
+        step = true;
 
-        if (!settings::debugger_enabled) screen::init(std::stoi(cli::setting("scale", "1")));
-        if (!settings::debugger_enabled) screen::register_keydown_cb(joypad::keydown);
-        if (!settings::debugger_enabled) screen::register_keyup_cb(joypad::keyup);
-        if (!settings::debugger_enabled) screen::register_rom_dropped_cb(reload_rom);
+        if (!settings::bios_checks_enabled) {
+            bios::rom[0xfa] = 0x00;
+            bios::rom[0xfb] = 0x00;
+            bios::rom[0xe9] = 0x00;
+            bios::rom[0xea] = 0x00;
+        }
 
         if (!sound_disabled) spu::init();
     }

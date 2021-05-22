@@ -32,9 +32,6 @@ precomp/
 *.out
 *.app
 
-# Ignore compiled executable
-geebly
-
 # Ignore test suites
 tests/
 tearoom/
@@ -77,3 +74,4 @@ build-win.bat
 .vscode/settings.json
 src/devices/ppu/naive_ppu.hpp
 .github/
+imgui/

@@ -70,6 +70,9 @@ namespace gameboy {
 
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::read(addr, size); }
+
+            if (addr == 0xff69) { return ppu::read(addr, size); }
+
             if (addr == MMIO_VBK) { return ppu::read(addr, size); }
 
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { return hram::read(addr, size); }
@@ -107,7 +110,7 @@ namespace gameboy {
             // Handle a read to a PPU register
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) { return ppu::ref(addr); }
 
-            if ((addr >= 0xff68 && addr <= 0xff6b) || addr == 0xff4f) { return ppu::ref(addr); ; }
+            if ((addr >= 0xff68 && addr <= 0xff6b) || addr == 0xff4f) { return ppu::ref(addr); }
 
             if (addr == MMIO_SVBK) { return wram::ref(addr); }
 
