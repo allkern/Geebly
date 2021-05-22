@@ -77,3 +77,4 @@ src/devices/ppu/naive_ppu.hpp
 imgui/
 lgw/
 docs/
+bin/
