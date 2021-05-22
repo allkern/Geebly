@@ -75,3 +75,5 @@ build-win.bat
 src/devices/ppu/naive_ppu.hpp
 .github/
 imgui/
+lgw/
+docs/
