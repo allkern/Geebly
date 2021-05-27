@@ -12,6 +12,7 @@
 #include "devices/dma/hdma.hpp"
 #include "devices/timer.hpp"
 #include "devices/clock.hpp"
+#include "devices/serial.hpp"
 #include "devices/spu/spu.hpp"
 
 // Clean this whole file up
@@ -58,6 +59,7 @@ namespace gameboy {
             if (addr >= OAM_BEGIN && addr <= OAM_END) { return ppu::read(addr, size); }
 
             if (addr == MMIO_JOYP) { return joypad::read(); }
+            if ((addr == MMIO_SB) || (addr == MMIO_SC)) { return serial::read(addr, size); }
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { return timer::read(addr, size); }
 
@@ -79,7 +81,7 @@ namespace gameboy {
 
             if (addr == MMIO_IF || addr == MMIO_IE) { return ic::read(addr, size); }
 
-            _log(warning, "Unhandled bus read at addr=%04x", addr);
+            //_log(warning, "Unhandled bus read at addr=%04x", addr);
 
             return 0x0;
         }
@@ -123,7 +125,7 @@ namespace gameboy {
 
         void write(u16 addr, u16 value, size_t size) {
             // Handle a cartridge header/ROM read
-            if (addr >= ROM_BEGIN && addr <= ROM_END) { cart::write(addr, value, size); return; }
+            if (addr <= ROM_END) { cart::write(addr, value, size); return; }
 
             // Handle a cartridge RAM read
             if (addr >= SRAM_BEGIN && addr <= SRAM_END) { cart::write(addr, value, size); return; }
@@ -137,8 +139,11 @@ namespace gameboy {
 
             // Handle an OAM read
             if (addr >= OAM_BEGIN && addr <= OAM_END) { ppu::write(addr, value, size); return; }
+            if (addr >= IOAM_BEGIN && addr <= IOAM_END) { return; }
 
             if (addr == MMIO_JOYP) { joypad::write(value); return; }
+
+            if ((addr == MMIO_SB) || (addr == MMIO_SC)) { serial::write(addr, value, size); return; }
 
             if (addr >= TIMER_BEGIN && addr <= TIMER_END) { timer::write(addr, value, size); return; }
 
@@ -155,11 +160,13 @@ namespace gameboy {
 
             if (addr == MMIO_DISABLE_BOOTROM) { bootrom_enabled = false; return; }
 
+            if (addr == 0xff7f) return;
+
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { hram::write(addr, value, size); return; }
 
             if (addr == MMIO_IF || addr == MMIO_IE) { ic::write(addr, value, size); return; }
 
-            //_log(warning, "Unhandled bus write at addr=%04x", addr);
+            _log(warning, "Unhandled bus write at addr=%04x, value=%02x", addr, value);
         }
     }
 }

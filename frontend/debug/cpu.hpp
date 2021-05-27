@@ -2,6 +2,7 @@
 
 #include "global.hpp"          
 #include "geebly/gameboy.hpp"
+#include "mnemonics.hpp"
 
 #include "imgui.h"
 #include "imgui_internal.h"
@@ -58,6 +59,18 @@ namespace frontend {
                          timer_isr  = timer_ie & timer_if,
                          joypad_isr = joypad_ie & joypad_if;
 
+                    const char* mnemonic = cpu::s.opcode == 0xcb ?
+                        fmt_mnemonics_cb[cpu::s.imm8] :
+                        fmt_mnemonics[cpu::s.opcode];
+
+                    char buf[50];
+
+                    sprintf(&buf[0], mnemonic, cpu::s.imm);
+
+                    Text("Instruction: %s", buf);
+
+                    Separator();
+
                     if (TreeNodeEx("Registers", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                     Text("af: %04x\ta: %02x\tf: %02x", (u16)af, r[a], r[f]);
@@ -76,6 +89,8 @@ namespace frontend {
                     Checkbox("H", &hf_set); SameLine();
                     Checkbox("C", &cf_set);
 
+                    Separator();
+
                     TreePop();
 
                     } // cpu#registers TreeNode
@@ -89,17 +104,28 @@ namespace frontend {
                     Separator();
 
                     Text("Interrupt table:");
-                    Text("   IF   IE    Serviced?");
+                    Text("   IF   IE");
 
-                    Text("V:"); SameLine(); Checkbox("&", &vbl_if);    SameLine(); Checkbox("->", &vbl_ie);    SameLine(); Checkbox("", &vbl_isr);
-                    Text("S:"); SameLine(); Checkbox("&", &stat_if);   SameLine(); Checkbox("->", &stat_ie);   SameLine(); Checkbox("", &stat_isr);
-                    Text("T:"); SameLine(); Checkbox("&", &timer_if);  SameLine(); Checkbox("->", &timer_ie);  SameLine(); Checkbox("", &timer_isr);
-                    Text("J:"); SameLine(); Checkbox("&", &joypad_if); SameLine(); Checkbox("->", &joypad_ie); SameLine(); Checkbox("", &joypad_isr);
+                    Text("V:"); SameLine(); Checkbox("&", &vbl_if);    SameLine(); Checkbox("", &vbl_ie);
+                    Text("S:"); SameLine(); Checkbox("&", &stat_if);   SameLine(); Checkbox("", &stat_ie);
+                    Text("T:"); SameLine(); Checkbox("&", &timer_if);  SameLine(); Checkbox("", &timer_ie);
+                    Text("J:"); SameLine(); Checkbox("&", &joypad_if); SameLine(); Checkbox("", &joypad_ie);
+
+                    Separator();
 
                     TreePop();
 
                     }
 
+                    if (TreeNode("Internal state")) {
+                        Text("Opcode: %02x", cpu::s.opcode);
+                        Text("imm: %04x, low: %02x", cpu::s.imm, cpu::s.imm8);
+                        Text("Increment: %u (%02x)", cpu::s.pc_increment, cpu::s.pc_increment);
+
+                        Separator();
+
+                        TreePop();
+                    }
                 End();
             }
         }

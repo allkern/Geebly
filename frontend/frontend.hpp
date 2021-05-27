@@ -21,16 +21,19 @@ namespace frontend {
     }
 
     void init() {
-        ppu::init(screen::update);
+        ppu::init(settings::debugger_enabled ? nullptr : screen::update);
 
-        screen::register_keydown_cb(input::keydown_cb);
-        screen::register_keyup_cb(input::keyup_cb);
-        screen::init(std::stoi(cli::setting("scale", "1")));
+        if (!settings::debugger_enabled) {
+            screen::register_keydown_cb(input::keydown_cb);
+            screen::register_keyup_cb(input::keyup_cb);
+            screen::init(std::stoi(cli::setting("scale", "1")));
+        }
 
         audio::init();
     }
 
     void close() {
-        screen::close();
+        if (!settings::debugger_enabled)
+            screen::close();
     }
 }

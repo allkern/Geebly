@@ -137,7 +137,7 @@ namespace gameboy {
 
                     if (pixel_pushed) sprite_fifo.push({
                         spr_c,
-                        settings::cgb_mode ? (spr.a & 0x7) : ((spr.a >> 4) & 0x1),
+                        settings::cgb_mode ? (uint8_t)(spr.a & 0x7) : (uint8_t)((spr.a >> 4) & 0x1),
                         0,
                         (spr.a & 0x80)
                     });
@@ -375,7 +375,9 @@ namespace gameboy {
                         if (r[PPU_LY] == 144) {
                             SWITCH_MODE(MODE_VBLANK);
 
-                            frame_ready_cb(frame.get_buffer());
+                            if (frame_ready_cb != nullptr)
+                                frame_ready_cb(frame.get_buffer());
+
                         } else {
                             fx = 0;
                             cx = 0;

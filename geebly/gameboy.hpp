@@ -38,6 +38,9 @@ namespace gameboy {
         bus::init();
         clock::init(cpu::registers::last_instruction_cycles);
 
+        cpu::handle_interrupts();
+        cpu::fetch();
+
         pause = settings::debugger_enabled;
         step = true;
 
@@ -56,7 +59,9 @@ namespace gameboy {
             cpu::cycle();
         } else {
             if (step) {
-                cpu::cycle();
+                cpu::execute();
+                cpu::handle_interrupts();
+                cpu::fetch();
 
                 step = false;
             }

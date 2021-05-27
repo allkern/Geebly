@@ -19,8 +19,11 @@
 #include "global.hpp"
 #include "ppu.hpp"
 #include "cpu.hpp"
+#include "spu.hpp"
+#include "screen.hpp"
 
 #include "../dialog.hpp"
+#include "../input.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -89,7 +92,9 @@ namespace frontend {
             SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
             SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
 
-            sdl::window = SDL_CreateWindow("Debug", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+            SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+
+            sdl::window = SDL_CreateWindow("Debug", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, window_flags);
             sdl::gl_context = SDL_GL_CreateContext(sdl::window);
 
             SDL_GL_MakeCurrent(sdl::window, sdl::gl_context);
@@ -121,6 +126,7 @@ namespace frontend {
             // Setup Dear ImGui context
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
+            ImPlot::CreateContext();
             sdl::io = &ImGui::GetIO();
 
             // Setup Platform/Renderer backends
@@ -143,6 +149,7 @@ namespace frontend {
             cio.Fonts->AddFontFromFileTTF("ubuntu-mono.ttf", 16.0f);
 
             ppu_panel::init();
+            screen_panel::init();
 
             ImGui::GetStyle().WindowBorderSize = 0.0f;
             
@@ -155,6 +162,21 @@ namespace frontend {
             return open;
         }
 
+        void close() {
+            open = false;
+
+            SDL_Quit();
+
+            // Cleanup
+            ImGui_ImplOpenGL3_Shutdown();
+            ImGui_ImplSDL2_Shutdown();
+            ImPlot::DestroyContext();
+            ImGui::DestroyContext();
+
+            SDL_GL_DeleteContext(sdl::gl_context);
+            SDL_DestroyWindow(sdl::window);
+        }
+
         void update() {
             SDL_Event event;
 
@@ -162,9 +184,9 @@ namespace frontend {
                 ImGui_ImplSDL2_ProcessEvent(&event);
 
                 switch (event.type) {
-                    case SDL_QUIT: {
-                        open = false;
-                    } break;
+                    case SDL_QUIT: { close(); } break;
+                    case SDL_KEYDOWN: { input::keydown_cb(event.key.keysym.sym); } break;
+                    case SDL_KEYUP: { input::keyup_cb(event.key.keysym.sym); } break;
                 }
 
                 if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(sdl::window))
@@ -191,9 +213,27 @@ namespace frontend {
                     ImGui::EndMenu();
                 }
 
-                if (ImGui::BeginMenu("Game Boy")) {
+                if (ImGui::BeginMenu("GameBoy")) {
                     if (ImGui::MenuItem("Reset"));
                     if (ImGui::MenuItem("Shutdown"));
+
+                    ImGui::EndMenu();
+                }
+
+                if (ImGui::BeginMenu("Panels")) {
+                    ImGui::PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+
+                    if (ImGui::MenuItem("CPU", nullptr, &show_cpu_panel));
+                    if (ImGui::MenuItem("PPU", nullptr, &show_ppu_panel));
+
+                    ImGui::PopItemFlag();
+
+                    if (ImGui::BeginMenu("Screen")) {
+                        ImGui::MenuItem("Show", nullptr, &show_screen_panel);
+                        ImGui::SliderInt("Scale", &screen_panel::scale, 1, 4);
+
+                        ImGui::EndMenu();
+                    }
 
                     ImGui::EndMenu();
                 }
@@ -204,7 +244,10 @@ namespace frontend {
             ImGui::ShowDemoWindow();
 
             //ppu_panel::render();
-            cpu_panel::render();
+            if (show_cpu_panel) cpu_panel::render();
+            if (show_screen_panel) screen_panel::render();
+            if (show_ppu_panel) ppu_panel::render();
+            spu_panel::render();
 
             ImGui::PopFont();
 
@@ -215,19 +258,6 @@ namespace frontend {
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             SDL_GL_SwapWindow(sdl::window);
-        }
-
-        void close() {
-            open = false;
-
-            // Cleanup
-            ImGui_ImplOpenGL3_Shutdown();
-            ImGui_ImplSDL2_Shutdown();
-            ImGui::DestroyContext();
-
-            SDL_GL_DeleteContext(sdl::gl_context);
-            SDL_DestroyWindow(sdl::window);
-            //SDL_Quit();
         }
         
         void update_proc() {

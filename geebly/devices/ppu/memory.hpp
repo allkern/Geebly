@@ -37,6 +37,8 @@
 #define TM1_END     PPU_END
 #define OAM_BEGIN   0xfe00
 #define OAM_END     0xfe9f
+#define IOAM_BEGIN  0xfea0
+#define IOAM_END    0xfeff
 #define PPU_R_BEGIN 0xff40
 #define PPU_R_END   0xff4b
 

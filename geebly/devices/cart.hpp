@@ -15,12 +15,14 @@
 #include "mappers/mbc2.hpp"
 #include "mappers/mbc3.hpp"
 #include "mappers/mbc5.hpp"
+#include "mappers/camera.hpp"
 
 #define HDR_CGB_COMPATIBLE 0x43
 #define HDR_CART_TYPE      0x47
 #define HDR_TITLE          0x34
 #define HDR_ENTRY          0x00
 #define HDR_MANUFACTURER   0x3f
+
 #define RVA_BEGIN 0x0
 #define RVA_END 0xff
 #define HDR_BEGIN 0x100
@@ -290,7 +292,7 @@ namespace gameboy {
                 case 0x1e: { cartridge = new mbc5(true, &sav);     } break;
 
                 // Pocket camera
-                case 0xfc: { cartridge = new mbc3(sbc, true, &sav);} break;
+                case 0xfc: { cartridge = new camera(sbc, true, &sav);} break;
                 // ...
                 // Unsupported cartridge types:
                 // - MMM01

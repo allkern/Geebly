@@ -1,6 +1,7 @@
 #pragma once
 
 #include "SDL2/SDL_audio.h"
+#include "SDL2/SDL.h"
 
 #define AUDIO_DEVICE_SAMPLERATE 48000
 #define AUDIO_BUFFER_SIZE 32
@@ -8,7 +9,10 @@
     ((size_t)(AUDIO_BUFFER_SIZE * ((double)SPU_NATIVE_SAMPLERATE / (double)AUDIO_DEVICE_SAMPLERATE)))
 
 #include <cstdint>
+#include <vector>
 #include <array>
+
+#include "imgui.h"
 
 namespace frontend {
     namespace audio {
@@ -34,6 +38,8 @@ namespace frontend {
 
         void init() {
             if (!sound_disabled) {
+                SDL_Init(SDL_INIT_AUDIO);
+
                 stream = SDL_NewAudioStream(
                     AUDIO_S16SYS,
                     SPU_CHANNELS,

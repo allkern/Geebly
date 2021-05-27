@@ -15,7 +15,7 @@
 
 namespace gameboy {
     namespace timer {
-        enum frequency_t {
+        enum frequency_t : int {
             f4khz,
             f262khz,
             f65khz,
@@ -24,16 +24,16 @@ namespace gameboy {
 
         u8 dummy;
         
-        u32 div = 0x4, divi = div;
-        u16 tima = 0x0, tma = 0x0;
+        u16 idiv = 0x4, prev = idiv;
+        u8 div = 0, tima = 0x0, tma = 0x0;
 
         struct tac_t {
-            frequency_t f : 2;
-            bool enable : 1;
+            frequency_t f;
+            bool enable;
         } tac;
 
         u32 read(u16 addr, size_t size) {
-            if (addr == MMIO_DIV ) { return (div >> 7) & 0xff; }
+            if (addr == MMIO_DIV ) { return div; }
             if (addr == MMIO_TIMA) { return tima & 0xff; }
             if (addr == MMIO_TMA ) { return tma & 0xff; }
             if (addr == MMIO_TAC ) { return (tac.f & 0x2) | (tac.enable << 2); }
@@ -42,7 +42,7 @@ namespace gameboy {
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            if (addr == MMIO_DIV ) { div = 0x0; return; }
+            if (addr == MMIO_DIV ) { div = 0x0; idiv = 0x0; return; }
             if (addr == MMIO_TIMA) { tima = value & 0xff; return; }
             if (addr == MMIO_TMA ) { tma = value & 0xff; return; }
             if (addr == MMIO_TAC ) { tac.f = (frequency_t)(value & 0x3); tac.enable = (value & 0x4); return; }
@@ -52,34 +52,27 @@ namespace gameboy {
             return dummy;
         }
 
+        u16 value = 0x0;
+
         void update() {
-            static const u8 mask[4] = { 0x40, 0x1, 0x4, 0x10 };
+            static const u16 mask[4] = { 0x400, 0x10, 0x40, 0x100 };
 
-            div += clock::get();
+            prev = idiv;
 
-            if (tima & 0xc000) { 
-                tima = tma;
-                ic::ia |= IRQ_TIMER;
+            idiv += clock::get();
+            idiv &= 0x3fff;
+            div = idiv >> 8;
+
+            u16 falling_bits = prev & (~idiv);
+
+            if ((falling_bits & (mask[tac.f] >> 1)) && tac.enable) {
+                tima++;
+
+                if (!tima) {
+                    tima = tma;
+                    ic::ia |= IRQ_TIMER;
+                }
             }
-
-            if (((div >> 3) & mask[tac.f]) && tac.enable) tima++;
-
-            // To-do: Fix timer
-            // static const u32 mask[4] = { 0x400, 0x10, 0x40, 0x100 };
-
-            // div += clock::get();
-
-            // if (tima & 0xf000) {
-            //     tima = tma;
-            //     ic::ia |= IRQ_TIMER;
-            // }
-
-            // if ((divi & mask[tac.f]) && tac.enable) {
-            //     divi = 0;
-            //     tima++;
-            // } else {
-            //     divi += clock::get();
-            // }
         }
     }
 }
