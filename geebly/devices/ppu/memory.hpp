@@ -195,6 +195,40 @@ namespace gameboy {
             return frame.get_buffer();
         }
 
+        void reset() {
+            clk = 0;
+            cx = 0;
+            rx = 0;
+            sx = 0;
+            sy = 0;
+            fx = 0;
+            clki = 0;
+            wiy = 0;
+            tile_scy_off = 0;
+            tile_scx_off = 0;
+            coff = 0;
+            vram_disabled = false;
+            oam_disabled = false;
+            tile = false;
+            l = 0;
+            h = 0;
+
+            queued_sprites.clear();
+            queued_sprites.reserve(10);
+
+            bcps = 0;
+            ocps = 0;
+            current_bank_idx = 0;
+
+            //for (u8& reg : r) { reg = 0; }
+
+            // Flush FIFOs
+            while (!background_fifo.empty()) background_fifo.pop();
+            while (!sprite_fifo.empty()) sprite_fifo.pop();
+
+            r[PPU_STAT] &= 0xfc;
+        }
+
         u32 read(u16 addr, size_t size) {
             switch (addr) {
                 case MMIO_VBK: return current_bank_idx;
@@ -206,12 +240,12 @@ namespace gameboy {
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                //if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
+                if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
                 return utility::default_mb_read(vram[current_bank_idx].data(), addr, size, VRAM_BEGIN);
             }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                //if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
+                if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
                 return utility::default_mb_read(oam.data(), addr, size, OAM_BEGIN);
             }
 
@@ -220,6 +254,7 @@ namespace gameboy {
 
         void write(u16 addr, u16 value, size_t size) {
             switch (addr) {
+                case 0xff40: { if (!(value & 0x80)) reset(); } break;
                 case MMIO_VBK: { current_bank_idx = value & 0x1; return; };
                 case MMIO_BCPS: { bcps = value; return; }
                 case MMIO_BCPD: {
@@ -245,13 +280,13 @@ namespace gameboy {
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                //if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+                if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
                 utility::default_mb_write(vram[current_bank_idx].data(), addr, value, size, VRAM_BEGIN);
                 return;
             }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                //if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+                if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
                 utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
                 return;
             }

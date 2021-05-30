@@ -166,7 +166,7 @@ namespace gameboy {
 
             if (addr == MMIO_IF || addr == MMIO_IE) { ic::write(addr, value, size); return; }
 
-            _log(warning, "Unhandled bus write at addr=%04x, value=%02x", addr, value);
+            //_log(warning, "Unhandled bus write at addr=%04x, value=%02x", addr, value);
         }
     }
 }
