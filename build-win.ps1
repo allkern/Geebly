@@ -1,16 +1,44 @@
-$SDL2_INCLUDE_DIR = $args[0]
-$SDL2_LIB_DIR = $args[1]
-$LGW_INCLUDE_DIR = $args[2]
-$IMGUI_SDL_DIR = $args[3]
-$IMGUI_DIR = $args[4]
-$IMPLOT_DIR = $args[5]
+$GEEBLY_INCLUDE_DIR = "."
+$LGW_INCLUDE_DIR    = ""
+$IMPLOT_DIR         = ""
+$IMGUI_DIR          = ""
+$SDL2_DIR           = ""
+
 $VERSION_TAG = git describe --always --tags --abbrev=0
 $COMMIT_HASH = git rev-parse --short HEAD
 
-md -Force -Path build > $null
+md -Force -Path bin > $null
 
-c++ -c src/geebly.cpp -o build/geebly.o -I"`"$($SDL2_INCLUDE_DIR)`"" -I"`"$($LGW_INCLUDE_DIR)`"" -I"`"$($IMGUI_DIR)`"" -I"`"$($IMGUI_SDL_DIR)`"" -I"`"$($IMPLOT_DIR)`"" -std=c++2a -m64 -mbmi2 -Ofast -Wno-format -Wno-narrowing -D GEEBLY_VERSION_TAG=$VERSION_TAG -D GEEBLY_COMMIT_HASH=$COMMIT_HASH -Wunused
+c++ -c -I"`"$($IMGUI_DIR)`"" `
+       -I"`"$($IMGUI_DIR)\backends`"" `
+       -I"`"$($IMGUI_DIR)\examples\libs\gl3w`"" `
+       -I"`"$($GEEBLY_INCLUDE_DIR)`"" `
+       -I"`"$($LGW_INCLUDE_DIR)`"" `
+       -I"`"$($SDL2_DIR)\include\SDL2`"" `
+       -I"`"$($SDL2_DIR)\include`"" `
+       -I"`"$($IMPLOT_DIR)`"" `
+       "`"$($IMGUI_DIR)\backends\imgui_impl_sdl.cpp`"" `
+       "`"$($IMGUI_DIR)\backends\imgui_impl_opengl3.cpp`"" `
+       "`"$($IMGUI_DIR)\*.cpp`"" `
+       "`"$($IMPLOT_DIR)\*.cpp`"" `
+       "`"$($IMGUI_DIR)\examples\libs\gl3w\GL\gl3w.c`"" `
+       -L"`"$($SDL2_DIR)\lib\x64`"" `
+       -DIMGUI_IMPL_OPENGL_LOADER_GL3W `
+       -limm32 -m64 -mbmi2 -lSDL2main -lSDL2 -lopengl32 -fpermissive -lcomdlg32
 
-c++ precomp/implot.o precomp/implot_items.o precomp/implot_demo.o precomp/imgui.o precomp/imgui_demo.o precomp/imgui_draw.o precomp/imgui_tables.o precomp/imgui_widgets.o precomp/imgui_sdl.o build/geebly.o -o build/geebly.exe -L"`"$($SDL2_LIB_DIR)`"" -limm32 -m64 -lSDL2main -lSDL2
-
-del "build\geebly.o"
+c++ -I"`"$($IMGUI_DIR)`"" `
+    -I"`"$($IMGUI_DIR)\backends`"" `
+    -I"`"$($IMGUI_DIR)\examples\libs\gl3w`"" `
+    -I"`"$($GEEBLY_INCLUDE_DIR)`"" `
+    -I"`"$($LGW_INCLUDE_DIR)`"" `
+    -I"`"$($SDL2_DIR)\include\SDL2`"" `
+    -I"`"$($SDL2_DIR)\include`"" `
+    -I"`"$($IMPLOT_DIR)`"" `
+    "*.o" `
+    frontend\geebly.cpp `
+    -DGEEBLY_VERSION_TAG="`"$($VERSION_TAG)`"" `
+    -DGEEBLY_COMMIT_HASH="`"$($COMMIT_HASH)`"" `
+    -o bin\geebly.exe `
+    -L"`"$($SDL2_DIR)\lib\x64`"" `
+    -DIMGUI_IMPL_OPENGL_LOADER_GL3W `
+    -limm32 -m64 -mbmi2 -lSDL2main -lSDL2 -lopengl32 -fpermissive -lcomdlg32
