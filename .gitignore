@@ -78,3 +78,4 @@ imgui/
 lgw/
 docs/
 bin/
+debug-build-libs.ps1

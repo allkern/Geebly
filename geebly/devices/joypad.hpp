@@ -70,7 +70,7 @@ namespace gameboy {
         void update() {
             if (irq) {
                 if (!(delay--)) {
-                    ic::ref(MMIO_IF) |= IRQ_JOYP;
+                    ic::fire(IRQ_JOYP);
                     delay = 0; irq = 0;
                 }
             }

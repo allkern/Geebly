@@ -9,16 +9,15 @@
 #include "../clock.hpp"
 #include "../ic.hpp"
 
-#include "immintrin.h"
-
 #define GEEBLY_OPTIMIZE_PPU
 
 #ifdef GEEBLY_OPTIMIZE_PPU
-    #define PPU_PIXEL_EXTRACT _pext_u32(((u16)h << 8) | l, 0x0101 << p)
-    #define PPU_SPRITE_PIXEL_EXTRACT _pext_u32(((u16)spr_h << 8) | spr_l, 0x0101 << spr_p)
+#include "immintrin.h"
+#define PPU_PIXEL_EXTRACT _pext_u32(((u16)h << 8) | l, 0x0101 << p)
+#define PPU_SPRITE_PIXEL_EXTRACT _pext_u32(((u16)spr_h << 8) | spr_l, 0x0101 << spr_p)
 #else
-    #define PPU_PIXEL_EXTRACT ((l >> p) & 0x1) | ((h >> p) & 0x1) << 1))
-    #define PPU_SPRITE_PIXEL_EXTRACT ((spr_l >> spr_p) & 0x1) | ((spr_h >> spr_p) & 0x1) << 1))
+#define PPU_PIXEL_EXTRACT ((l >> p) & 0x1) | ((h >> p) & 0x1) << 1))
+#define PPU_SPRITE_PIXEL_EXTRACT ((spr_l >> spr_p) & 0x1) | ((spr_h >> spr_p) & 0x1) << 1))
 #endif
 
 #include <queue>
@@ -43,7 +42,7 @@ namespace gameboy {
             r[PPU_OBP1] = 0xff;
 
             // Vblank is fired when first turning on the LCD
-            ic::ia |= 0x1;
+            ic::irq |= 0x1;
 
             for (auto& b : cgb_bg_palette) { b = rand() % 0xff; }
             for (auto& b : cgb_spr_palette) { b = rand() % 0xff; }
@@ -184,12 +183,7 @@ namespace gameboy {
 
         #define SWITCH_MODE(m) r[PPU_STAT] = (r[PPU_STAT] & ~(STAT_CRMODE)) | m
 
-        bool vbl_pure_fired = false,
-             lyc_stat_fired = false,
-             oam_stat_fired = false,
-             vbl_stat_fired = false,
-             hbl_stat_fired = false,
-             already_fetched_sprites = false,
+        bool already_fetched_sprites = false,
              residual_cycles = false;
 
         u32 get_pixel_color(const fifo_pixel_t& pixel, bool sprite) {
@@ -205,53 +199,6 @@ namespace gameboy {
 
             return lgw::rgb(r, g, b);
         }
-
-        inline void fire_lyc_irq() {
-            if (r[PPU_LY] == r[PPU_LYC]) {
-                r[PPU_STAT] |= 0x4;
-            } else {
-                r[PPU_STAT] &= ~0x4;
-            }
-            if (TEST_REG(PPU_STAT, STAT_LYCNSD) && (r[PPU_LY] == r[PPU_LYC]) && (!lyc_stat_fired)) {
-                ic::ia |= IRQ_STAT;
-                lyc_stat_fired = true;
-                r[PPU_STAT] |= 0x4;
-            }
-        }
-
-        inline void fire_oam_irq() {
-            if ((!oam_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE02)) {
-                ic::ia |= IRQ_STAT;
-                oam_stat_fired = true;
-            }
-        }
-
-        inline void fire_hbl_irq() {
-            if ((!hbl_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE00)) {
-                ic::ia |= IRQ_STAT;
-                hbl_stat_fired = true;
-            }
-        }
-
-        inline void fire_stat_vbl_irq() {
-            if ((!vbl_stat_fired) && TEST_REG(PPU_STAT, STAT_MODE01)) {
-                ic::ia |= IRQ_STAT;
-                vbl_stat_fired = true;
-            }
-        }
-
-        inline void fire_pure_vbl_irq() {
-            if (!vbl_pure_fired) {
-                ic::ia |= IRQ_VBL;
-                vbl_pure_fired = true;
-            }
-        }
-
-        void fire_pure_vbl_irq_nocheck() { ic::ia |= IRQ_VBL; }
-        void fire_stat_vbl_irq_nocheck() { if (TEST_REG(PPU_STAT, STAT_MODE01)) ic::ia |= IRQ_STAT; }
-        void fire_hbl_irq_nocheck() { if (TEST_REG(PPU_STAT, STAT_MODE00)) ic::ia |= IRQ_STAT; }
-        void fire_oam_irq_nocheck() { if (TEST_REG(PPU_STAT, STAT_MODE02)) ic::ia |= IRQ_STAT; }
-        void fire_lyc_irq_nocheck() { if (TEST_REG(PPU_STAT, STAT_LYCNSD) && (r[PPU_LY] == r[PPU_LYC])) ic::ia |= IRQ_STAT; }
 
         inline void fetch_sprites() {
             if ((!already_fetched_sprites) && (TEST_REG(PPU_LCDC, LCDC_SPDISP))) {
@@ -273,32 +220,38 @@ namespace gameboy {
             }
         }
 
-        bool stat_irq_signal = false, prev_stat_irq_signal = stat_irq_signal;
+        bool stat_irq_signal = false, prev_stat_irq_signal = stat_irq_signal,
+             vbl_irq_signal = false, prev_vbl_irq_signal = vbl_irq_signal;
 
-        void fire_stat_irq() {
+        void test_irqs() {
             prev_stat_irq_signal = stat_irq_signal;
+            prev_vbl_irq_signal = vbl_irq_signal;
 
             stat_irq_signal = ((r[PPU_LY] == r[PPU_LYC]) && TEST_REG(PPU_STAT, STAT_LYCNSD)) ||
                 (((r[PPU_STAT] & 0x3) == 0) && TEST_REG(PPU_STAT, STAT_MODE00)) ||
                 (((r[PPU_STAT] & 0x3) == 2) && TEST_REG(PPU_STAT, STAT_MODE02)) ||
                 (((r[PPU_STAT] & 0x3) == 1) && (TEST_REG(PPU_STAT, STAT_MODE01) || TEST_REG(PPU_STAT, STAT_MODE02)));
 
-            if (((stat_irq_signal == true) && (prev_stat_irq_signal == false))) ic::ia |= IRQ_STAT;
+            vbl_irq_signal = (r[PPU_STAT] & 0x3) == 1;
+
+            if (((stat_irq_signal == true) && (prev_stat_irq_signal == false))) ic::fire(IRQ_STAT);
+            if (((vbl_irq_signal == true) && (prev_vbl_irq_signal == false))) ic::fire(IRQ_VBL);
+
+            if (r[PPU_LY] == r[PPU_LYC]) {
+                r[PPU_STAT] |= 0x4;
+            } else {
+                r[PPU_STAT] &= ~(0x4);
+            }
         }
 
         void cycle() {
             if (!TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
 
-            fire_stat_irq();
+            test_irqs();
 
             switch (r[PPU_STAT] & STAT_CRMODE) {
                 case MODE_SPR_SEARCH: {
                     oam_disabled = true;
-
-                    // Test IRQs for this scanline
-                    //fire_lyc_irq();
-                    //fire_oam_irq();
-                    //fire_lyc_irq_nocheck();
 
                     // Queue up 10 sprites max for this scanline
                     fetch_sprites();
@@ -306,9 +259,6 @@ namespace gameboy {
                     if (clk >= 80) {
                         // Reset sprite fetcher state for the next scanline
                         already_fetched_sprites = false;
-
-                        oam_stat_fired = false;
-                        lyc_stat_fired = false;
 
                         clk -= 80;
 
@@ -339,15 +289,6 @@ namespace gameboy {
                         u32 out = 0x0;
 
                         if (!TEST_REG(PPU_LCDC, LCDC_SPDISP)) spr_pixel.color = 0;
-
-                        // if (!TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
-                        //     bg_pixel.color = 0;
-                        //     bg_pixel.palette = 0;
-                        //     spr_pixel.color = 0;
-                        //     spr_pixel.oam_index = 0;
-                        //     spr_pixel.palette = 0;
-                        //     spr_pixel.bg_priority = 0;
-                        // }
 
                         if (settings::cgb_mode) {
                             u32 bg_out = get_pixel_color(bg_pixel, false),
@@ -388,29 +329,19 @@ namespace gameboy {
                         vram_disabled = false;
                         oam_disabled = false;
 
-                        //fire_hbl_irq_nocheck();
-
                         SWITCH_MODE(MODE_HBLANK);
                     }
                 } break;
 
                 case MODE_HBLANK: {
-                    // Test HBL IRQ
-                    //fire_hbl_irq();
-
                     if (clk >= 204) {
-                        if ((r[PPU_LY] >= r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
+                        if ((r[PPU_LY] > r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
 
                         r[PPU_LY]++;
 
                         clk -= 204;
 
-                        hbl_stat_fired = false;
-
                         if (r[PPU_LY] == 144) {
-                            fire_pure_vbl_irq_nocheck();
-                            //fire_stat_vbl_irq_nocheck();
-
                             SWITCH_MODE(MODE_VBLANK);
 
                             if (frame_ready_cb != nullptr)
@@ -420,35 +351,22 @@ namespace gameboy {
                             fx = 0;
                             cx = 0;
 
-                            //fire_oam_irq_nocheck();
-
                             SWITCH_MODE(MODE_SPR_SEARCH);
                         }
                     }
                 } break;
 
                 case MODE_VBLANK: {
-                    // Test VBL IRQs
-                    // fire_pure_vbl_irq();
-                    // fire_stat_vbl_irq();
-                    // fire_lyc_irq();
-
                     if (clk >= 456) {
                         r[PPU_LY]++;
 
                         clk -= 456;
 
                         if (r[PPU_LY] == 154) {
-                            vbl_stat_fired = false;
-                            vbl_pure_fired = false;
-                            lyc_stat_fired = false;
-                            
                             wiy = 0;
                             r[PPU_LY] = 0;
                             fx = 0;
                             cx = 0;
-
-                            //fire_oam_irq_nocheck();
 
                             SWITCH_MODE(MODE_SPR_SEARCH);
                         }
@@ -456,7 +374,7 @@ namespace gameboy {
                 } break;
             }
 
-            fire_stat_irq();
+            test_irqs();
 
             clki = clock::get();
 

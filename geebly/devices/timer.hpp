@@ -65,12 +65,12 @@ namespace gameboy {
 
             u16 falling_bits = prev & (~idiv);
 
-            if ((falling_bits & (mask[tac.f] >> 1)) && tac.enable) {
+            if (((falling_bits << 1) & (mask[tac.f])) && tac.enable) {
                 tima++;
 
                 if (!tima) {
                     tima = tma;
-                    ic::ia |= IRQ_TIMER;
+                    ic::fire(IRQ_TIMER);
                 }
             }
         }

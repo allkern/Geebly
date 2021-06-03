@@ -23,7 +23,7 @@ namespace frontend {
                     }
 
                     if (Button("Step"))
-                        step = !step;
+                        step = true;
 
                     if (!pause) {
                         PopItemFlag();
@@ -50,10 +50,10 @@ namespace frontend {
                          stat_ie    = ic::ie & IRQ_STAT,
                          timer_ie   = ic::ie & IRQ_TIMER,
                          joypad_ie  = ic::ie & IRQ_JOYP,
-                         vbl_if     = ic::ia & IRQ_VBL,
-                         stat_if    = ic::ia & IRQ_STAT,
-                         timer_if   = ic::ia & IRQ_TIMER,
-                         joypad_if  = ic::ia & IRQ_JOYP,
+                         vbl_if     = ic::irq & IRQ_VBL,
+                         stat_if    = ic::irq & IRQ_STAT,
+                         timer_if   = ic::irq & IRQ_TIMER,
+                         joypad_if  = ic::irq & IRQ_JOYP,
                          vbl_isr    = vbl_ie & vbl_if,
                          stat_isr   = stat_ie & stat_if,
                          timer_isr  = timer_ie & timer_if,
@@ -98,7 +98,7 @@ namespace frontend {
                     if (TreeNodeEx("Interrupts", ImGuiTreeNodeFlags_DefaultOpen)) {
 
                     Text("ime: %s", ime ? "Enabled" : "Disabled");
-                    Text("if: %02x", gameboy::ic::ia);
+                    Text("if: %02x", gameboy::ic::irq);
                     Text("ie: %02x", gameboy::ic::ie);
 
                     Separator();

@@ -37,29 +37,29 @@ namespace frontend {
         }
 
         void init() {
-            if (!sound_disabled) {
-                SDL_Init(SDL_INIT_AUDIO);
+            if (sound_disabled) return;
 
-                stream = SDL_NewAudioStream(
-                    AUDIO_S16SYS,
-                    SPU_CHANNELS,
-                    SPU_NATIVE_SAMPLERATE,
-                    AUDIO_S16SYS,
-                    SPU_CHANNELS,
-                    AUDIO_DEVICE_SAMPLERATE
-                );
+            SDL_Init(SDL_INIT_AUDIO);
 
-                desired.freq     = AUDIO_DEVICE_SAMPLERATE;
-                desired.format   = AUDIO_S16SYS;
-                desired.channels = SPU_CHANNELS;
-                desired.samples  = AUDIO_BUFFER_SIZE;
-                desired.callback = &update;
-                desired.userdata = nullptr;
+            stream = SDL_NewAudioStream(
+                AUDIO_S16SYS,
+                SPU_CHANNELS,
+                SPU_NATIVE_SAMPLERATE,
+                AUDIO_S16SYS,
+                SPU_CHANNELS,
+                AUDIO_DEVICE_SAMPLERATE
+            );
 
-                dev = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
+            desired.freq     = AUDIO_DEVICE_SAMPLERATE;
+            desired.format   = AUDIO_S16SYS;
+            desired.channels = SPU_CHANNELS;
+            desired.samples  = AUDIO_BUFFER_SIZE;
+            desired.callback = &update;
+            desired.userdata = nullptr;
 
-                if (dev) SDL_PauseAudioDevice(dev, 0);
-            }
+            dev = SDL_OpenAudioDevice(nullptr, 0, &desired, nullptr, 0);
+
+            if (dev) SDL_PauseAudioDevice(dev, 0);
         }
     }
 }

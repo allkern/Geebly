@@ -57,21 +57,28 @@ namespace gameboy {
     void update() {
         if (!pause) {
             cpu::cycle();
+
+            if (!cpu::stopped) {
+                ppu::cycle();
+                timer::update();
+            }
+
+            if (settings::enable_joyp_irq_delay) joypad::update();
         } else {
             if (step) {
                 cpu::execute();
                 cpu::handle_interrupts();
                 cpu::fetch();
 
+                if (!cpu::stopped) {
+                    ppu::cycle();
+                    timer::update();
+                }
+
+                if (settings::enable_joyp_irq_delay) joypad::update();
+
                 step = false;
             }
         }
-
-        if (!cpu::stopped) {
-            ppu::cycle();
-            timer::update();
-        }
-
-        if (settings::enable_joyp_irq_delay) joypad::update();
     }
 }

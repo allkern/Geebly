@@ -78,16 +78,16 @@ namespace cli {
             DEFINE_SETTING("--master-volume", "-v", "master-volume");
 
             DEFINE_SWITCH("--debug"                   , "-d"                 , "debug");
-            DEFINE_SWITCH("--enable-joyp-irq-delay"   , "-Ejoyp-irq-delay"   , "joyp-irq-delay");
-            DEFINE_SWITCH("--disable-joyp-irq-delay"  , "-Eno-joyp-irq-delay", "no-joyp-irq-delay");
-            DEFINE_SWITCH("--skip-bootrom"            , "-Bskip"             , "bootrom-skip");
-            DEFINE_SWITCH("--cgb-mode", "-Ecgb"       , "cgb-mode");
-            DEFINE_SWITCH("--patch-bios-checks"       , "-Bno-checks"        , "no-bios-checks");
-            DEFINE_SWITCH("--no-patch-bios-checks"    , "-Bchecks"           , "bios-checks");
-            DEFINE_SWITCH("--vram-access-emulation"   , "-Gvram-access"      , "vram-access-emulation");
-            DEFINE_SWITCH("--no-vram-access-emulation", "-Gno-vram-access"   , "no-vram-access-emulation");
-            DEFINE_SWITCH("--mono"                    , "-m"                 , "mono");
-            DEFINE_SWITCH("--sound-disabled"          , "-Sdisable"          , "sound-disabled");
+            DEFINE_SWITCH("--enable-joyp-irq-delay"   , "-joyp-irq-delay"    , "joyp-irq-delay");
+            DEFINE_SWITCH("--disable-joyp-irq-delay"  , "-no-joyp-irq-delay" , "no-joyp-irq-delay");
+            DEFINE_SWITCH("--skip-bootrom"            , "-no-boot"           , "bootrom-skip");
+            DEFINE_SWITCH("--cgb-mode"                , "-cgb"               , "cgb-mode");
+            DEFINE_SWITCH("--patch-bios-checks"       , "-no-checks"         , "no-bios-checks");
+            DEFINE_SWITCH("--no-patch-bios-checks"    , "-checks"            , "bios-checks");
+            DEFINE_SWITCH("--vram-access-emulation"   , "-vram-access"       , "vram-access-emulation");
+            DEFINE_SWITCH("--no-vram-access-emulation", "-no-vram-access"    , "no-vram-access-emulation");
+            DEFINE_SWITCH("--mono"                    , "-mono"              , "mono");
+            DEFINE_SWITCH("--sound-disabled"          , "-m"                 , "sound-disabled");
 
             if (cli.size()) {
                 if (cli.at(0).size()) {

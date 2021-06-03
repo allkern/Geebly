@@ -14,21 +14,25 @@ namespace gameboy {
     namespace ic {
         u8 dummy;
 
-        u8 ia = 0, ie = 0;
+        u8 irq = 0, ie = 0;
+
+        void fire(u8 irqs) {
+            irq |= irqs;
+        }
 
         u32 read(u16 addr, size_t size) {
-            if (addr == MMIO_IF) { return ia; }
+            if (addr == MMIO_IF) { return irq; }
             if (addr == MMIO_IE) { return ie; }
             return 0;
         }
 
         void write(u16 addr, u16 value, size_t size) {
-            if (addr == MMIO_IF) { ia = value & 0xff; return; }
+            if (addr == MMIO_IF) { irq = value & 0xff; return; }
             if (addr == MMIO_IE) { ie = value & 0xff; return; }
         }
 
         u8& ref(u16 addr) {
-            if (addr == MMIO_IF) { return ia; }
+            if (addr == MMIO_IF) { return irq; }
             if (addr == MMIO_IE) { return ie; }
             return dummy;
         }

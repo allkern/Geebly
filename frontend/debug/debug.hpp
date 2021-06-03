@@ -19,7 +19,6 @@
 #include "global.hpp"
 #include "ppu.hpp"
 #include "cpu.hpp"
-#include "spu.hpp"
 #include "screen.hpp"
 
 #include "../dialog.hpp"
@@ -126,7 +125,7 @@ namespace frontend {
             // Setup Dear ImGui context
             IMGUI_CHECKVERSION();
             ImGui::CreateContext();
-            ImPlot::CreateContext();
+            //ImPlot::CreateContext();
             sdl::io = &ImGui::GetIO();
 
             // Setup Platform/Renderer backends
@@ -170,7 +169,7 @@ namespace frontend {
             // Cleanup
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplSDL2_Shutdown();
-            ImPlot::DestroyContext();
+            //ImPlot::DestroyContext();
             ImGui::DestroyContext();
 
             SDL_GL_DeleteContext(sdl::gl_context);
@@ -241,13 +240,12 @@ namespace frontend {
                 ImGui::EndMainMenuBar();
             }
 
-            ImGui::ShowDemoWindow();
+            //ImGui::ShowDemoWindow();
 
             //ppu_panel::render();
             if (show_cpu_panel) cpu_panel::render();
             if (show_screen_panel) screen_panel::render();
             if (show_ppu_panel) ppu_panel::render();
-            spu_panel::render();
 
             ImGui::PopFont();
 

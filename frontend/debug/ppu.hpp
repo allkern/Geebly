@@ -69,6 +69,24 @@ namespace frontend {
                 PopStyleVar();
             }
 
+            #define DISPLAY_PALETTE(N) \
+                for (int i = 0; i < 4; i++) { \
+                    uint32_t color = ppu::dmg_palette[(ppu::r[PPU_##N] >> (i << 1)) & 0x3]; \
+                    char title[256]; \
+                    sprintf(&title[0], #N " color %u", i); \
+                    ColorButton(title, \
+                        ImVec4( \
+                            (float)((color >> 8 ) & 0xff) / 255.0, \
+                            (float)((color >> 16) & 0xff) / 255.0, \
+                            (float)((color >> 24) & 0xff) / 255.0, \
+                            (float)(color         & 0xff) / 255.0 \
+                        ), \
+                        0, \
+                        ImVec2(20, 20) \
+                    ); \
+                    SameLine(); \
+                } NewLine();
+
             void render() {
                 using namespace ImGui;
 
@@ -78,7 +96,28 @@ namespace frontend {
                 Begin("PPU", nullptr, ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
                     render_tileset_table(0); SameLine();
                     render_tileset_table(1);
+
+                    Separator();
+
+                    Text("lcdc      : %02x", ppu::r[PPU_LCDC]);
+                    Text("stat      : %02x", ppu::r[PPU_STAT]);
+                    Text("ly, lyc   : %02x -> %02x", ppu::r[PPU_LY], ppu::r[PPU_LYC]);
+                    Text("background: (%02x (%+i), %02x (%+i))", ppu::r[PPU_SCX], ppu::r[PPU_SCX], ppu::r[PPU_SCY], ppu::r[PPU_SCY]);
+                    Text("window    : (%02x (%+i), %02x (%+i))", ppu::r[PPU_WX], ppu::r[PPU_WX], ppu::r[PPU_WY], ppu::r[PPU_WY]);
                     
+                    Separator();
+
+                    Text("bgp       : %02x", ppu::r[PPU_BGP]);
+
+                    DISPLAY_PALETTE(BGP);
+
+                    Separator();
+
+                    Text("obp0, obp1: %02x, %02x", ppu::r[PPU_OBP0], ppu::r[PPU_OBP1]);
+
+                    DISPLAY_PALETTE(OBP0);
+                    DISPLAY_PALETTE(OBP1);
+
                 End();
             }
         }
