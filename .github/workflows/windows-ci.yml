@@ -11,5 +11,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Setup dependencies
+    - name: Download SDL2
+      uses: carlosperate/download-file-action@v1.0.3
+      with:
+        file-url: "https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz"
+        file-name: "sdl2.tar.gz"
+    - name: Run
       run: dir
