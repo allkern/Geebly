@@ -18,6 +18,7 @@ jobs:
         file-name: "sdl2.tar.gz"
     - name: Extract SDL2
       run: |
-           mkdir -Force sdl2
-           tar xzvf "sdl2.tar.gz" -c "sdl2/"
+           # mkdir -Force sdl2
+           tar xzvf "sdl2.tar.gz"
+           dir
            del "sdl2.tar.gz"
