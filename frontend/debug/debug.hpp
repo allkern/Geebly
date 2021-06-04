@@ -206,7 +206,8 @@ namespace frontend {
             ImGui_ImplSDL2_NewFrame(sdl::window);
             ImGui::NewFrame();
 
-            ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
+            if (font_present) 
+                ImGui::PushFont(ImGui::GetIO().Fonts->Fonts[1]);
 
             if (ImGui::BeginMainMenuBar()) {
                 if (ImGui::BeginMenu("File")) {
@@ -256,7 +257,8 @@ namespace frontend {
             if (show_screen_panel) screen_panel::render();
             if (show_ppu_panel) ppu_panel::render();
 
-            ImGui::PopFont();
+            if (font_present)
+                ImGui::PopFont();
 
             // Rendering
             ImGui::Render();
