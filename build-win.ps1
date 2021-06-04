@@ -22,7 +22,7 @@ c++ -c -I"`"$($IMGUI_DIR)`"" `
        "`"$($IMGUI_DIR)\*.cpp`"" `
        "`"$($IMPLOT_DIR)\*.cpp`"" `
        "`"$($IMGUI_DIR)\examples\libs\gl3w\GL\gl3w.c`"" `
-       -L"`"$($SDL2_DIR)\lib`"" `
+       -L"`"$($SDL2_DIR)\lib\x64`"" `
        -DIMGUI_IMPL_OPENGL_LOADER_GL3W `
        -limm32 -m64 -mbmi2 -lSDL2main -lSDL2 -lopengl32 -fpermissive -lcomdlg32
 
