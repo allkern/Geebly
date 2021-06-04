@@ -45,13 +45,10 @@ jobs:
            }
            Compress-Archive @compress
            dir
-    #- uses: "marvinpinto/action-automatic-releases@latest"
-    #  with:
-    #    repo_token: "${{ secrets.GITHUB_TOKEN }}"
-    #    automatic_release_tag: ${{ steps.tag_version.outputs.new_tag }}
-    #    prerelease: false
-    #    title: Geebly ${{ steps.tag_version.outputs.new_tag }}
-    #    files: |
-    #        LICENSE.txt
-    #        bin/geebly.exe
-    #        sdl2/lib/x64/SDL2.dll
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: ${{ steps.tag_version.outputs.new_tag }}
+        prerelease: false
+        title: Geebly ${{ steps.tag_version.outputs.new_tag }}
+        files: geebly-${{ steps.tag_version.outputs.new_tag }}.zip
