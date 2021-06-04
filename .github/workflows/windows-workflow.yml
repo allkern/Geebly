@@ -31,13 +31,27 @@ jobs:
       run: |
            ./build-win.ps1 "lgw/" "implot/" "imgui/" "sdl2/"
            dir
-    - uses: "marvinpinto/action-automatic-releases@latest"
+    - name: Bump version and push tag
+      id: tag_version
+      uses: mathieudutour/github-tag-action@v5.5
       with:
-        repo_token: "${{ secrets.GITHUB_TOKEN }}"
-        automatic_release_tag: "latest"
-        prerelease: false
-        title: "Latest"
-        files: |
-            LICENSE.txt
-            bin/geebly.exe
-            sdl2/lib/x64/SDL2.dll
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Package for release
+      run: |
+           $compress = @{ 
+             Path = "bin/geebly.exe", "sdl2/lib/x64/SDL2.dll", "LICENSE"
+             CompressionLevel = "Fastest"
+             DestinationPath = "geebly-" ${{ steps.tag_version.outputs.new_tag }} ".zip
+           }
+           Compress-Archive @compress
+           dir
+    #- uses: "marvinpinto/action-automatic-releases@latest"
+    #  with:
+    #    repo_token: "${{ secrets.GITHUB_TOKEN }}"
+    #    automatic_release_tag: ${{ steps.tag_version.outputs.new_tag }}
+    #    prerelease: false
+    #    title: Geebly ${{ steps.tag_version.outputs.new_tag }}
+    #    files: |
+    #        LICENSE.txt
+    #        bin/geebly.exe
+    #        sdl2/lib/x64/SDL2.dll
