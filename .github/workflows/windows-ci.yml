@@ -14,12 +14,12 @@ jobs:
     - name: Download SDL2
       uses: carlosperate/download-file-action@v1.0.3
       with:
-        file-url: "https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz"
+        file-url: "https://www.libsdl.org/release/SDL2-devel-2.0.14-VC.zip"
         file-name: "sdl2.tar.gz"
     - name: Extract SDL2
       run: |
            tar xzvf "sdl2.tar.gz"
-           move-item "SDL2-2.0.14/x86_64-w64-mingw32" "sdl2"
+           move-item "SDL2-2.0.14" "sdl2"
            del "sdl2.tar.gz"
            dir sdl2/
     - name: Clone ImGui, ImPlot and lgw
