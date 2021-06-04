@@ -1,11 +1,5 @@
 #pragma once
 
-// Dear ImGui: standalone example application for SDL2 + OpenGL
-// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
-// (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
-// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
-// Read online: https://github.com/ocornut/imgui/tree/master/docs
-
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
@@ -54,6 +48,14 @@ using namespace gl;
 
 namespace frontend {
     namespace debug {
+        bool file_exists(std::string name) {
+            std::ifstream f(name);
+
+            return f.good() && f.is_open();
+        }
+
+        bool font_present = false;
+
         namespace sdl {
             SDL_Window* window = nullptr;
             SDL_GLContext gl_context;
@@ -118,8 +120,9 @@ namespace frontend {
             bool err = false; // If you use IMGUI_IMPL_OPENGL_LOADER_CUSTOM, your loader is likely to requires some form of initialization.
 #endif
             if (err) {
-                fprintf(stderr, "Failed to initialize OpenGL loader!\n");
-                return 1;
+                _log(error, "Couldn't initialize OpenGL loader");
+
+                return false;
             }
 
             // Setup Dear ImGui context
@@ -141,18 +144,24 @@ namespace frontend {
             // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
             
             ImGuiIO& cio = ImGui::GetIO();
+
+            open = true;
+            ppu_panel::init();
+            screen_panel::init();
+            ImGui::GetStyle().WindowBorderSize = 0.0f;
+
+            font_present = file_exists("ubuntu-mono.ttf") || file_exists("res/ubuntu-mono.ttf");
+
+            if (!font_present) {
+                _log(warning, "Couldn't find ubuntu-mono.ttf, continuing with default font");
+
+                return true;
+            }
             
             cio.Fonts->Clear();
             sdl::io->Fonts->AddFontDefault();
 
             cio.Fonts->AddFontFromFileTTF("ubuntu-mono.ttf", 16.0f);
-
-            ppu_panel::init();
-            screen_panel::init();
-
-            ImGui::GetStyle().WindowBorderSize = 0.0f;
-            
-            open = true;
 
             return true;
         }

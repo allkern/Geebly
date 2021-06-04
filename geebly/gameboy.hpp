@@ -8,7 +8,15 @@
 #include "log.hpp"
 #include "cli.hpp"
 
+#include <fstream>
+
 namespace gameboy {
+    bool file_exists(std::string name) {
+        std::ifstream f(name);
+
+        return f.good() && f.is_open();
+    }
+
     // To-do: Make ROM dropping better
     void reset() {
         spu::reset();
@@ -25,6 +33,23 @@ namespace gameboy {
     }
 
     void init(std::string rom_reload = "") {
+        bool bootrom_present = false;
+
+        if (settings::cgb_mode) {
+            bootrom_present =
+                file_exists("cgb_boot.bin") ||
+                file_exists("boot/cgb_boot.bin");
+        } else {
+            bootrom_present =
+                file_exists("dmg_boot.bin") ||
+                file_exists("boot/dmg_boot.bin");
+        }
+
+        if (!bootrom_present)
+            _log(warning, "Couldn't find any DMG or CGB boot ROMs, skipping boot logo");
+
+        settings::skip_bootrom |= bootrom_present;
+ 
         if (!settings::skip_bootrom)
             bios::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
 
