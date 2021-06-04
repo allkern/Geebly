@@ -19,7 +19,7 @@ jobs:
     - name: Extract SDL2
       run: |
            tar xzvf "sdl2.tar.gz"
-           rename-item "SDL2-2.0.14" "sdl2"
+           move-item "SDL2-2.0.14/x86_64-w64-mingw32" "sdl2"
            del "sdl2.tar.gz"
            dir sdl2/
     - name: Clone ImGui, ImPlot and lgw
