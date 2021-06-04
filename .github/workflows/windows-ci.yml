@@ -26,4 +26,7 @@ jobs:
            git clone https://github.com/ocornut/imgui
            git clone https://github.com/epezent/implot
            git clone https://github.com/Lycoder/lgw
+    - name: Build
+      run: |
+           ./build-win.ps1 "lgw/" "implot/" "imgui/" "sdl2/"
            dir
