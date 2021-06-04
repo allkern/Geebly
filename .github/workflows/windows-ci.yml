@@ -1,8 +1,8 @@
-name: C/C++ CI
+name: Windows
 
 on:
   push:
-    branches: [ rework-workflows ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -31,3 +31,13 @@ jobs:
       run: |
            ./build-win.ps1 "lgw/" "implot/" "imgui/" "sdl2/"
            dir
+    - uses: "marvinpinto/action-automatic-releases@latest"
+      with:
+        repo_token: "${{ secrets.GITHUB_TOKEN }}"
+        automatic_release_tag: "latest"
+        prerelease: false
+        title: "Latest"
+        files: |
+            LICENSE.txt
+            bin/geebly.exe
+            sdl2/lib/x64/SDL2.dll
