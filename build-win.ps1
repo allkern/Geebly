@@ -1,8 +1,8 @@
 $GEEBLY_INCLUDE_DIR = "."
-$LGW_INCLUDE_DIR    = ""
-$IMPLOT_DIR         = ""
-$IMGUI_DIR          = ""
-$SDL2_DIR           = ""
+$LGW_INCLUDE_DIR    = $args[0]
+$IMPLOT_DIR         = $args[1]
+$IMGUI_DIR          = $args[2]
+$SDL2_DIR           = $args[3]
 
 $VERSION_TAG = git describe --always --tags --abbrev=0
 $COMMIT_HASH = git rev-parse --short HEAD

@@ -12,7 +12,7 @@
 #define GEEBLY_SDL_WINDOW_FLAGS SDL_WINDOW_OPENGL
 #endif
 
-#include "SDL2/SDL.h"
+#include "SDL.h"
 
 #include <chrono>
 #include <unordered_map>

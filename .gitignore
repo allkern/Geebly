@@ -73,7 +73,6 @@ imgui.ini
 build-win.bat
 .vscode/settings.json
 src/devices/ppu/naive_ppu.hpp
-.github/
 imgui/
 lgw/
 docs/
