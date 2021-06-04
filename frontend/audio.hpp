@@ -1,7 +1,7 @@
 #pragma once
 
-#include "SDL2/SDL_audio.h"
-#include "SDL2/SDL.h"
+#include "SDL_audio.h"
+#include "SDL.h"
 
 #define AUDIO_DEVICE_SAMPLERATE 48000
 #define AUDIO_BUFFER_SIZE 32
