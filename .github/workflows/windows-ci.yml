@@ -21,6 +21,7 @@ jobs:
            tar xzvf "sdl2.tar.gz"
            rename-item "SDL2-2.0.14" "sdl2"
            del "sdl2.tar.gz"
+           dir sdl2/
     - name: Clone ImGui, ImPlot and lgw
       run: |
            git clone https://github.com/ocornut/imgui
