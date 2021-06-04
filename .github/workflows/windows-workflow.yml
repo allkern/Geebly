@@ -2,7 +2,7 @@ name: Windows
 
 on:
   push:
-    branches: [ main ]
+    branches: [ rework-workflows ]
 
 jobs:
   build:
