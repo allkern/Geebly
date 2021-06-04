@@ -18,7 +18,7 @@ jobs:
         file-name: "sdl2.tar.gz"
     - name: Extract SDL2
       run: |
-           # mkdir -Force sdl2
            tar xzvf "sdl2.tar.gz"
-           dir
+           rename-item "SDL2-2.0.14" "sdl2
            del "sdl2.tar.gz"
+           dir
