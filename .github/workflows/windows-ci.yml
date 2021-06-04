@@ -16,5 +16,8 @@ jobs:
       with:
         file-url: "https://www.libsdl.org/release/SDL2-devel-2.0.14-mingw.tar.gz"
         file-name: "sdl2.tar.gz"
-    - name: Run
-      run: dir
+    - name: Extract SDL2
+      run: |
+           mkdir -Force sdl2
+           tar xzvf "sdl2.tar.gz" -c "sdl2/"
+           del "sdl2.tar.gz"
