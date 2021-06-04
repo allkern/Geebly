@@ -41,7 +41,7 @@ jobs:
            $compress = @{ 
              Path = "bin/geebly.exe", "sdl2/lib/x64/SDL2.dll", "LICENSE"
              CompressionLevel = "Fastest"
-             DestinationPath = "geebly-" ${{ steps.tag_version.outputs.new_tag }} ".zip
+             DestinationPath = "geebly-" + "${{ steps.tag_version.outputs.new_tag }}" + ".zip"
            }
            Compress-Archive @compress
            dir
