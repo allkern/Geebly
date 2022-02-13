@@ -14,6 +14,7 @@
 #include <SDL.h>
 
 #include "geebly/global.hpp"
+#include "geebly/gameboy.hpp"
 #include "lgw/color.hpp"
 
 #include "global.hpp"
@@ -213,7 +214,9 @@ namespace frontend {
                 }
 
                 if (ImGui::BeginMenu("GameBoy")) {
-                    if (ImGui::MenuItem("Reset"));
+                    if (ImGui::MenuItem("Reset")) {
+                        gameboy::reset();
+                    }
                     if (ImGui::MenuItem("Shutdown"));
 
                     ImGui::EndMenu();
@@ -241,8 +244,6 @@ namespace frontend {
             }
 
             //ImGui::ShowDemoWindow();
-
-            //ppu_panel::render();
             if (show_cpu_panel) cpu_panel::render();
             if (show_screen_panel) screen_panel::render();
             if (show_ppu_panel) ppu_panel::render();

@@ -14,7 +14,7 @@ namespace gameboy {
             std::array <sram_bank_t, 8> sram;
             std::vector <rom_bank_t> rom;
 
-            u8 current_rom_bank_idx = 0, sram_bank_count = 0;
+            u8 current_rom_bank_idx = 0, current_sram_bank_idx = 0, sram_bank_count = 0;
 
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
@@ -24,6 +24,29 @@ namespace gameboy {
                  sram_battery_backed = false;
 
         public:
+            void save_state(std::ofstream& o) override {
+                for (sram_bank_t& b : sram)
+                    o.write(reinterpret_cast<char*>(b.data()), b.size());
+
+                GEEBLY_WRITE_VARIABLE(current_rom_bank_idx);
+                GEEBLY_WRITE_VARIABLE(current_sram_bank_idx);
+                GEEBLY_WRITE_VARIABLE(sram_bank_count);
+                GEEBLY_WRITE_VARIABLE(sram_enabled);
+            }
+
+            void load_state(std::ifstream& i) override {
+                for (sram_bank_t& b : sram)
+                    i.read(reinterpret_cast<char*>(b.data()), b.size());
+
+                GEEBLY_LOAD_VARIABLE(current_rom_bank_idx);
+                GEEBLY_LOAD_VARIABLE(current_sram_bank_idx);
+                GEEBLY_LOAD_VARIABLE(sram_bank_count);
+                GEEBLY_LOAD_VARIABLE(sram_enabled);
+
+                current_rom_bank = &rom[current_rom_bank_idx];
+                current_sram_bank = &sram[current_sram_bank_idx];
+            }
+
             mbc3(u8 sram_bc = 0, bool has_sram = false, std::ifstream* sav = nullptr) {
                 sram_present = has_sram;
                 sram_battery_backed = sram_present && (sav != nullptr);
@@ -81,6 +104,7 @@ namespace gameboy {
                     // Drop last bank, misread (fix?)
                     rom.pop_back();
 
+                    current_rom_bank_idx = 1;
                     current_rom_bank = &rom[1];
                 }
 
@@ -88,6 +112,7 @@ namespace gameboy {
             }
 
             u32 read(u16 addr, size_t size) override {
+                u8 value = utility::default_mb_read(current_rom_bank->data(), addr, size, 0x4000);
                 if (addr >= 0x150 && addr <= 0x3fff) { return utility::default_mb_read(rom[0].data(), addr, size, 0); }
                 if (addr >= 0x4000 && addr <= 0x7fff) { return utility::default_mb_read(current_rom_bank->data(), addr, size, 0x4000); }
                 if (addr >= 0xa000 && addr <= 0xbfff) { if (sram_enabled) return utility::default_mb_read(current_sram_bank->data(), addr, size, 0xa000); }
@@ -105,6 +130,7 @@ namespace gameboy {
 
                 // SRAM bank select/ROM MSB select
                 if (addr >= 0x4000 && addr <= 0x5fff) {
+                    current_sram_bank_idx = value & 0x3;
                     current_sram_bank = &sram[value & 0x3];
                     return;
                 }
@@ -112,9 +138,8 @@ namespace gameboy {
                 if (addr >= 0x2000 && addr <= 0x3fff) {
                     if ((value & 0x7f) == 0x0) value++;
 
-                    current_rom_bank_idx = value;
-
-                    current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
+                    current_rom_bank_idx = value % rom.size();
+                    current_rom_bank = &rom[current_rom_bank_idx];
                 }
             }
 

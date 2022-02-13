@@ -30,10 +30,10 @@ int main(int argc, char *argv[]) {
 
     if (settings::debugger_enabled) debug::start();
 
-    frontend::init();
     gameboy::init();
+    frontend::init();
 
-    while (screen::is_open()) gameboy::update();
+    while (window::is_open()) gameboy::update();
 
     frontend::close();
 

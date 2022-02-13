@@ -44,6 +44,14 @@ namespace gameboy {
                 double freq = 0.0, amp = 0.0;
             } cs;
 
+            void reset() {
+                std::memset(&cs, 0, sizeof(current_sound_t));
+
+                s = 0;
+
+                if (nr) for (size_t i = 0; i < 5; i++) nr[i] = 0x00;
+            }
+
             int16_t get_sample() {
                 if (cs.playing) {
                     if (cs.infinite ? true : (cs.remaining_samples--)) {
@@ -59,8 +67,18 @@ namespace gameboy {
                 }
             }
 
+            void update() {
+                if (!(nr[0x0] & 0x80)) { cs.playing = false; return; }
+
+                u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & CTRL_FREQH) << 8)) & 0x7ff;
+
+                cs.output_level = (nr[0x2] >> 5) & 3;
+
+                cs.freq = 65536.0 / (2048.0 - rf);
+            }
+
             void update_state() {
-                if (TEST_REG(SPUNR_CTRL, CTRL_RESTR) || cs.playing) {
+                if (TEST_REG(SPUNR_CTRL, CTRL_RESTR)) {
                     bool i = !(nr[SPUNR_CTRL] & CTRL_LENCT);
 
                     u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & CTRL_FREQH) << 8)) & 0x7ff;
@@ -70,6 +88,8 @@ namespace gameboy {
                     size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * (SPU_NATIVE_SAMPLERATE >> 2);
 
                     u8 o = (nr[0x2] >> 5) & 3;
+
+                    if (!nr[SPUNR_ENVC]) reset();
 
                     cs = {
                         true,   // cs.playing
@@ -83,20 +103,20 @@ namespace gameboy {
                 }
             }
             
-            void update_output_level() {
-                cs.output_level = (nr[0x2] >> 5) & 3;
-            }
-
             void init(u8& nr){
                 this->nr = &nr;
             }
 
-            void reset() {
-                std::memset(&cs, 0, sizeof(current_sound_t));
+            void save_state(std::ofstream& o) {
+                GEEBLY_WRITE_VARIABLE(s);
 
-                s = 0;
+                o.write(reinterpret_cast<char*>(&cs), sizeof(cs));
+            }
 
-                for (size_t i = 0; i < 5; i++) nr[i] = 0xff;
+            void load_state(std::ifstream& i) {
+                GEEBLY_LOAD_VARIABLE(s);
+
+                i.read(reinterpret_cast<char*>(&cs), sizeof(cs));
             }
         } ch3;
     }

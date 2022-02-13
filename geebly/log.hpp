@@ -37,7 +37,19 @@ namespace _log {
         #endif
     }
 
+    bool disable_logs = false;
+
+    void disable() {
+        disable_logs = true;
+    }
+
+    void enable() {
+        disable_logs = false;
+    }
+
     template <class... Args> void log(const char* t, std::string fmt, Args... args) {
+        if (disable_logs) return;
+
         sprintf(buf, fmt.c_str(), args...);
 
         #ifdef LOG_TARGET_LINUX

@@ -1,9 +1,10 @@
 #pragma once
 
 #include "audio.hpp"
-#include "window.hpp"
 #include "input.hpp"
 #include "debug/debug.hpp"
+#include "window.hpp"
+#include "geebly/gameboy.hpp"
 
 using namespace gameboy;
 
@@ -15,18 +16,30 @@ namespace frontend {
         settings::debugger_enabled                    = cli::setting("debug");
         settings::skip_bootrom                        = cli::setting("bootrom-skip");
         settings::cgb_mode                            = cli::setting("cgb-mode");
-        master_volume                                 = std::stod(cli::setting("master-volume", "1.0"));
+        settings::disable_logs                        = cli::setting("no-logs");
+        settings::sgb_mode                            = cli::setting("sgb-mode");
+        gameboy::master_volume                        = std::stod(cli::setting("master-volume", "1.0"));
         stereo                                        = !cli::setting("mono");
-        sound_disabled                                = cli::setting("sound-disabled");
+        gameboy::sound_disabled                       = cli::setting("sound-disabled");
+        ntsc_codec_enabled                            = cli::setting("ntsc-codec");
+        start_with_gui                                = cli::setting("gui") || cli::no_arguments();
+        settings::disable_logs                        = start_with_gui;
+        blend_frames                                  = cli::setting("blend-frames");
+    }
+
+    void rom_drop_cb(const char* file) {
+        _log(debug, "%s", file);
     }
 
     void init() {
-        ppu::init(settings::debugger_enabled ? nullptr : screen::update);
+        ppu::init(settings::debugger_enabled ? nullptr : window::update);
+
 
         if (!settings::debugger_enabled) {
-            screen::register_keydown_cb(input::keydown_cb);
-            screen::register_keyup_cb(input::keyup_cb);
-            screen::init(std::stoi(cli::setting("scale", "1")));
+            window::register_keydown_cb(input::keydown_cb);
+            window::register_keyup_cb(input::keyup_cb);
+            window::register_rom_dropped_cb(gameboy::reload_rom);
+            window::init(std::stoi(cli::setting("scale", "1")));
         }
 
         audio::init();
@@ -34,6 +47,6 @@ namespace frontend {
 
     void close() {
         if (!settings::debugger_enabled)
-            screen::close();
+            window::close();
     }
 }

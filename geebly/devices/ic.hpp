@@ -8,6 +8,7 @@
 #define IRQ_VBL   0x1
 #define IRQ_STAT  0x2
 #define IRQ_TIMER 0x4
+#define IRQ_SERIAL 0x8
 #define IRQ_JOYP  0x10
 
 namespace gameboy {
@@ -16,12 +17,17 @@ namespace gameboy {
 
         u8 irq = 0, ie = 0;
 
+        void reset() {
+            irq = 0;
+            ie = 0;
+        }
+
         void fire(u8 irqs) {
             irq |= irqs;
         }
 
         u32 read(u16 addr, size_t size) {
-            if (addr == MMIO_IF) { return irq; }
+            if (addr == MMIO_IF) { return 0xe0 | irq; }
             if (addr == MMIO_IE) { return ie; }
             return 0;
         }
@@ -35,6 +41,16 @@ namespace gameboy {
             if (addr == MMIO_IF) { return irq; }
             if (addr == MMIO_IE) { return ie; }
             return dummy;
+        }
+
+        void save_state(std::ofstream& o) {
+            GEEBLY_WRITE_VARIABLE(irq);
+            GEEBLY_WRITE_VARIABLE(ie);
+        }
+
+        void load_state(std::ifstream& i) {
+            GEEBLY_LOAD_VARIABLE(irq);
+            GEEBLY_LOAD_VARIABLE(ie);
         }
     }
 }

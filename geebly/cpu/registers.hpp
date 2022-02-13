@@ -18,7 +18,7 @@ namespace gameboy {
             size_t pc_increment = 0x0;
         } s;
 
-        bool halted, stopped;
+        bool halted;//, stopped;
 
         namespace registers {
             struct pair {
@@ -50,7 +50,7 @@ namespace gameboy {
             std::array <uint8_t, 8> r = { 0 };
 
             uint64_t cycles = 0;
-            uint8_t last_instruction_cycles = 0;
+            int last_instruction_cycles = 0;
 
             // Program Counter
             uint16_t pc = 0x0;
@@ -68,6 +68,13 @@ namespace gameboy {
         }
 
         bool jump = false;
+
+        bool halt_bug = false,
+             halt_ime_state = false,
+             ei_issued = false;
+        int  ei_delay = 0;
+
+        u8 fired = 0;
     }
 
 }

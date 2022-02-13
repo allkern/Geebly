@@ -37,7 +37,7 @@ namespace frontend {
         }
 
         void init() {
-            if (sound_disabled) return;
+            if (gameboy::sound_disabled) return;
 
             SDL_Init(SDL_INIT_AUDIO);
 

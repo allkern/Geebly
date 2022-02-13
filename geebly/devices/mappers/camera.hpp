@@ -15,7 +15,7 @@ namespace gameboy {
             std::array <sram_bank_t, 8> sram;
             std::vector <rom_bank_t> rom;
 
-            u8 current_rom_bank_idx = 0, sram_bank_count = 0;
+            u8 current_rom_bank_idx = 0, current_sram_bank_idx = 0, sram_bank_count = 0;
 
             rom_bank_t* current_rom_bank = nullptr;
             sram_bank_t* current_sram_bank = &sram[0];
@@ -28,6 +28,29 @@ namespace gameboy {
             cam_registers_t camr = { 0x0 };
 
         public:
+            void save_state(std::ofstream& o) override {
+                for (sram_bank_t& b : sram)
+                    o.write(reinterpret_cast<char*>(b.data()), b.size());
+
+                GEEBLY_WRITE_VARIABLE(current_rom_bank_idx);
+                GEEBLY_WRITE_VARIABLE(current_sram_bank_idx);
+                GEEBLY_WRITE_VARIABLE(sram_bank_count);
+                GEEBLY_WRITE_VARIABLE(sram_enabled);
+            }
+
+            void load_state(std::ifstream& i) override {
+                for (sram_bank_t& b : sram)
+                    i.read(reinterpret_cast<char*>(b.data()), b.size());
+
+                GEEBLY_LOAD_VARIABLE(current_rom_bank_idx);
+                GEEBLY_LOAD_VARIABLE(current_sram_bank_idx);
+                GEEBLY_LOAD_VARIABLE(sram_bank_count);
+                GEEBLY_LOAD_VARIABLE(sram_enabled);
+
+                current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
+                current_sram_bank = &sram[current_sram_bank_idx];
+            }
+
             camera(u8 sram_bc = 0, bool has_sram = false, std::ifstream* sav = nullptr) {
                 sram_present = has_sram;
                 sram_battery_backed = sram_present && (sav != nullptr);
@@ -85,6 +108,7 @@ namespace gameboy {
                     // Drop last bank, misread (fix?)
                     rom.pop_back();
 
+                    current_rom_bank_idx = 1;
                     current_rom_bank = &rom[1];
                 }
 
@@ -132,6 +156,7 @@ namespace gameboy {
                         cam_registers_enabled = false;
                     }
 
+                    current_rom_bank_idx = value & 0x3;
                     current_sram_bank = &sram[value & 0x3];
                     return;
                 }
@@ -140,7 +165,6 @@ namespace gameboy {
                     if ((value & 0x7f) == 0x0) value++;
 
                     current_rom_bank_idx = value;
-
                     current_rom_bank = &rom[current_rom_bank_idx % rom.size()];
                 }
             }

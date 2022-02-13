@@ -89,7 +89,36 @@
 #define TEST_REG(reg, mask) (r[reg] & mask)
 
 namespace gameboy {
-    namespace ppu {
+    namespace ppu {        
+        template <class T> class queue_t {
+            std::vector <T> c;
+
+        public:
+            void push(T value) {
+                c.push_back(value);
+            }
+
+            void pop() {
+                if (c.size()) {
+                    c.erase(c.begin());
+                } else {
+                    _log(debug, "TRYING TO POP FROM AN EMPTY QUEUE");
+                }
+            }
+
+            T front() {
+                return c.at(0);
+            }
+
+            size_t size() {
+                return c.size();
+            }
+
+            bool empty() {
+                return !size();
+            }
+        };
+
         struct fifo_pixel_t {
             u8 color = 0,
                palette = 0,
@@ -117,7 +146,7 @@ namespace gameboy {
             bool vram_bank, xflip, yflip, priority;
         } bg_attr;
 
-        typedef void (*frame_ready_callback_t)(uint32_t*);
+        typedef void (*frame_ready_callback_t)(uint32_t*, uint32_t*);
 
         frame_ready_callback_t frame_ready_cb = nullptr;
 
@@ -128,11 +157,12 @@ namespace gameboy {
         typedef std::array <u8, 0xc>        registers_t;
         typedef std::array <u32, 4>         dmg_palette_t;
         typedef std::array <vram_bank_t, 2> vram_t;
-        typedef std::queue <fifo_pixel_t>   fifo_t;
+        typedef queue_t <fifo_pixel_t>      fifo_t;
         typedef std::vector <sprite_t>      queued_sprite_array_t;
 
         typedef lgw::framebuffer <PPU_WIDTH, PPU_HEIGHT> framebuffer_t;
 
+        bool stat_blocking;
         queued_sprite_array_t queued_sprites;
         sprite_array_t sprites;
         vram_t vram;
@@ -149,7 +179,9 @@ namespace gameboy {
         fifo_t background_fifo,
                sprite_fifo;
 
-        framebuffer_t frame;
+        framebuffer_t frame[2];
+
+        bool buffer_latch = false;
 
 #ifdef GEEBLY_FRAMEBUFFER_FORMAT
 #if GEEBLY_FRAMEBUFFER_FORMAT == 1
@@ -179,7 +211,8 @@ namespace gameboy {
         bool bg_auto_inc = false,
              spr_auto_inc = false;
 
-        size_t clk = 0, cx, rx, sx, sy, fx, clki = 4, wiy = 0;
+        int clk = 0;
+        size_t cx, rx, sx, sy, fx, clki = 4, wiy = 0;
 
         u16 tile_scy_off, tile_scx_off, coff;
 
@@ -192,7 +225,7 @@ namespace gameboy {
         }
 
         uint32_t* get_buffer() {
-            return frame.get_buffer();
+            return frame[buffer_latch].get_buffer();
         }
 
         void reset() {
@@ -220,41 +253,135 @@ namespace gameboy {
             ocps = 0;
             current_bank_idx = 0;
 
-            //for (u8& reg : r) { reg = 0; }
-
             // Flush FIFOs
             while (!background_fifo.empty()) background_fifo.pop();
             while (!sprite_fifo.empty()) sprite_fifo.pop();
 
-            r[PPU_STAT] &= 0xfc;
+            r[PPU_STAT] &= 0xf8;
+        }
+
+        void save_state(std::ofstream& o) {
+            GEEBLY_WRITE_VARIABLE(clk);
+            GEEBLY_WRITE_VARIABLE(cx);
+            GEEBLY_WRITE_VARIABLE(rx);
+            GEEBLY_WRITE_VARIABLE(sx);
+            GEEBLY_WRITE_VARIABLE(sy);
+            GEEBLY_WRITE_VARIABLE(fx);
+            GEEBLY_WRITE_VARIABLE(clki);
+            GEEBLY_WRITE_VARIABLE(wiy);
+            GEEBLY_WRITE_VARIABLE(tile_scy_off);
+            GEEBLY_WRITE_VARIABLE(tile_scx_off);
+            GEEBLY_WRITE_VARIABLE(coff);
+            GEEBLY_WRITE_VARIABLE(vram_disabled);
+            GEEBLY_WRITE_VARIABLE(oam_disabled);
+            GEEBLY_WRITE_VARIABLE(tile);
+            GEEBLY_WRITE_VARIABLE(l);
+            GEEBLY_WRITE_VARIABLE(h);
+            GEEBLY_WRITE_VARIABLE(bg_auto_inc);
+            GEEBLY_WRITE_VARIABLE(spr_auto_inc);
+            GEEBLY_WRITE_VARIABLE(bcps);
+            GEEBLY_WRITE_VARIABLE(ocps);
+            GEEBLY_WRITE_VARIABLE(current_bank_idx);
+
+            for (vram_bank_t& b : vram)
+                o.write(reinterpret_cast<char*>(b.data()), b.size());
+            
+            o.write(reinterpret_cast<char*>(oam.data()), oam.size());
+            o.write(reinterpret_cast<char*>(r.data()), r.size());
+            o.write(reinterpret_cast<char*>(r.data()), r.size());
+            o.write(reinterpret_cast<char*>(cgb_bg_palette.data()), cgb_bg_palette.size());
+            o.write(reinterpret_cast<char*>(cgb_spr_palette.data()), cgb_spr_palette.size());
+            //o.write(queued_sprites.data(), queued_sprites.size());
+
+            //o.write(background_fifo.data(), queued_sprites.size());
+            //o.write(queued_sprites.data(), queued_sprites.size());
+        }
+        
+        void load_state(std::ifstream& i) {
+            GEEBLY_LOAD_VARIABLE(clk);
+            GEEBLY_LOAD_VARIABLE(cx);
+            GEEBLY_LOAD_VARIABLE(rx);
+            GEEBLY_LOAD_VARIABLE(sx);
+            GEEBLY_LOAD_VARIABLE(sy);
+            GEEBLY_LOAD_VARIABLE(fx);
+            GEEBLY_LOAD_VARIABLE(clki);
+            GEEBLY_LOAD_VARIABLE(wiy);
+            GEEBLY_LOAD_VARIABLE(tile_scy_off);
+            GEEBLY_LOAD_VARIABLE(tile_scx_off);
+            GEEBLY_LOAD_VARIABLE(coff);
+            GEEBLY_LOAD_VARIABLE(vram_disabled);
+            GEEBLY_LOAD_VARIABLE(oam_disabled);
+            GEEBLY_LOAD_VARIABLE(tile);
+            GEEBLY_LOAD_VARIABLE(l);
+            GEEBLY_LOAD_VARIABLE(h);
+            GEEBLY_LOAD_VARIABLE(bg_auto_inc);
+            GEEBLY_LOAD_VARIABLE(spr_auto_inc);
+            GEEBLY_LOAD_VARIABLE(bcps);
+            GEEBLY_LOAD_VARIABLE(ocps);
+            GEEBLY_LOAD_VARIABLE(current_bank_idx);
+
+            for (vram_bank_t& b : vram)
+                i.read(reinterpret_cast<char*>(b.data()), b.size());
+            
+            i.read(reinterpret_cast<char*>(oam.data()), oam.size());
+            i.read(reinterpret_cast<char*>(r.data()), r.size());
+            i.read(reinterpret_cast<char*>(r.data()), r.size());
+            i.read(reinterpret_cast<char*>(cgb_bg_palette.data()), cgb_bg_palette.size());
+            i.read(reinterpret_cast<char*>(cgb_spr_palette.data()), cgb_spr_palette.size());
+            //o.write(queued_sprites.data(), queued_sprites.size());
+
+            //o.write(background_fifo.data(), queued_sprites.size());
+            //o.write(queued_sprites.data(), queued_sprites.size());
+        }
+
+        void reset_full() {
+            reset();
+
+            for (vram_bank_t& b : vram)
+               for (u8& v : b) v = 0;
+
+            for (u8& v : oam) v = 0;
+            for (u8& v : r) v = 0;
+            for (u8& v : cgb_bg_palette) v = 0;
+            for (u8& v : cgb_spr_palette) v = 0;
+        }
+
+        void reset_fetcher_state() {
+            r[PPU_LY] = 0x0;
+            r[PPU_STAT] &= ~STAT_CRMODE;
         }
 
         u32 read(u16 addr, size_t size) {
             switch (addr) {
-                case MMIO_VBK: return current_bank_idx;
-                case MMIO_BCPD: return utility::default_mb_read(cgb_bg_palette.data(), bcps & 0x3f, size);
+                case MMIO_VBK: return settings::cgb_mode ? (0xfe | current_bank_idx) : 0xff;
+                case MMIO_BCPD: return settings::cgb_mode ? utility::default_mb_read(cgb_bg_palette.data(), bcps & 0x3f, size) : 0xff;
             }
             
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
+                if (addr == 0xff41) return 0x80 | r[PPU_STAT];
+
                 return utility::default_mb_read(r.data(), addr, size, PPU_R_BEGIN);
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
+                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
                 return utility::default_mb_read(vram[current_bank_idx].data(), addr, size, VRAM_BEGIN);
             }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
+                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) { for (auto& b : oam) b = rand() % 0xff; return 0xff; }
                 return utility::default_mb_read(oam.data(), addr, size, OAM_BEGIN);
             }
 
-            return 0;
+            return 0xff;
         }
 
         void write(u16 addr, u16 value, size_t size) {
+            if (addr == 0xff41) { if (pause) _log(debug, "value=%02x, stat=%02x", value, r[PPU_STAT]); value &= 0xf8; }
+
             switch (addr) {
                 case 0xff40: { if (!(value & 0x80)) reset(); } break;
+                case 0xff41: {} break;
                 case MMIO_VBK: { current_bank_idx = value & 0x1; return; };
                 case MMIO_BCPS: { bcps = value; return; }
                 case MMIO_BCPD: {
@@ -275,18 +402,25 @@ namespace gameboy {
             }
 
             if (addr >= PPU_R_BEGIN && addr <= PPU_R_END) {
+                // Ignore writes to LY
+                if (addr == 0xff44) return;
+
+                u8 old_stat = r[PPU_STAT];
                 utility::default_mb_write(r.data(), addr, value, size, PPU_R_BEGIN);
+
+                if (addr == 0xff41) r[PPU_STAT] |= old_stat & 0x7;
+
                 return;
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                if (vram_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+                if (vram_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
                 utility::default_mb_write(vram[current_bank_idx].data(), addr, value, size, VRAM_BEGIN);
                 return;
             }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                if (oam_disabled && !TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) { for (auto& b : oam) b = rand() % 0xff; return; }
                 utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
                 return;
             }

@@ -9,7 +9,6 @@ namespace gameboy {
         static void func() {
             bool exec = true;
             while (exec && !window_closed) {
-                //if (cpu::registers::pc == 0x0042) { cpu::run = false; cpu::step = false; }
                 exec = cpu::cycle();
             }
         }

@@ -51,22 +51,29 @@ namespace gameboy {
             for (auto& b : oam) { b = rand() % 0xff; }
 
             for (size_t idx = 0; idx < sprites.size(); idx++)
-                sprites.at(idx) = reinterpret_cast<sprite_t*>(&oam.at(idx << 2));
+                sprites.at(idx) = (sprite_t*)(&oam.at(idx << 2));
 
             queued_sprites.reserve(12);
 
             if (settings::skip_bootrom) {
+                _log(debug, "Initializing PPU state skipping bootrom");
                 r[PPU_LCDC] = 0x91;
                 r[PPU_STAT] = 0x85;
                 r[PPU_BGP] = 0xfc;
             }
         }
 
-        void refetch(size_t size = 0) {
-            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]) && ((cx - size) >= (r[PPU_WX] - 7));
+#define WINDOW_ENABLED (TEST_REG(PPU_LCDC, LCDC_WNDSWI))
 
-            u8 scroll_x     = window ? (r[PPU_WX] - 7) : r[PPU_SCX],
-               scroll_y     = window ? r[PPU_WY] : r[PPU_SCY],
+        inline bool window_visible(size_t x) {
+            return WINDOW_ENABLED &&
+                   (r[PPU_LY] >= r[PPU_WY]) &&
+                   (x >= ((int)r[PPU_WX] - 7));
+        }
+
+        void refetch(bool window = false) {
+            u8 scroll_x     = window ? 0 : r[PPU_SCX],
+               scroll_y     = window ? 0 : r[PPU_SCY],
                tilemap_mask = window ? LCDC_WNDTMS : LCDC_BGWTMS,
                switch_mask  = window ? LCDC_WNDSWI : LCDC_BGWSWI;
 
@@ -76,7 +83,7 @@ namespace gameboy {
                 return;
             }
 
-            sx = cx + (window ? -scroll_x : scroll_x);
+            sx = window ? (cx - (r[PPU_WX] - 7)) : (cx + scroll_x);
             sy = window ? wiy : ((r[PPU_LY] + scroll_y) & 0xff);
 
             tile_scx_off = (sx >> 3) & 0x1f;
@@ -96,10 +103,12 @@ namespace gameboy {
                 bg_attr.priority  = (bool)(bg_attr_byte & 0x80);
             }
 
+            size_t yflip_off = (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
+    
             if (TEST_REG(PPU_LCDC, LCDC_BGWTSS)) {
-                coff = (tile << 4) + (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
+                coff = (tile << 4) + yflip_off;
             } else {
-                coff = 0x1000 + ((int8_t)tile * 16) + (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
+                coff = 0x1000 + ((int8_t)tile * 16) + yflip_off;
             }
 
             size_t bank = settings::cgb_mode ? ((int)bg_attr.vram_bank) : 0;
@@ -138,7 +147,7 @@ namespace gameboy {
                         spr_c,
                         settings::cgb_mode ? (uint8_t)(spr.a & 0x7) : (uint8_t)((spr.a >> 4) & 0x1),
                         0,
-                        (spr.a & 0x80)
+                        (spr.a & 0x80) != 0
                     });
                 }
             }
@@ -149,24 +158,23 @@ namespace gameboy {
         void render_row(size_t size) {
             size--;
 
-            bool window = TEST_REG(PPU_LCDC, LCDC_WNDSWI) && (r[PPU_LY] >= r[PPU_WY]) && ((cx + size) >= (r[PPU_WX] - 7));
+            u8 scroll_x = r[PPU_SCX],
+               scroll_y = r[PPU_SCY];
 
-            u8 scroll_x = window ? (r[PPU_WX] - 7): r[PPU_SCX],
-               scroll_y = window ? r[PPU_WY] : r[PPU_SCY];
-
-            refetch();
+            refetch(window_visible(cx));
 
             do {
-                if (!((sx + 1) % 8) || (window && ((cx + size) == (r[PPU_WX] - 7)))) refetch();
+                if ((!((sx + 1) % 8))) refetch(window_visible(cx));
+                if (window_visible(cx)) refetch(true);
 
-                sx = cx + (window ? -scroll_x : scroll_x);
-                sy = window ? wiy : ((r[PPU_LY] + scroll_y) & 0xff);
+                sx = window_visible(cx) ? (cx - (r[PPU_WX] - 7)) : (cx + r[PPU_SCX]);
+                sy = (r[PPU_LY] + scroll_y) & 0xff;
 
                 size_t p = bg_attr.xflip ? (sx % 8) : (7 - (sx % 8));
 
                 u8 color = PPU_PIXEL_EXTRACT;
 
-                background_fifo.push({
+                background_fifo.push(fifo_pixel_t{
                     color,
                     bg_attr.bgp,
                     0,
@@ -178,8 +186,6 @@ namespace gameboy {
                 cx++;
             } while (size--);
         }
-
-        bool vbl_triggered = false;
 
         #define SWITCH_MODE(m) r[PPU_STAT] = (r[PPU_STAT] & ~(STAT_CRMODE)) | m
 
@@ -193,23 +199,38 @@ namespace gameboy {
 
             u16 p = palette_ram->at(off) | (palette_ram->at(off+1) << 8);
 
-            u8 r = (p & 0x1f) << 3,
-               g = ((p >> 0x5) & 0x1f) << 3,
-               b = ((p >> 0xa) & 0x1f) << 3;
+            // Naive CGB color translation
+            // u8 r = (p & 0x1f) << 3,
+            //    g = ((p >> 0x5) & 0x1f) << 3,
+            //    b = ((p >> 0xa) & 0x1f) << 3;
 
-            return lgw::rgb(r, g, b);
+            // Emulate CGB LCD color translation
+            u8 r = p & 0x1f,
+               g = (p >> 0x5) & 0x1f,
+               b = (p >> 0xa) & 0x1f;
+
+            int cr = ((r * 26) + (g *  4) + (b *  2)),
+                cg = (           (g * 24) + (b *  8)),
+                cb = ((r *  6) + (g *  4) + (b * 22));
+
+            cr = std::min(960, cr) >> 2;
+            cg = std::min(960, cg) >> 2;
+            cb = std::min(960, cb) >> 2;
+
+            return lgw::rgb(cr, cg, cb);
         }
 
+        unsigned int mode3_length_addend = 0;
+
         inline void fetch_sprites() {
+            static const int mode3_initial_addends[] = {
+                3, 2, 2, 2, 2, 1, 1, 1
+            };
+
             if ((!already_fetched_sprites) && (TEST_REG(PPU_LCDC, LCDC_SPDISP))) {
                 for (sprite_t* spr : sprites) {
                     // Enforce 10 sprites per scanline limit
-                    if (queued_sprites.size() == 10) {
-                        std::sort(queued_sprites.begin(), queued_sprites.end(), [](sprite_t& a, sprite_t& b) {
-                            return a.x < b.x;
-                        });
-                        break;
-                    }
+                    if (queued_sprites.size() == 10) break;
 
                     bool sprite_in_scanline =
                         (r[PPU_LY] >= ((int)spr->y - 16)) &&
@@ -217,50 +238,133 @@ namespace gameboy {
 
                     if (((int)spr->y-16 >= -16) && sprite_in_scanline) queued_sprites.push_back(*spr);
                 }
+
+                already_fetched_sprites = true;
+
+                std::sort(queued_sprites.begin(), queued_sprites.end(), [](sprite_t& a, sprite_t& b) {
+                    return a.x < b.x;
+                });
+
+                if (queued_sprites.size() >= 1) {
+                    mode3_length_addend = mode3_initial_addends[queued_sprites[0].x % 8] * 4;
+                }
+
+                if (queued_sprites.size() > 1) {
+                    for (int i = 1; i < queued_sprites.size(); i++) {
+                        int x = queued_sprites[i].x - 8;
+
+                        if (x < 8) {
+                            mode3_length_addend += (1 * 4);
+                        } else {
+                            if ((x % 8) < 4) {
+                                mode3_length_addend += (2 * 4);
+                            } else {
+                                mode3_length_addend += (1 * 4);
+                            }
+                        }
+                    }
+                }
             }
         }
 
         bool stat_irq_signal = false, prev_stat_irq_signal = stat_irq_signal,
              vbl_irq_signal = false, prev_vbl_irq_signal = vbl_irq_signal;
 
+        bool stat_hbl_irq_signal = false, prev_stat_hbl_irq_signal = stat_hbl_irq_signal,
+             stat_vbl_irq_signal = false, prev_stat_vbl_irq_signal = stat_vbl_irq_signal,
+             stat_md2_irq_signal = false, prev_stat_md2_irq_signal = stat_md2_irq_signal,
+             stat_lyc_irq_signal = false, prev_stat_lyc_irq_signal = stat_lyc_irq_signal;
+        
+        bool md0_mode_signal = false, prev_md0_mode_signal = md0_mode_signal,
+             md1_mode_signal = false, prev_md1_mode_signal = md1_mode_signal,
+             md2_mode_signal = false, prev_md2_mode_signal = md2_mode_signal,
+             md3_mode_signal = false, prev_md3_mode_signal = md3_mode_signal;
+        
+        bool fake_stat_irq = false, prev_fake_stat_irq = fake_stat_irq;
+        
         void test_irqs() {
             prev_stat_irq_signal = stat_irq_signal;
             prev_vbl_irq_signal = vbl_irq_signal;
+            prev_stat_hbl_irq_signal = stat_hbl_irq_signal;
+            prev_stat_vbl_irq_signal = stat_vbl_irq_signal;
+            prev_stat_md2_irq_signal = stat_md2_irq_signal;
+            prev_stat_lyc_irq_signal = stat_lyc_irq_signal;
 
-            stat_irq_signal = ((r[PPU_LY] == r[PPU_LYC]) && TEST_REG(PPU_STAT, STAT_LYCNSD)) ||
-                (((r[PPU_STAT] & 0x3) == 0) && TEST_REG(PPU_STAT, STAT_MODE00)) ||
-                (((r[PPU_STAT] & 0x3) == 2) && TEST_REG(PPU_STAT, STAT_MODE02)) ||
-                (((r[PPU_STAT] & 0x3) == 1) && (TEST_REG(PPU_STAT, STAT_MODE01) || TEST_REG(PPU_STAT, STAT_MODE02)));
+            prev_md0_mode_signal = md0_mode_signal;
+            prev_md1_mode_signal = md1_mode_signal;
+            prev_md2_mode_signal = md2_mode_signal;
+            prev_md3_mode_signal = md3_mode_signal;
+
+            prev_fake_stat_irq = fake_stat_irq;
+
+            md0_mode_signal = (r[PPU_STAT] & 0x3) == 0;
+            md1_mode_signal = (r[PPU_STAT] & 0x3) == 1;
+            md2_mode_signal = (r[PPU_STAT] & 0x3) == 2;
+            md3_mode_signal = (r[PPU_STAT] & 0x3) == 3;
+
+            //_log(debug, "ly=%02x, lyc=%02x, signal=%u, prev=%u", r[PPU_LY], r[PPU_LYC], ((r[PPU_LY] == r[PPU_LYC]) && TEST_REG(PPU_STAT, STAT_LYCNSD)), prev_stat_irq_signal);
+
+            stat_lyc_irq_signal = ((r[PPU_LY] == r[PPU_LYC]) && TEST_REG(PPU_STAT, STAT_LYCNSD));
+            stat_hbl_irq_signal = (((r[PPU_STAT] & 0x3) == 0) && TEST_REG(PPU_STAT, STAT_MODE00));
+            stat_md2_irq_signal = (((r[PPU_STAT] & 0x3) == 2) && TEST_REG(PPU_STAT, STAT_MODE02));
+            stat_vbl_irq_signal = (((r[PPU_STAT] & 0x3) == 1) && (TEST_REG(PPU_STAT, STAT_MODE01)));
+
+            stat_irq_signal = (stat_lyc_irq_signal) ||
+                              (stat_hbl_irq_signal) ||
+                              (stat_md2_irq_signal) ||
+                              (stat_vbl_irq_signal);
+
+            // stat_irq_signal = ((stat_lyc_irq_signal == true) && (prev_stat_lyc_irq_signal == false)) ||
+            //                   ((stat_hbl_irq_signal == true) && (prev_stat_hbl_irq_signal == false)) ||
+            //                   ((stat_md2_irq_signal == true) && (prev_stat_md2_irq_signal == false)) ||
+            //                   ((stat_vbl_irq_signal == true) && (prev_stat_vbl_irq_signal == false));
 
             vbl_irq_signal = (r[PPU_STAT] & 0x3) == 1;
 
-            if (((stat_irq_signal == true) && (prev_stat_irq_signal == false))) ic::fire(IRQ_STAT);
-            if (((vbl_irq_signal == true) && (prev_vbl_irq_signal == false))) ic::fire(IRQ_VBL);
+            bool lcd_on = TEST_REG(PPU_LCDC, LCDC_SWITCH);
+
+            if (stat_irq_signal && (!prev_stat_irq_signal) && lcd_on) ic::fire(IRQ_STAT);
+            if (vbl_irq_signal && (!prev_vbl_irq_signal) && lcd_on) ic::fire(IRQ_VBL);
 
             if (r[PPU_LY] == r[PPU_LYC]) {
-                r[PPU_STAT] |= 0x4;
+                r[PPU_STAT] |= STAT_CDFLAG; 
             } else {
-                r[PPU_STAT] &= ~(0x4);
+                r[PPU_STAT] &= ~STAT_CDFLAG;
             }
         }
 
-        void cycle() {
-            if (!TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+#define MODE3_BASE_LENGTH 160
+#define MODE0_BASE_LENGTH (456 - 80 - MODE3_BASE_LENGTH)
+#define MODE2_LENGTH 80
 
-            test_irqs();
+        bool& toggle(bool& var) { return var = !var; }
+
+        void cycle() {
+            if (!TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
+                r[PPU_LY] = 0x0;
+                clk = 0;
+            }
 
             switch (r[PPU_STAT] & STAT_CRMODE) {
                 case MODE_SPR_SEARCH: {
                     oam_disabled = true;
 
+                    if (residual_cycles) {
+                        clki += clk;
+                        residual_cycles = false;
+                    }
+
                     // Queue up 10 sprites max for this scanline
                     fetch_sprites();
 
-                    if (clk >= 80) {
+                    if (pause)
+                        _log(debug, "mode 2 cycles remaining for switch =%i", MODE2_LENGTH - clk);
+
+                    if (clk >= MODE2_LENGTH) {
                         // Reset sprite fetcher state for the next scanline
                         already_fetched_sprites = false;
 
-                        clk -= 80;
+                        clk -= MODE2_LENGTH;
 
                         if (clk) residual_cycles = true;
 
@@ -272,16 +376,20 @@ namespace gameboy {
                     vram_disabled = true;
 
                     // Handle pixels drawn in residual cycles (solves black lines bug)
+                    unsigned int pcount = clki;
+
                     if (residual_cycles) {
-                        clki += clk;
+                        pcount += clk;
                         residual_cycles = false;
                     }
 
-                    render_row(clki);
+                    render_row(pcount);
 
                     // Pop sprite and background/window pixels from the FIFO for mixing
                     // given priorities, colors, etc.
-                    for (size_t i = 0; i < clki; i++) {
+                    for (size_t i = 0; i < pcount; i++) {
+                        if (!background_fifo.size()) break;
+
                         fifo_pixel_t bg_pixel = background_fifo.front(),
                                      spr_pixel = sprite_fifo.front();
 
@@ -291,6 +399,11 @@ namespace gameboy {
                         if (!TEST_REG(PPU_LCDC, LCDC_SPDISP)) spr_pixel.color = 0;
 
                         if (settings::cgb_mode) {
+                            if (settings::cgb_dmg_mode) {
+                                spr_pixel.color = ((spr_pixel.palette ? r[PPU_OBP1] : r[PPU_OBP0]) >> (spr_pixel.color << 1)) & 0x3;
+                                bg_pixel.color = (r[PPU_BGP] >> (bg_pixel.color << 1)) & 0x3;
+                            }
+
                             u32 bg_out = get_pixel_color(bg_pixel, false),
                                 spr_out = get_pixel_color(spr_pixel, true);
 
@@ -299,6 +412,9 @@ namespace gameboy {
                             } else {
                                 out = spr_pixel.color ? spr_out : bg_out;
                             }
+
+                            if (!(TEST_REG(PPU_LCDC, LCDC_BGWSWI)))
+                                out = spr_out;
                         } else {
                             if (!TEST_REG(PPU_LCDC, LCDC_BGWSWI)) bg_pixel.color = 0;
 
@@ -311,42 +427,65 @@ namespace gameboy {
                                 out = spr_pixel.color ? dmg_palette.at(spr_idx) : dmg_palette.at(bg_idx);
                             }
                         }
-                        
-                        if (fx < PPU_WIDTH) frame.draw(fx++, r[PPU_LY], out);
 
-                        sprite_fifo.pop();
-                        background_fifo.pop();
+                        if (stopped) {
+                            if (settings::cgb_mode) {
+                                frame[buffer_latch].draw(fx++, r[PPU_LY], 0x000000ff);
+                            } else {
+                                frame[buffer_latch].draw(fx++, r[PPU_LY], 0xffffffff);
+                            }
+                        } else if (!TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
+                            frame[buffer_latch].draw(fx++, r[PPU_LY], 0xffffffff);
+                        } else {
+                            if (fx < PPU_WIDTH)
+                                frame[buffer_latch].draw(fx++, r[PPU_LY], out);
+                        }
+
+                        if (sprite_fifo.size()) sprite_fifo.pop(); else break;
+                        if (background_fifo.size()) background_fifo.pop(); else break;
                     }
 
-                    if (clk >= 172) {
+                    if (pause)
+                        _log(debug, "mode 3 cycles remaining for switch =%i", 160 - clk);
+
+                    if (clk >= (MODE3_BASE_LENGTH + mode3_length_addend)) {
                         // Prepare the sprite FIFO for the next scanline
                         queued_sprites.clear();
 
-                        clk -= 172;
+                        clk -= MODE3_BASE_LENGTH + mode3_length_addend;
 
                         if (clk) residual_cycles = true;
 
                         vram_disabled = false;
                         oam_disabled = false;
 
+                        if (pause)
+                            _log(debug, "switching to hblank cycles=%i", clk);
+
                         SWITCH_MODE(MODE_HBLANK);
                     }
                 } break;
 
                 case MODE_HBLANK: {
-                    if (clk >= 204) {
-                        if ((r[PPU_LY] > r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
+                    //if (clk >= 204) {
+                    if (clk >= MODE0_BASE_LENGTH - mode3_length_addend) {
+                        if ((r[PPU_LY] >= r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
 
-                        r[PPU_LY]++;
+                        if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) r[PPU_LY]++; else r[PPU_LY] = 0;
 
-                        clk -= 204;
+                        // clk -= 204;
+                        clk -= MODE0_BASE_LENGTH - mode3_length_addend;
 
+                        residual_cycles = clk;
+
+                        mode3_length_addend = 0;
                         if (r[PPU_LY] == 144) {
                             SWITCH_MODE(MODE_VBLANK);
 
                             if (frame_ready_cb != nullptr)
-                                frame_ready_cb(frame.get_buffer());
-
+                                frame_ready_cb(frame[buffer_latch].get_buffer(), frame[!buffer_latch].get_buffer());
+                            
+                            toggle(buffer_latch);
                         } else {
                             fx = 0;
                             cx = 0;
@@ -357,16 +496,25 @@ namespace gameboy {
                 } break;
 
                 case MODE_VBLANK: {
+                    // if (residual_cycles) {
+                    //     clki += clk;
+
+                    //     residual_cycles = false;
+                    // }
+
                     if (clk >= 456) {
-                        r[PPU_LY]++;
+                        if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) r[PPU_LY]++; else r[PPU_LY] = 0;
 
                         clk -= 456;
+
+                        if (clk) residual_cycles = true;
 
                         if (r[PPU_LY] == 154) {
                             wiy = 0;
                             r[PPU_LY] = 0;
                             fx = 0;
                             cx = 0;
+                            clk = 0;
 
                             SWITCH_MODE(MODE_SPR_SEARCH);
                         }
@@ -376,9 +524,22 @@ namespace gameboy {
 
             test_irqs();
 
-            clki = clock::get();
+            if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) {
+                clki = clock::get();
 
-            clk += clki;
+                clk += clki;
+            } else {
+                r[PPU_LY] = 0x0;
+                clk = 0;
+            }
+
+            // This behavior makes VRAM/OAM Blocked Writes not pass
+            // if (trigger_oam_bug) {
+            //     if (!oam_disabled)
+            //         for (auto& b : oam) { b = rand() % 0xff; }
+
+            //     trigger_oam_bug = false;
+            // }
         }
     }
 }

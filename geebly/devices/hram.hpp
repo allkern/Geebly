@@ -17,6 +17,14 @@ namespace gameboy {
 
         hram_t hram;
 
+        void save_state(std::ofstream& o) {
+            o.write(reinterpret_cast<char*>(hram.data()), hram.size());
+        }
+
+        void load_state(std::ifstream& i) {
+            i.read(reinterpret_cast<char*>(hram.data()), hram.size());
+        }
+
         void init() {
             srand(time(NULL));
 

@@ -11,9 +11,9 @@ namespace gameboy {
     namespace bios {
         typedef std::array <u8, 0x900> big_bios_rom_t;
 
-        u8 dummy;
-
         big_bios_rom_t rom;
+
+        u8 dummy;
 
         u32 read(u16 addr, size_t size) {
             return utility::default_mb_read(rom.data(), addr, size);

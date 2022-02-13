@@ -3,15 +3,20 @@
 #include "aliases.hpp"
 #include <atomic>
 
+#define GEEBLY_WRITE_VARIABLE(var) o.write(reinterpret_cast<char*>(&var), sizeof(var))
+#define GEEBLY_LOAD_VARIABLE(var) i.read(reinterpret_cast<char*>(&var), sizeof(var));
+
 namespace gameboy {
     namespace settings {
         bool debugger_enabled = false,
              bios_checks_enabled = false,
-             inaccessible_vram_emulation_enabled = false,
+             inaccessible_vram_emulation_enabled = true,
              skip_bootrom = false,
              cgb_mode = false,
              cgb_dmg_mode = false,
-             enable_joyp_irq_delay = false;
+             disable_logs = false,
+             enable_joyp_irq_delay = false,
+             sgb_mode = false;
     }
 
     std::atomic_bool pause, step;
@@ -39,9 +44,10 @@ namespace gameboy {
          */
         inline u32 default_mb_read(u8* buffer, u16 addr, size_t size, size_t offset = 0) {
             u32 d = 0;
-            while (size) {
+
+            while (size)
                 d |= buffer[(addr+(size-1))-offset] << (((size--)-1)*8);
-            }
+
             return d;
         }
         
@@ -54,7 +60,8 @@ namespace gameboy {
          *  \param offset Offset of this buffer in the memory map
          */
         inline void default_mb_write(u8* buffer, u16 addr, u16 value, size_t size, size_t offset) {
-            while (size--) buffer[(addr+size)-offset] = value >> (size*8);
+            while (size--)
+                buffer[(addr+size)-offset] = value >> (size*8);
         }
     }
 }

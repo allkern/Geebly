@@ -49,10 +49,12 @@ namespace frontend {
                          vbl_ie     = ic::ie & IRQ_VBL,
                          stat_ie    = ic::ie & IRQ_STAT,
                          timer_ie   = ic::ie & IRQ_TIMER,
+                         serial_ie  = ic::ie & IRQ_SERIAL,
                          joypad_ie  = ic::ie & IRQ_JOYP,
                          vbl_if     = ic::irq & IRQ_VBL,
                          stat_if    = ic::irq & IRQ_STAT,
                          timer_if   = ic::irq & IRQ_TIMER,
+                         serial_if  = ic::irq & IRQ_SERIAL,
                          joypad_if  = ic::irq & IRQ_JOYP,
                          vbl_isr    = vbl_ie & vbl_if,
                          stat_isr   = stat_ie & stat_if,
@@ -72,7 +74,6 @@ namespace frontend {
                     Separator();
 
                     if (TreeNodeEx("Registers", ImGuiTreeNodeFlags_DefaultOpen)) {
-
                     Text("af: %04x\ta: %02x\tf: %02x", (u16)af, r[a], r[f]);
                     Text("bc: %04x\tb: %02x\tc: %02x", (u16)bc, r[b], r[c]);
                     Text("de: %04x\td: %02x\te: %02x", (u16)de, r[d], r[e]);
@@ -107,8 +108,9 @@ namespace frontend {
                     Text("   IF   IE");
 
                     Text("V:"); SameLine(); Checkbox("&", &vbl_if);    SameLine(); Checkbox("", &vbl_ie);
-                    Text("S:"); SameLine(); Checkbox("&", &stat_if);   SameLine(); Checkbox("", &stat_ie);
+                    Text("L:"); SameLine(); Checkbox("&", &stat_if);   SameLine(); Checkbox("", &stat_ie);
                     Text("T:"); SameLine(); Checkbox("&", &timer_if);  SameLine(); Checkbox("", &timer_ie);
+                    Text("S:"); SameLine(); Checkbox("&", &serial_if); SameLine(); Checkbox("", &serial_ie);
                     Text("J:"); SameLine(); Checkbox("&", &joypad_if); SameLine(); Checkbox("", &joypad_ie);
 
                     Separator();
@@ -121,6 +123,8 @@ namespace frontend {
                         Text("Opcode: %02x", cpu::s.opcode);
                         Text("imm: %04x, low: %02x", cpu::s.imm, cpu::s.imm8);
                         Text("Increment: %u (%02x)", cpu::s.pc_increment, cpu::s.pc_increment);
+                        Text("Halted: %s", cpu::halted ? "true" : "false");
+                        Text("Stopped: %s", stopped ? "true" : "false");
 
                         Separator();
 

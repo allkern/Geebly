@@ -26,17 +26,66 @@
 
 namespace gameboy {
     namespace cpu {
-        #ifdef _WIN32
+#ifdef _WIN32
         template <class T> size_t ffs(T n) {
             for (int c = 0; c < sizeof(T)*8; c++) {
                 if (n & (1 << c)) return c + 1;
             }
             return 0;
         }
-        #endif
+#endif
+
+        void save_state(std::ofstream& o) {
+            using namespace registers;
+
+            o.write(reinterpret_cast<char*>(&s), sizeof(state));
+
+            GEEBLY_WRITE_VARIABLE(halted);
+            GEEBLY_WRITE_VARIABLE(stopped);
+            GEEBLY_WRITE_VARIABLE(jump);
+            GEEBLY_WRITE_VARIABLE(halt_bug);
+            GEEBLY_WRITE_VARIABLE(halt_ime_state);
+            GEEBLY_WRITE_VARIABLE(ei_issued);
+            GEEBLY_WRITE_VARIABLE(ei_delay);
+            GEEBLY_WRITE_VARIABLE(fired);
+            GEEBLY_WRITE_VARIABLE(pc);
+            GEEBLY_WRITE_VARIABLE(sp);
+
+            o.write(reinterpret_cast<char*>(&r), sizeof(r));
+        }
+
+        void load_state(std::ifstream& i) {
+            using namespace registers;
+
+            i.read(reinterpret_cast<char*>(&s), sizeof(state));
+
+            GEEBLY_LOAD_VARIABLE(halted);
+            GEEBLY_LOAD_VARIABLE(stopped);
+            GEEBLY_LOAD_VARIABLE(jump);
+            GEEBLY_LOAD_VARIABLE(halt_bug);
+            GEEBLY_LOAD_VARIABLE(halt_ime_state);
+            GEEBLY_LOAD_VARIABLE(ei_issued);
+            GEEBLY_LOAD_VARIABLE(ei_delay);
+            GEEBLY_LOAD_VARIABLE(fired);
+            GEEBLY_LOAD_VARIABLE(pc);
+            GEEBLY_LOAD_VARIABLE(sp);
+
+            i.read(reinterpret_cast<char*>(&r), sizeof(r));
+        }
 
         void init() {
             using namespace registers;
+
+            std::memset(&s, 0, sizeof(state));
+
+            halted = false;
+            stopped = false;
+            jump = false;
+            halt_bug = false;
+            halt_ime_state = false;
+            ei_issued = false;
+            ei_delay = 0;
+            fired = 0;
 
             pc = 0x0;
             sp = 0x0;
@@ -54,13 +103,6 @@ namespace gameboy {
                 hl = 0x014d;
             }
         }
-        
-        bool halt_bug = false,
-             halt_ime_state = false,
-             ei_issued = false;
-        int  ei_delay = 0;
-
-        u8 fired = 0;
 
         inline void handle_interrupts() {
             using namespace registers;
@@ -71,8 +113,7 @@ namespace gameboy {
             }
             
             u8& ie = bus::ref(0xffff),
-              & ia = bus::ref(0xff0f);
-
+                & ia = bus::ref(0xff0f);
 
             u8 i = GEEBLY_PERF_FFS(ie & ia & 0x1f);
 
@@ -94,6 +135,14 @@ namespace gameboy {
             ei_issued = true;
             ei_delay = 1;
         }
+
+        inline void disable_interrupts() {
+            registers::ime = false;
+            ei_issued = false;
+            ei_delay = 0;
+        }
+
+        int halt_bug_counter = 0;
 
         inline void update(size_t pci, size_t ci, bool j = false) {
             registers::cycles += ci;
@@ -132,8 +181,16 @@ namespace gameboy {
 
                 // stop #i8
                 case 0x10: {
+                    // if (s.imm8) {
+                    //     update(0, 4);
+                    //     _log(error, "Invalid stop 0x%04x @ pc=%04x, CPU halted", (s.opcode << 8) | s.imm, pc);
+                    //     halted = true;
+                    //     stopped = true;
+                    //     return true;
+                    // }
                     if (!clock::do_switch()) {
-                        //stopped = true;
+                        //_log(debug, "stopped");
+                        stopped = true;
                     }
                     update(2, 4);
                 } break;
@@ -173,18 +230,23 @@ namespace gameboy {
                 // halt
                 case 0x76: {
                     u8 ie = bus::read(0xffff, 1), ia = bus::read(0xff0f, 1);
-                    halted = ime || (ia & ie & 0x1f) == 0;
+
+                    if ((!ime) && ((ia & ie & 0x1f) != 0)) {
+                        halt_bug_counter = 2;
+                    } else {
+                        halted = ime || ((ia & ie & 0x1f) == 0);
+                    }
                     update(1, 4);
                 } break;
 
-                // ld r8, (hl)
+                // ld r8, *%hl
                 case 0x46: case 0x4e: case 0x56: case 0x5e: case 0x66: case 0x6e: case 0x7e: {
                     r[(opcode >> 3) & 7] = bus::read(hl, 1);
                     update(1, 8);
                     break;
                 } break;
 
-                // ld (hl), r8
+                // ld *%hl, r8
                 case 0x70: case 0x71: case 0x72: case 0x73: case 0x74: case 0x75: case 0x77: {
                     bus::write(hl, r[opcode & 0x7], 1);
                     update(1, 8);
@@ -274,7 +336,7 @@ namespace gameboy {
                     update(2, 8);
                 } break;
                 
-                case 0x36: { bus::write(hl, s.imm8, 1); update(2, 12); } break;
+                case 0x36: { if (*hl.high == 0xfe) bus::write(hl, 0, 0); bus::write(hl, s.imm8, 1); update(2, 12); } break;
 
                 // rst #rst_vector;
                 case 0xc7: case 0xd7: case 0xe7: case 0xf7: case 0xcf: case 0xdf: case 0xef: case 0xff: {
@@ -292,15 +354,15 @@ namespace gameboy {
                 case 0x08: { bus::write(s.imm, sp, 2); update(3, 20); } break;
                 
                 // inc %r16;
-                case 0x03: { bc++; update(1, 8); } break;
-                case 0x13: { de++; update(1, 8); } break;
-                case 0x23: { hl++; update(1, 8); } break;
+                case 0x03: { if (*bc.high == 0xfe) bus::write(bc, 0, 0); bc++; update(1, 8); } break;
+                case 0x13: { if (*de.high == 0xfe) bus::write(de, 0, 0); de++; update(1, 8); } break;
+                case 0x23: { if (*hl.high == 0xfe) bus::write(hl, 0, 0); hl++; update(1, 8); } break;
                 case 0x33: { sp++; update(1, 8); } break;
 
                 // dec %r16;
-                case 0x0b: { bc--; update(1, 8); } break;
-                case 0x1b: { de--; update(1, 8); } break;
-                case 0x2b: { hl--; update(1, 8); } break;
+                case 0x0b: { if (*bc.high == 0xfe) bus::write(bc, 0, 0); bc--; update(1, 8); } break;
+                case 0x1b: { if (*de.high == 0xfe) bus::write(de, 0, 0); de--; update(1, 8); } break;
+                case 0x2b: { if (*hl.high == 0xfe) bus::write(hl, 0, 0); hl--; update(1, 8); } break;
                 case 0x3b: { sp--; update(1, 8); } break;
 
                 // ld *%r16, %a;
@@ -316,8 +378,8 @@ namespace gameboy {
                 case 0x1a: { r[a] = bus::read((u16)de, 1); update(1, 8); } break;
 
                 // ld %a, *%hl+-;
-                case 0x2a: { r[a] = bus::read(hl++, 1); update(1, 8); } break;
-                case 0x3a: { r[a] = bus::read(hl--, 1); update(1, 8); } break;
+                case 0x2a: { if (*hl.high == 0xfe) bus::write(hl, 0, 0); r[a] = bus::read(hl++, 1); update(1, 8); } break;
+                case 0x3a: { if (*hl.high == 0xfe) bus::write(hl, 0, 0); r[a] = bus::read(hl--, 1); update(1, 8); } break;
 
                 // add %hl, %r16;
                 case 0x09: { op_addhl((u16)bc); update(1, 8); } break;
@@ -396,13 +458,13 @@ namespace gameboy {
                 case 0xe0: { bus::write(0xff00 | s.imm8, r[a], 1); update(2, 12); } break;
                 case 0xf0: { r[a] = bus::read(0xff00 | s.imm8, 1); update(2, 12); } break;
 
-                // ld *#0xff00+%c, a, ld a, *#0xff00+%c;
+                // ld *#0xff00+%c, %a, ld %a, *#0xff00+%c;
                 case 0xe2: { bus::write(0xff00 | r[c], r[a], 1); update(1, 8); } break;
                 case 0xf2: { r[a] = bus::read(0xff00 | r[c], 1); update(1, 8); } break;
 
                 // ei; di;
                 case 0xfb: { enable_interrupts(); update(1, 4); } break;
-                case 0xf3: { ime = false; update(1, 4); } break;
+                case 0xf3: { disable_interrupts(); update(1, 4); } break;
 
                 // reti
                 case 0xd9: { pc = pop(); ime = true; update(1, 16, true); } break;
@@ -541,13 +603,25 @@ namespace gameboy {
                 case 0x3f: { set_flags(CF, !test_flags(CF)); set_flags(NF | HF, false); update(1, 4); }; break;
 
                 default: {
-                    //_log(error, "Unimplemented opcode 0x%02x @ pc=%04x", opcode, pc);
-                    update(1, 4);
+                    _log(error, "Invalid opcode 0x%02x @ pc=%04x, CPU halted", opcode, pc);
+                    update(0, 4);
+                    halted = true;
+                    stopped = true;
+                    return true;
                     //return false; // Halt and Catch Fire!
                 }
             }
 
-            if (!jump) { if (!halt_bug) { pc += s.pc_increment; } else { halt_bug = false; } }
+            if (!jump) {
+                if (halt_bug_counter) {
+                    if (halt_bug_counter == 2) {
+                        pc += s.pc_increment;
+                    }
+                    halt_bug_counter--;
+                } else {
+                    pc += s.pc_increment;
+                }
+            }
 
             skip:
 

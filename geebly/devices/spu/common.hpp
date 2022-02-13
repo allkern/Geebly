@@ -1,6 +1,6 @@
 #pragma once
 
-#define SPU_NATIVE_SAMPLERATE 2000000 // 2 MHz
+#define SPU_NATIVE_SAMPLERATE 2097152 // 2 MiHz
 #define SPU_CHANNELS 2
 
 #define SPU_BEGIN 0xff10

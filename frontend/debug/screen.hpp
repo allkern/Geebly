@@ -26,12 +26,12 @@ namespace frontend {
             void render() {
                 using namespace ImGui;
 
-                glGenTextures(1, &screen_tex);
+                //glGenTextures(1, &screen_tex);
                 glBindTexture(GL_TEXTURE_2D, screen_tex);
 
                 // Setup filtering parameters for display
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, PPU_WIDTH, PPU_HEIGHT, 0, GL_RGBA, GL_UNSIGNED_INT_8_8_8_8, screen_fb);
 

@@ -41,6 +41,12 @@ namespace cli {
         }
     }
 
+    bool no_args = false;
+
+    bool no_arguments() {
+        return no_args;
+    }
+
     bool is_defined(std::string setting) {
         return settings.find(setting) != settings.end();
     }
@@ -88,12 +94,19 @@ namespace cli {
             DEFINE_SWITCH("--no-vram-access-emulation", "-no-vram-access"    , "no-vram-access-emulation");
             DEFINE_SWITCH("--mono"                    , "-mono"              , "mono");
             DEFINE_SWITCH("--sound-disabled"          , "-m"                 , "sound-disabled");
+            DEFINE_SWITCH("--no-logs"                 , "-n"                 , "no-logs");
+            DEFINE_SWITCH("--ntsc-codec"              , "-ntsc"              , "ntsc-codec");
+            DEFINE_SWITCH("--sgb-mode"                , "-sgb"               , "sgb-mode");
+            DEFINE_SWITCH("--gui"                     , "-g"                 , "gui");
+            DEFINE_SWITCH("--blend-frames"            , "-i"                 , "blend-frames");
 
             if (cli.size()) {
                 if (cli.at(0).size()) {
                     settings.insert({"cartridge", cli.at(0)});
                 }
             }
+        } else {
+            no_args = true;
         }
     }
 #undef DEFINE_SETTING

@@ -24,6 +24,14 @@ namespace gameboy {
 
         u8 ro_sink = 0;
 
+        void save_state(std::ofstream& o) {
+            GEEBLY_WRITE_VARIABLE(bootrom_enabled);
+        }
+
+        void load_state(std::ifstream& i) {
+            GEEBLY_LOAD_VARIABLE(bootrom_enabled);
+        }
+
         void init() {
             bootrom_enabled = true;
 
@@ -34,12 +42,8 @@ namespace gameboy {
 
         u32 read(u16 addr, size_t size) {
             // Handle a DMG BIOS/CGB BIOS read
-            if (addr <= 0xff || (addr >= 0x200 && addr <= 0x8ff)) {
-                if (bootrom_enabled) {
-                    return bios::read(addr, size);
-                }
-
-                return cart::read(addr, size);
+            if ((addr <= 0xff || (addr >= 0x200 && addr <= 0x8ff)) && bootrom_enabled) {
+                return bios::read(addr, size);
             }
 
             // Handle a cartridge header/ROM read
@@ -83,7 +87,7 @@ namespace gameboy {
 
             //_log(warning, "Unhandled bus read at addr=%04x", addr);
 
-            return 0x0;
+            return 0xff;
         }
 
         u8& ref(u16 addr) {
@@ -165,6 +169,10 @@ namespace gameboy {
             if (addr >= HRAM_BEGIN && addr <= HRAM_END) { hram::write(addr, value, size); return; }
 
             if (addr == MMIO_IF || addr == MMIO_IE) { ic::write(addr, value, size); return; }
+
+            if (addr == 0xff4c) {
+                settings::cgb_dmg_mode = value == 0x4;
+            }
 
             //_log(warning, "Unhandled bus write at addr=%04x, value=%02x", addr, value);
         }

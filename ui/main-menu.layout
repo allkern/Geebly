@@ -1,0 +1,15 @@
+screen: {
+    main_list: list {
+        open_rom: button {
+            layout: stack {
+                left: hstack {
+                    icon : image_container {
+                        path: "res/folder.png",
+                        square: true,
+                        scale_x: 0.45,
+                    }
+                }
+            }
+        }
+    }
+}

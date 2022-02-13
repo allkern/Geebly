@@ -19,6 +19,14 @@ namespace gameboy {
                  sram_battery_backed = false;
 
         public:
+            void save_state(std::ofstream& o) override {
+                o.write(reinterpret_cast<char*>(sram.data()), sram.size());
+            }
+
+            void load_state(std::ifstream& i) override {
+                i.read(reinterpret_cast<char*>(sram.data()), sram.size());
+            }
+
             rom_only(bool has_sram = false, std::ifstream* sav = nullptr) {
                 sram_present = has_sram;
                 sram_battery_backed = sram_present && (sav != nullptr);

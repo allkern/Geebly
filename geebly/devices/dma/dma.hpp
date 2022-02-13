@@ -14,6 +14,18 @@ namespace gameboy {
 
         u8 dma_transfer = 0x0;
 
+        void reset() {
+            dma_transfer = 0x0;
+        }
+
+        void save_state(std::ofstream& o) {
+            GEEBLY_WRITE_VARIABLE(dma_transfer);
+        }
+
+        void load_state(std::ifstream& i) {
+            GEEBLY_LOAD_VARIABLE(dma_transfer);
+        }
+
         u32 read(u16 addr, size_t size) {
             return dma_transfer;
         }

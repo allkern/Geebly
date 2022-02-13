@@ -12,13 +12,30 @@ namespace gameboy {
 
             sram_t sram;
             std::vector <rom_bank_t> rom;
-
+            
+            size_t current_rom_bank_idx = 0;
             rom_bank_t* current_rom_bank = nullptr;
             
             bool sram_enabled = true,
                  sram_battery_backed = false;
 
         public:
+            void save_state(std::ofstream& o) override {
+                o.write(reinterpret_cast<char*>(sram.data()), sram.size());
+
+                GEEBLY_WRITE_VARIABLE(current_rom_bank_idx);
+                GEEBLY_WRITE_VARIABLE(sram_enabled);
+            }
+
+            void load_state(std::ifstream& i) override {
+                i.read(reinterpret_cast<char*>(sram.data()), sram.size());
+
+                GEEBLY_LOAD_VARIABLE(current_rom_bank_idx);
+                GEEBLY_LOAD_VARIABLE(sram_enabled);
+
+                current_rom_bank = &rom[current_rom_bank_idx];
+            }
+
             mbc2(std::ifstream* sav = nullptr) {
                 sram_battery_backed = sav != nullptr;
 
@@ -65,6 +82,7 @@ namespace gameboy {
                     // Drop last bank, misread (fix?)
                     rom.pop_back();
 
+                    current_rom_bank_idx = 1;
                     current_rom_bank = &rom[1];
                 }
 
@@ -90,6 +108,7 @@ namespace gameboy {
                 if (addr & 0x100) {
                     if ((value & 0xf) == 0x0) value++;
 
+                    current_rom_bank_idx = (value & 0xf) % rom.size();
                     current_rom_bank = &rom[(value & 0xf) % rom.size()];
                 }
             }

@@ -6,6 +6,8 @@
 #include "ic.hpp"
 #include "../cpu/registers.hpp"
 
+#include "sgb.hpp"
+
 #include <unordered_map>
 
 // JOYP masks
@@ -26,6 +28,7 @@ namespace gameboy {
         bool button, direct;
         u8 buttons = 0xff;
 
+        int counter = 0;
         int delay = 0;
         bool irq = false;
 
@@ -55,16 +58,68 @@ namespace gameboy {
             buttons |= k;
         }
 
+        u8 data = 0;
+        bool done = false;
+
+        void reset() {
+            done = false;
+            data = 0;
+            counter = 0;
+            button = false;
+            direct = false;
+            buttons = 0xff;
+            delay = 0;
+            irq = false;
+        }
+
+        void save_state(std::ofstream& o) {
+            GEEBLY_WRITE_VARIABLE(done);
+            GEEBLY_WRITE_VARIABLE(data);
+            GEEBLY_WRITE_VARIABLE(counter);
+            GEEBLY_WRITE_VARIABLE(button);
+            GEEBLY_WRITE_VARIABLE(direct);
+            GEEBLY_WRITE_VARIABLE(buttons);
+            GEEBLY_WRITE_VARIABLE(delay);
+            GEEBLY_WRITE_VARIABLE(irq);
+        }
+
+        void load_state(std::ifstream& i) {
+            GEEBLY_LOAD_VARIABLE(done);
+            GEEBLY_LOAD_VARIABLE(data);
+            GEEBLY_LOAD_VARIABLE(counter);
+            GEEBLY_LOAD_VARIABLE(button);
+            GEEBLY_LOAD_VARIABLE(direct);
+            GEEBLY_LOAD_VARIABLE(buttons);
+            GEEBLY_LOAD_VARIABLE(delay);
+            GEEBLY_LOAD_VARIABLE(irq);
+        }
+
         void write(u8 value) {
             button = !(value & 0b00100000);
             direct = !(value & 0b00010000);
+
+            if (sgb::transfer_ongoing() && settings::sgb_mode){}
+                sgb::update(direct, button);
+
+            // SGB Packet Transfer
+            if (button && direct && settings::sgb_mode){}
+                sgb::start_transfer();
         }
 
         u8 read() {
-            if (button) return 0xd0 | (buttons & 0xf);
-            if (direct) return 0xe0 | (buttons >> 4);
+            if (settings::sgb_mode) {
+                u8 value = 0xfe;
 
-            return 0xff;
+                if (button) value = 0xd0 | (buttons & 0xf);
+                if (direct) value = 0xe0 | (buttons >> 4);
+
+                return value;
+            } else {
+                if (button) return 0xd0 | (buttons & 0xf);
+                if (direct) return 0xe0 | (buttons >> 4);
+
+                return 0xff;
+            }
         }
 
         void update() {

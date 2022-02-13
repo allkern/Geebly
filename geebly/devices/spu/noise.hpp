@@ -39,6 +39,14 @@ namespace gameboy {
                 double current_freq = 0.0, current_amp = 0.0;
             } cs;
 
+            void reset() {
+                std::memset(&cs, 0, sizeof(current_sound_t));
+
+                r = 0;
+
+                if (nr) for (size_t i = 0; i < 5; i++) nr[i] = 0x00;
+            }
+
             int16_t get_sample() {
                 if (cs.playing) {
                     if (cs.infinite ? cs.infinite : (cs.remaining_samples--)) {
@@ -59,7 +67,14 @@ namespace gameboy {
 
                         return sample;
                     } else {
-                        cs.playing = false;
+                        // Super mega hack:
+                        // For some reason, setting CH4's cs.playing flag
+                        // to false, actually mutes CH3 (????)
+                        // So, we actually set its frequency to 0, so the
+                        // sample synth doesn't generate any sound.
+                        cs.current_freq = 0.0;
+                        //cs.playing = false;
+
                         return 0;
                     }
                 } else {
@@ -78,17 +93,23 @@ namespace gameboy {
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
                     size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * (SPU_NATIVE_SAMPLERATE << 2);
+                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
 
-                    double envs = 1 / (double)(envc ? envc : 1);
+                    double envs = a / (double)(envc ? envc : a);
 
-                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * (SPU_NATIVE_SAMPLERATE << 2);
+                    if (envd) {
+                        envs = (1.0 - a) / (double)(envc ? envc : (1.0 - a));
+                    }
+
+                    size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_NATIVE_SAMPLERATE;
+
+                    if (!nr[SPUNR_ENVC]) reset();
 
                     cs = {
                         true,   // cs.playing
                         i,      // cs.infinite
-                        envc,   // cs.env_enabled
+                        envc > 0,   // cs.env_enabled
                         l,      // cs.remaining_samples
                         envc,   // cs.env_step_count
                         envl,   // cs.env_step_length
@@ -101,16 +122,31 @@ namespace gameboy {
                 }
             }
 
+            void update() {
+                if (!(nr[SPUNR_ENVC] & ENVC_STVOL)) {
+                    cs.playing = false; return;
+                }
+
+                double r = nr[SPUNR_FREQ] & 0x7,
+                       s = (nr[SPUNR_FREQ] & 0xf0) >> 4;
+
+                cs.current_freq = 524288.0 / (!r ? 0.5 : r) / std::pow(2, s + 1);
+            }
+
             void init(u8& nr){
                 this->nr = &nr;
             }
 
-            void reset() {
-                std::memset(&cs, 0, sizeof(current_sound_t));
+            void save_state(std::ofstream& o) {
+                GEEBLY_WRITE_VARIABLE(r);
 
-                r = 0;
+                o.write(reinterpret_cast<char*>(&cs), sizeof(cs));
+            }
 
-                for (size_t i = 0; i < 5; i++) nr[i] = 0xff;
+            void load_state(std::ifstream& i) {
+                GEEBLY_LOAD_VARIABLE(r);
+
+                i.read(reinterpret_cast<char*>(&cs), sizeof(cs));
             }
         } ch4;
     }

@@ -27,15 +27,27 @@ namespace gameboy {
 
         u8 current_bank_idx = 1;
 
+        void save_state(std::ofstream& o) {
+            for (wram_bank_t& b : wram)
+                o.write(reinterpret_cast<char*>(b.data()), b.size());
+            
+            GEEBLY_WRITE_VARIABLE(current_bank_idx);
+        }
+
+        void load_state(std::ifstream& i) {
+            for (wram_bank_t& b : wram)
+                i.read(reinterpret_cast<char*>(b.data()), b.size());
+            
+            GEEBLY_LOAD_VARIABLE(current_bank_idx);
+        }
+
         void init() {
             srand(time(NULL));
 
             // Init all banks
-            for (auto& b : wram) {
-                for (auto& c : b) {
+            for (auto& b : wram)
+                for (auto& c : b)
                     c = rand() % 0xff;
-                }
-            }
         }
 
         u32 read(u16 addr, size_t size) {
