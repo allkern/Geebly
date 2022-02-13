@@ -9,8 +9,6 @@
 #include "cli.hpp"
 
 namespace gameboy {
-<<<<<<< Updated upstream
-=======
     bool file_exists(std::string name) {
         std::ifstream f(name);
 
@@ -30,7 +28,6 @@ namespace gameboy {
 
     void load_bootrom();
 
->>>>>>> Stashed changes
     // To-do: Make ROM dropping better
     void reset() {
         if (!sound_disabled)
@@ -140,9 +137,6 @@ namespace gameboy {
         step = true;
     }
 
-<<<<<<< Updated upstream
-    void init(std::string rom_reload = "") {
-=======
     void load_bootrom() {
         bool bootrom_present = false;
 
@@ -161,7 +155,6 @@ namespace gameboy {
 
         settings::skip_bootrom = settings::skip_bootrom || !bootrom_present;
 
->>>>>>> Stashed changes
         if (!settings::skip_bootrom)
             bios::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
     }
