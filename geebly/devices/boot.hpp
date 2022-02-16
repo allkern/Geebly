@@ -29,7 +29,8 @@ namespace gameboy {
             rom.fill(0xff);
 
             if (!f.is_open()) {
-                _log(error, "Couldn't find bootrom \"%s\". Please specify another BIOS file, or enable skipping with \"-Bskip\"", filename.c_str());
+                _log(error, "Couldn't find bootrom \"%s\". Please specify another ROM file, or enable skipping with -no-boot", filename.c_str());
+
                 std::exit(1);
             }
 
