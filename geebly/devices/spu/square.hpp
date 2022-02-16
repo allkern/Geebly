@@ -139,6 +139,8 @@ namespace gameboy {
             }
 
             void update() {
+                clk = 0.0;
+
                 if (!(nr[SPUNR_ENVC] & 0xf8)) {
                     cs.playing = false; return;
                 }
@@ -155,6 +157,8 @@ namespace gameboy {
 
             void update_state() {
                 if (TEST_REG(SPUNR_CTRL, CTRL_RESTR)) {
+                    clk = 0;
+
                     u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & 0x7) << 8));
 
                     bool i = !(nr[SPUNR_CTRL] & CTRL_LENCT);

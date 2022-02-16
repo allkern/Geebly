@@ -8,10 +8,10 @@
 #include "../log.hpp"
 
 namespace gameboy {
-    namespace bios {
-        typedef std::array <u8, 0x900> big_bios_rom_t;
+    namespace boot {
+        typedef std::array <u8, 0x900> big_bootrom_t;
 
-        big_bios_rom_t rom;
+        big_bootrom_t rom;
 
         u8 dummy;
 

@@ -1,7 +1,7 @@
 #pragma once
 
 #include "aliases.hpp"
-#include "devices/bios.hpp"
+#include "devices/boot.hpp"
 #include "devices/cart.hpp"
 #include "devices/wram.hpp"
 #include "devices/hram.hpp"
