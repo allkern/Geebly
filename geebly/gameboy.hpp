@@ -156,7 +156,7 @@ namespace gameboy {
         settings::skip_bootrom = settings::skip_bootrom || !bootrom_present;
 
         if (!settings::skip_bootrom)
-            bios::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
+            boot::init(cli::setting("boot", settings::cgb_mode ? "cgb_boot.bin" : "dmg_boot.bin"));
     }
 
     void init() {
@@ -181,10 +181,10 @@ namespace gameboy {
         step = false;
 
         if (!settings::bios_checks_enabled) {
-            bios::rom[0xfa] = 0x00;
-            bios::rom[0xfb] = 0x00;
-            bios::rom[0xe9] = 0x00;
-            bios::rom[0xea] = 0x00;
+            boot::rom[0xfa] = 0x00;
+            boot::rom[0xfb] = 0x00;
+            boot::rom[0xe9] = 0x00;
+            boot::rom[0xea] = 0x00;
         }
 
         if (!sound_disabled) spu::init();

@@ -92,15 +92,10 @@ namespace gameboy {
                     double f = 524288.0 / (!r ? 0.5 : r) / std::pow(2, s + 1),
                            a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
 
-                    size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN),
-                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE;
+                    size_t envc = 15,
+                           envl = ((double)(nr[SPUNR_ENVC] & ENVC_ENVSN) / 64.0) * SPU_NATIVE_SAMPLERATE;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
-
-                    double envs = a / (double)(envc ? envc : a);
-
-                    if (envd) {
-                        envs = (1.0 - a) / (double)(envc ? envc : (1.0 - a));
-                    }
+                    double envs = (envd ? (1.0 - a) : a) / 16.0;
 
                     size_t l = ((double)(64 - (nr[SPUNR_LENC] & LENC_LENCT)) / 256) * SPU_NATIVE_SAMPLERATE;
 
@@ -109,7 +104,7 @@ namespace gameboy {
                     cs = {
                         true,   // cs.playing
                         i,      // cs.infinite
-                        envc > 0,   // cs.env_enabled
+                        envl > 0,   // cs.env_enabled
                         l,      // cs.remaining_samples
                         envc,   // cs.env_step_count
                         envl,   // cs.env_step_length

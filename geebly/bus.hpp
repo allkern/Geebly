@@ -43,7 +43,7 @@ namespace gameboy {
         u32 read(u16 addr, size_t size) {
             // Handle a DMG BIOS/CGB BIOS read
             if ((addr <= 0xff || (addr >= 0x200 && addr <= 0x8ff)) && bootrom_enabled) {
-                return bios::read(addr, size);
+                return boot::read(addr, size);
             }
 
             // Handle a cartridge header/ROM read

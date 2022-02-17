@@ -85,7 +85,7 @@ namespace gameboy {
 
                     double f = 65536.0 / (2048.0 - rf);
 
-                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * (SPU_NATIVE_SAMPLERATE >> 2);
+                    size_t l = ((double)(256 - nr[SPUNR_LENC]) / 256) * SPU_NATIVE_SAMPLERATE;
 
                     u8 o = (nr[0x2] >> 5) & 3;
 

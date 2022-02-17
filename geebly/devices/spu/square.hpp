@@ -12,7 +12,7 @@ namespace gameboy {
             double c = SPU_NATIVE_SAMPLERATE / f,
                    h = c / dc;
 
-            cycle = std::fmod(t, h);
+            cycle = std::fmod(t, c);
                    
             if (!((u32)std::round(c))) return 0x0;
 
@@ -70,21 +70,19 @@ namespace gameboy {
 
             int16_t get_sample() {
                 if (cs.playing) {
-                    // if ((channel == CH1) && cs.env_step_count && cs.env_direction)
-                    // _log(debug, "ch1 env update: count=%u, length=%u, direction=%s, current amp=%f, step=%f",
-                    //     cs.env_step_count,
-                    //     cs.env_step_length, cs.env_direction ? "up" : "down", cs.current_amp, cs.env_step
-                    // );
                     if (cs.infinite ? cs.infinite : (cs.remaining_samples--)) {
+                        int16_t sample = generate_square_sample(clk++, cs.current_freq, cs.current_amp, cs.dc, cycle);
+
                         if (pending_freq_change) {
                             if (std::round(cycle) == 0.0) {
-                                if (!cs.sweep_enabled || (channel == CH2))
-                                    cs.current_freq = new_freq;
+                                clk = 0.0;
+
+                                //if (!cs.sweep_enabled || (channel == CH2))
+                                cs.current_freq = new_freq;
+
                                 pending_freq_change = false;
                             }
                         }
-                        
-                        int16_t sample = generate_square_sample(clk++, cs.current_freq, cs.current_amp, cs.dc, cycle);
 
                         if (cs.sweep_enabled && cs.sweep_step_count && (channel == CH1)) {
                             if (!cs.sweep_step_remaining) {
@@ -139,7 +137,7 @@ namespace gameboy {
             }
 
             void update() {
-                clk = 0.0;
+                // clk = 0.0;
 
                 if (!(nr[SPUNR_ENVC] & 0xf8)) {
                     cs.playing = false; return;
@@ -147,9 +145,15 @@ namespace gameboy {
 
                 cs.dc = duty_cycles[(nr[SPUNR_LENC] & LENC_WDUTY) >> 6];
 
+                if (pending_freq_change) {
+                    u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & 0x7) << 8));
+                    pending_freq_change = false;
+                    cs.current_freq = 131072.0 / (2048.0 - (double)rf);
+                }
+
                 if ((!cs.sweep_enabled) || (channel == CH2)) {
                     u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & 0x7) << 8));
-                    cs.current_freq = 131072.0 / (2048.0 - (double)rf);
+                    //cs.current_freq = 131072.0 / (2048.0 - (double)rf);
                     pending_freq_change = true;
                     new_freq = 131072.0 / (2048.0 - (double)rf);
                 }
@@ -157,25 +161,20 @@ namespace gameboy {
 
             void update_state() {
                 if (TEST_REG(SPUNR_CTRL, CTRL_RESTR)) {
-                    clk = 0;
+                    clk = 0.0;
 
                     u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & 0x7) << 8));
 
                     bool i = !(nr[SPUNR_CTRL] & CTRL_LENCT);
 
                     double f = 131072.0 / (2048.0 - (double)rf),
-                           a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 16.0;
+                           a = ((nr[SPUNR_ENVC] & ENVC_STVOL) >> 4) / 15.0;
+                    
 
-                    size_t envc = (nr[SPUNR_ENVC] & ENVC_ENVSN) * 2,
-                           envl = ((double)envc / 64.0) * SPU_NATIVE_SAMPLERATE;
+                    size_t envc = 16,
+                           envl = ((double)(nr[SPUNR_ENVC] & ENVC_ENVSN) / 64.0) * SPU_NATIVE_SAMPLERATE;
                     bool   envd = nr[SPUNR_ENVC] & ENVC_DIRCT;
-
-                    // Prevent SIGFPE
-                    double envs = a / (double)(envc ? envc : a);
-
-                    if (envd) {
-                        envs = (1.0 - a) / (double)(envc ? envc : (1.0 - a));
-                    }
+                    double envs = (envd ? (1.0 - a) : a) / 16.0;
 
                     int    swpt = (nr[SPUNR_SWPC] >> 4) & 0x7;
                     size_t swpl = SPU_NATIVE_SAMPLERATE * ((double)swpt / 128.0),
@@ -195,7 +194,7 @@ namespace gameboy {
                     cs = {
                         playing,   // cs.playing
                         i,      // cs.infinite
-                        envc > 0,   // cs.env_enabled
+                        envl > 0,   // cs.env_enabled
                         swpt > 0,   // cs.sweep_enabled
                         l,      // cs.remaining_samples
                         envc,   // cs.env_step_count
