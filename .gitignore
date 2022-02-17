@@ -62,6 +62,8 @@ build-win-debug.ps1
 *.json
 build-win-debug.ps1
 build-win-debug.bat
+build-win-debug-32.ps1
+build-win-debug-32.bat
 
 # Etc
 *.sna
@@ -77,4 +79,7 @@ imgui/
 lgw/
 docs/
 bin/
+roms/
+test/
 debug-build-libs.ps1
+saves/
