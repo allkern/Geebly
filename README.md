@@ -39,6 +39,7 @@ Here's all the settings currently present in the CLI:
 |`--ntsc-codec`|`-ntsc`|Enable NTSC codec|Disabled
 |`--sgb-mode`|`-sgb`|Change model to Super Game Boy|Disabled
 |`--no-logs`|`-n`|Disable logging|Disabled
+|`--blend-frames`|`-i`|Enable frame blending/interpolation|Enabled
 
 ## Tests
 Geebly passes 77 tests on Daid's shootout
