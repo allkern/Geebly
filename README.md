@@ -32,7 +32,7 @@ Here's all the settings currently present in the CLI:
 |`--scale`|`-s`|Set the display scale|1
 |`--no-patch-bios-checks`/`--patch-bios-checks`|`-checks`/`-no-checks`|Patch Boot ROM checks|No patches
 |`--skip-bootrom`|`-no-boot`|Skip the Boot ROM|Don't skip
-|`--vram-access-emulation`/`--no-vram-access-emulation`|`vram-access`/`-no-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Disabled
+|`--vram-access-emulation`/`--no-vram-access-emulation`|`vram-access`/`-no-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Enabled
 |`--cgb-mode`|`-cgb`|Change model to Game Boy Color|Disabled
 |`--enable-joyp-irq-delay/--disable-joyp-irq-delay`|`-joyp-irq-delay/-no-joyp-irq-delay`|Enable/disable JOYP IRQ delay|Enabled
 |`--gui`|`-g`|Launch GUI|Enabled
