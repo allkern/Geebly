@@ -27,18 +27,22 @@ Here's all the settings currently present in the CLI:
 |--|--|--|--|
 |`--master-volume`|`-v`|Set the master volume (`float` or `int`) <ul><li>`0.0` = Silence</li><li>`1.0` = Max</li><li>`> 1.0` = Clipping</li></ul>|`1.0`
 |`--mono`|`-m`|Disable stereo sound|No
-|`--debug`|`-d`|Enable the Geebly Debugger|Disabled
+|`--debug`|`-d`|Launch with debugger|Disabled
 |`--boot`|`-b`|Specify a boot ROM|`"dmg_boot.bin"`
 |`--scale`|`-s`|Set the display scale|1
-|`--no-patch-bios-checks`/`--patch-bios-checks`|`-Bchecks`/`-Bno-checks`|Patch Boot ROM checks|No patches
-|`--no-skip-bootrom`/`--skip-bootrom`|`-Bno-skip`/`-Bskip`|Skip the scrolling boot logo|No skip
-|`--vram-access-emulation`/`--no-vram-access-emulation`|`Evram-access`/`-Eno-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Disabled
-|`--cgb-mode`|`-Ecgb`|Switches to CGB (Game Boy Color) mode|Disabled
-|`--enable-joyp-irq-delay/--disable-joyp-irq-delay`|`-Ejoyp-irq-delay/-Eno-joyp-irq-delay`|Enable/disable JOYP IRQ delay|Enabled
+|`--no-patch-bios-checks`/`--patch-bios-checks`|`-checks`/`-no-checks`|Patch Boot ROM checks|No patches
+|`--skip-bootrom`|`-no-boot`|Skip the Boot ROM|Don't skip
+|`--vram-access-emulation`/`--no-vram-access-emulation`|`vram-access`/`-no-vram-access`|Enable/Disable VRAM/OAM mode 2 & 3 inaccessibility emulation|Enabled
+|`--cgb-mode`|`-cgb`|Change model to Game Boy Color|Disabled
+|`--enable-joyp-irq-delay/--disable-joyp-irq-delay`|`-joyp-irq-delay/-no-joyp-irq-delay`|Enable/disable JOYP IRQ delay|Enabled
+|`--gui`|`-g`|Launch GUI|Enabled
+|`--ntsc-codec`|`-ntsc`|Enable NTSC codec|Disabled
+|`--sgb-mode`|`-sgb`|Change model to Super Game Boy|Disabled
+|`--no-logs`|`-n`|Disable logging|Disabled
+|`--blend-frames`|`-i`|Enable frame blending/interpolation|Enabled
 
 ## Tests
- - `cpu_instrs.gb` passes all tests
- - `dmg-acid2.gb` passes both DMG and CGB tests
+Geebly passes 77 tests on Daid's shootout
 
 ## Building
 So many things have changed in this last version that the build process is just not the same anymore, I'll fix that in upcoming commits
