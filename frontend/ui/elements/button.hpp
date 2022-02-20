@@ -63,8 +63,6 @@ namespace frontend {
 
                 b = *(box_t*)&rect;
 
-                _log(debug, "rect=%u,%u,%u,%u", rect.w, rect.h, rect.x, rect.y);
-
                 primitives::render_rounded_rectangle_filled(
                     renderer,
                     rect.x, rect.y, rect.w, rect.h,
