@@ -308,6 +308,8 @@ namespace frontend {
             }
         }
 
+        bool lctrl_down = false;
+
         void update(uint32_t* current_frame, uint32_t* prev_frame) {
             uint32_t* buf = ntsc_codec_enabled || !blend_frames ? current_frame : blended.data();
 
@@ -414,89 +416,33 @@ namespace frontend {
                     case SDL_DROPFILE: { rom_drop_cb(event.drop.file); } break;
                     case SDL_QUIT: { close(); } break;
                     case SDL_KEYDOWN: {
-                        if (event.key.keysym.sym == SDLK_F1) {
-                            gameboy::spu::mute_ch1 = !gameboy::spu::mute_ch1;
-                        }
-                        if (event.key.keysym.sym == SDLK_F2) {
-                            gameboy::spu::mute_ch2 = !gameboy::spu::mute_ch2;
-                        }
-                        if (event.key.keysym.sym == SDLK_F3) {
-                            gameboy::spu::mute_ch3 = !gameboy::spu::mute_ch3;
-                        }
-                        if (event.key.keysym.sym == SDLK_F4) {
-                            gameboy::spu::mute_ch4 = !gameboy::spu::mute_ch4;
-                        }
+                        switch (event.key.keysym.sym) {
+                            case SDLK_LCTRL: { lctrl_down = true; } break;
+                            case SDLK_r: {
+                                if (!lctrl_down) break;
 
-                        if (event.key.keysym.sym == SDLK_ESCAPE) {
-                            gameboy::mute();
-                            ui::show();
-                            gameboy::unmute();
-                        }
-
-                        if (event.key.keysym.sym == SDLK_1) {
-                            gameboy::save_state("quick.ss");
-                            _log(ok, "Saved quick save state");
-                        }
-                        
-                        if (event.key.keysym.sym == SDLK_2) {
-                            bool compatible = gameboy::load_state("quick.ss");
-
-                            if (!compatible) {
+                                gameboy::reload_rom(cli::setting("cartridge", "geebly-no-cart").c_str());
+                            } break;
+                            case SDLK_F1: { gameboy::spu::mute_ch1 = !gameboy::spu::mute_ch1; } break;
+                            case SDLK_F2: { gameboy::spu::mute_ch2 = !gameboy::spu::mute_ch2; } break;
+                            case SDLK_F3: { gameboy::spu::mute_ch3 = !gameboy::spu::mute_ch3; } break;
+                            case SDLK_F4: { gameboy::spu::mute_ch4 = !gameboy::spu::mute_ch4; } break;
+                            case SDLK_ESCAPE: {
                                 gameboy::mute();
-
-                                std::string text = "This Quick Save State was created for \""
-                                    + gameboy::state_rom + "\"\n\nLoad anyways?";
-                                
-                                int result = fd::message_box(
-                                    text.c_str(),
-                                    "Save Incompatible",
-                                    MB_YESNO | MB_ICONWARNING | MB_APPLMODAL | MB_DEFBUTTON2,
-                                    get_hwnd()
-                                );
-
+                                ui::show();
                                 gameboy::unmute();
-
-                                if (result == IDYES) {
-                                    gameboy::load_state("quick.ss", true);
-                                    _log(info, "Loaded quick save state");
-                                } else {
-                                    _log(info, "Cancelled Quick Save State load");
-                                    break;
-                                }
-                            } else {
-                                _log(info, "Loaded quick save state");
-                            }
-
-                        }
-
-                        if (event.key.keysym.sym == SDLK_9) {
-                            gameboy::mute();
-
-                            std::string name = fd::save_as("Save state as", ".ss", "Geebly Save State\0*.ss\0\0", OFN_OVERWRITEPROMPT);
-
-                            if (name.size()) {
-                                gameboy::save_state(name);
-
-                                name = name.substr(name.find_last_of('\\') + 1);
-
-                                _log(ok, "Saved state \"%s\"", name.c_str());
-                            } else {
-                                _log(info, "No filename specified for save state");
-                            }
-
-                            gameboy::unmute();
-                        }
-
-                        if (event.key.keysym.sym == SDLK_0) {
-                            gameboy::mute();
-                            
-                            std::string name = fd::open("Open state", ".ss", "Geebly Save State\0*.ss\0\0");
-
-                            if (name.size()) {
-                                bool compatible = gameboy::load_state(name);
+                            } break;
+                            case SDLK_1: {
+                                gameboy::save_state("quick.ss");
+                                _log(ok, "Saved quick save state");
+                            } break;
+                            case SDLK_2: {
+                                bool compatible = gameboy::load_state("quick.ss");
 
                                 if (!compatible) {
-                                    std::string text = "This Save State was created for \""
+                                    gameboy::mute();
+
+                                    std::string text = "This Quick Save State was created for \""
                                         + gameboy::state_rom + "\"\n\nLoad anyways?";
                                     
                                     int result = fd::message_box(
@@ -509,60 +455,113 @@ namespace frontend {
                                     gameboy::unmute();
 
                                     if (result == IDYES) {
-                                        gameboy::load_state(name, true);
-
-                                        name = name.substr(name.find_last_of('\\') + 1);
-
-                                        _log(ok, "Loaded state \"%s\"", name.c_str());
+                                        gameboy::load_state("quick.ss", true);
+                                        _log(info, "Loaded quick save state");
                                     } else {
-                                        _log(info, "Cancelled Save State load");
+                                        _log(info, "Cancelled Quick Save State load");
                                         break;
                                     }
                                 } else {
-                                    _log(ok, "Loaded state \"%s\"", name.c_str());
+                                    _log(info, "Loaded quick save state");
                                 }
-                            } else {
-                                _log(info, "No filename specified for save state");
-                            }
+                            } break;
+                            case SDLK_9: {
+                                gameboy::mute();
 
-                            gameboy::unmute();
-                        }
+                                std::string name = fd::save_as("Save state as", ".ss", "Geebly Save State\0*.ss\0\0", OFN_OVERWRITEPROMPT);
 
-                        if (event.key.keysym.sym == SDLK_3) {
-                            gameboy::mute();
+                                if (name.size()) {
+                                    gameboy::save_state(name);
 
-                            SDL_FlushEvent(SDL_KEYDOWN);
-                            std::string addr_str = ui::input_hex(4);
+                                    name = name.substr(name.find_last_of('\\') + 1);
 
-                            if (!addr_str.size()) {
+                                    _log(ok, "Saved state \"%s\"", name.c_str());
+                                } else {
+                                    _log(info, "No filename specified for save state");
+                                }
+
+                                gameboy::unmute();
+                            } break;
+                            case SDLK_0: {
+                                gameboy::mute();
+                            
+                                std::string name = fd::open("Open state", ".ss", "Geebly Save State\0*.ss\0\0");
+
+                                if (name.size()) {
+                                    bool compatible = gameboy::load_state(name);
+
+                                    if (!compatible) {
+                                        std::string text = "This Save State was created for \""
+                                            + gameboy::state_rom + "\"\n\nLoad anyways?";
+                                        
+                                        int result = fd::message_box(
+                                            text.c_str(),
+                                            "Save Incompatible",
+                                            MB_YESNO | MB_ICONWARNING | MB_APPLMODAL | MB_DEFBUTTON2,
+                                            get_hwnd()
+                                        );
+
+                                        gameboy::unmute();
+
+                                        if (result == IDYES) {
+                                            gameboy::load_state(name, true);
+
+                                            name = name.substr(name.find_last_of('\\') + 1);
+
+                                            _log(ok, "Loaded state \"%s\"", name.c_str());
+                                        } else {
+                                            _log(info, "Cancelled Save State load");
+                                            break;
+                                        }
+                                    } else {
+                                        _log(ok, "Loaded state \"%s\"", name.c_str());
+                                    }
+                                } else {
+                                    _log(info, "No filename specified for save state");
+                                }
+
+                                gameboy::unmute();
+                            } break;
+                            case SDLK_3: {
+                                gameboy::mute();
+
+                                SDL_FlushEvent(SDL_KEYDOWN);
+                                std::string addr_str = ui::input_hex(4);
+
+                                if (!addr_str.size()) {
+                                    gameboy::unmute();
+
+                                    break;
+                                }
+
+                                uint16_t addr = std::stoi("0x" + addr_str, nullptr, 16);
+
+                                std::string val_str = ui::input_hex(4);
+
                                 gameboy::unmute();
 
-                                break;
-                            }
+                                if (!val_str.size()) {
+                                    _log(info, "Cancelled write to $%04x", addr);
 
-                            uint16_t addr = std::stoi("0x" + addr_str, nullptr, 16);
+                                    break;
+                                }
+                                
+                                uint16_t val = std::stoi("0x" + val_str, nullptr, 16);
 
-                            std::string val_str = ui::input_hex(4);
+                                gameboy::bus::write(addr, val, val_str.size() >> 1);
 
-                            gameboy::unmute();
-
-                            if (!val_str.size()) {
-                                _log(info, "Cancelled write to $%04x", addr);
-
-                                break;
-                            }
-                            
-                            uint16_t val = std::stoi("0x" + val_str, nullptr, 16);
-
-                            gameboy::bus::write(addr, val, val_str.size() >> 1);
-
-                            _log(debug, "Wrote 0x%02x to $%04x", val, addr);
-
+                                _log(debug, "Wrote 0x%02x to $%04x", val, addr);
+                            } break;
+                            default: { keydown_cb(event.key.keysym.sym); } break;
                         }
-
-                        keydown_cb(event.key.keysym.sym);
                     } break;
-                    case SDL_KEYUP: { keyup_cb(event.key.keysym.sym); } break;
+                    case SDL_KEYUP: {
+                        switch (event.key.keysym.sym) {
+                            case SDLK_LCTRL: { lctrl_down = false; } break;
+                            default: { keyup_cb(event.key.keysym.sym); } break;
+                        }
+                        
+                    } break;
                 }
             }
 
