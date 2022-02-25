@@ -86,6 +86,7 @@ namespace gameboy {
             ei_issued = false;
             ei_delay = 0;
             fired = 0;
+            invalid_opcode = false;
 
             pc = 0x0;
             sp = 0x0;
@@ -161,6 +162,8 @@ namespace gameboy {
             using namespace registers;
 
             u8 opcode = override ? override : s.opcode;
+
+            if (invalid_opcode) { update(0, 4); return true; }
 
             if (halted || stopped) {
                 update(0, 4);
@@ -605,8 +608,10 @@ namespace gameboy {
                 default: {
                     _log(error, "Invalid opcode 0x%02x @ pc=%04x, CPU halted", opcode, pc);
                     update(0, 4);
+                    ime = false;
                     halted = true;
                     stopped = true;
+                    invalid_opcode = true;
                     return true;
                     //return false; // Halt and Catch Fire!
                 }

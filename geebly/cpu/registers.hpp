@@ -19,6 +19,7 @@ namespace gameboy {
         } s;
 
         bool halted;//, stopped;
+        bool invalid_opcode = false;
 
         namespace registers {
             struct pair {
