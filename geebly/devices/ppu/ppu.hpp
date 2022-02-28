@@ -78,9 +78,12 @@ namespace gameboy {
                switch_mask  = window ? LCDC_WNDSWI : LCDC_BGWSWI;
 
             if (!TEST_REG(PPU_LCDC, switch_mask)) {
-                l = 0x0;
-                h = 0x0;
-                return;
+                if (!settings::cgb_mode) {
+                    l = 0x0;
+                    h = 0x0;
+
+                    return;
+                }
             }
 
             sx = window ? (cx - (r[PPU_WX] - 7)) : (cx + scroll_x);
@@ -334,8 +337,8 @@ namespace gameboy {
         }
 
 #define MODE3_BASE_LENGTH 160
-#define MODE0_BASE_LENGTH (456 - 80 - MODE3_BASE_LENGTH)
 #define MODE2_LENGTH 80
+#define MODE0_BASE_LENGTH (456 - MODE2_LENGTH - MODE3_BASE_LENGTH)
 
         bool& toggle(bool& var) { return var = !var; }
 
@@ -413,8 +416,6 @@ namespace gameboy {
                                 out = spr_pixel.color ? spr_out : bg_out;
                             }
 
-                            if (!(TEST_REG(PPU_LCDC, LCDC_BGWSWI)))
-                                out = spr_out;
                         } else {
                             if (!TEST_REG(PPU_LCDC, LCDC_BGWSWI)) bg_pixel.color = 0;
 
@@ -446,7 +447,7 @@ namespace gameboy {
                     }
 
                     if (pause)
-                        _log(debug, "mode 3 cycles remaining for switch =%i", 160 - clk);
+                        _log(debug, "mode 3 cycles remaining for switch =%i", MODE3_BASE_LENGTH - clk);
 
                     if (clk >= (MODE3_BASE_LENGTH + mode3_length_addend)) {
                         // Prepare the sprite FIFO for the next scanline
@@ -468,7 +469,7 @@ namespace gameboy {
 
                 case MODE_HBLANK: {
                     //if (clk >= 204) {
-                    if (clk >= MODE0_BASE_LENGTH - mode3_length_addend) {
+                    if (clk >= (MODE0_BASE_LENGTH - mode3_length_addend)) {
                         if ((r[PPU_LY] >= r[PPU_WY]) && TEST_REG(PPU_LCDC, LCDC_WNDSWI) && ((r[PPU_WX] - 7) <= PPU_WIDTH)) wiy++;
 
                         if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) r[PPU_LY]++; else r[PPU_LY] = 0;
@@ -479,6 +480,7 @@ namespace gameboy {
                         residual_cycles = clk;
 
                         mode3_length_addend = 0;
+
                         if (r[PPU_LY] == 144) {
                             SWITCH_MODE(MODE_VBLANK);
 
@@ -496,28 +498,64 @@ namespace gameboy {
                 } break;
 
                 case MODE_VBLANK: {
-                    // if (residual_cycles) {
-                    //     clki += clk;
+                    switch (r[PPU_LY]) {
+                        default: {
+                            if (clk >= 456) {
+                                clk -= 456;
 
-                    //     residual_cycles = false;
+                                r[PPU_LY]++;
+                            }
+                        } break;
+
+                        case 153: {
+                            if (clk >= 4) {
+                                clk -= 4;
+
+                                wiy = 0;
+                                r[PPU_LY] = 0;
+                                fx = 0;
+                                cx = 0;
+                                //clk = 0;
+
+                                //SWITCH_MODE(MODE_SPR_SEARCH);
+                            }
+                        } break;
+                        case 0: {
+                            if (clk >= 452) {
+                                clk -= 452;
+
+                                wiy = 0;
+                                r[PPU_LY] = 0;
+                                fx = 0;
+                                cx = 0;
+
+                                SWITCH_MODE(MODE_SPR_SEARCH);
+                            }
+                        } break;
+                    }
+                    // if (clk >= 456) {
+                    //     if (TEST_REG(PPU_LCDC, LCDC_SWITCH))
+                    //         r[PPU_LY]++; else r[PPU_LY] = 0;
+
+                    //     clk -= 456;
+
+                    //     if (clk) residual_cycles = true;
+
+                    //     if (r[PPU_LY] == 153) {
+                    //         SWITCH_MODE(MODE_LY153);
+                    //     }
                     // }
+                } break;
 
-                    if (clk >= 456) {
-                        if (TEST_REG(PPU_LCDC, LCDC_SWITCH)) r[PPU_LY]++; else r[PPU_LY] = 0;
+                case MODE_LY153: {
+                    if (clk >= 4) {
+                        wiy = 0;
+                        r[PPU_LY] = 0;
+                        fx = 0;
+                        cx = 0;
+                        clk = 0;
 
-                        clk -= 456;
-
-                        if (clk) residual_cycles = true;
-
-                        if (r[PPU_LY] == 154) {
-                            wiy = 0;
-                            r[PPU_LY] = 0;
-                            fx = 0;
-                            cx = 0;
-                            clk = 0;
-
-                            SWITCH_MODE(MODE_SPR_SEARCH);
-                        }
+                        SWITCH_MODE(MODE_SPR_SEARCH);
                     }
                 } break;
             }
