@@ -18,10 +18,10 @@
 
 // Noise visibility factor
 // Values between 1.0 and 2.0 are the most realistic
-#define LUMA_NOISE_FACTOR        1.0
-#define LUMA_NOISE_DENSITY       0.1
-#define CHROMA_NOISE_FACTOR      1.0
-#define CHROMA_NOISE_DENSITY     0.5
+#define LUMA_NOISE_FACTOR        0.0
+#define LUMA_NOISE_DENSITY       0.0
+#define CHROMA_NOISE_FACTOR      0.0
+#define CHROMA_NOISE_DENSITY     0.0
 
 #define BRIGHTNESS_FACTOR        34.0
 
@@ -104,13 +104,13 @@ void main() {
     yiq.x += 0.05;
     
     // Noise
-    float f = hash13(vec3(fragCoord.xy, iTime)),
-          af = (f - 0.5) * 0.5;
-    yiq.xyz *= (f > (1.0 - LUMA_NOISE_DENSITY)) ? (f * LUMA_NOISE_FACTOR) : 1.0;
+    // float f = hash13(vec3(fragCoord.xy, iTime)),
+    //       af = (f - 0.5) * 0.5;
+    // yiq.xyz *= (f > (1.0 - LUMA_NOISE_DENSITY)) ? (f * LUMA_NOISE_FACTOR) : 1.0;
 
-    yiq.x += f * 0.1;
+    // yiq.x += f * 0.1;
     
-    if (abs(af) > (1.0 - CHROMA_NOISE_DENSITY)) yiq.yz += af * CHROMA_NOISE_FACTOR;
+    // if (abs(af) > (1.0 - CHROMA_NOISE_DENSITY)) yiq.yz += af * CHROMA_NOISE_FACTOR;
     
     // Black bars
     float u = fragCoord.x / iResolution.x;

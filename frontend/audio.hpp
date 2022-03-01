@@ -29,6 +29,8 @@ namespace frontend {
             for (size_t i = 0; i < (AUDIO_RESAMPLER_FILL_SIZE * 2); i += 2)
                 *reinterpret_cast<int32_t*>(&mixed_sample_buf[i]) = spu::get_sample();
 
+            spu::reset_master_clock();
+
             SDL_AudioStreamPut(stream, mixed_sample_buf.data(), (mixed_sample_buf.size()) << 1);
 
             SDL_AudioStreamFlush(stream);

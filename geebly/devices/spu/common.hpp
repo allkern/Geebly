@@ -27,9 +27,13 @@
 #define RESET_REG(r, m) nr[r] &= (~m)
 
 #include <cstdint>
+#include <atomic>
 
 namespace gameboy {
     namespace spu {
+        int times_updated = 0;
+        std::atomic_int master_clk;
+
         namespace detail {
             template <typename T> inline int sign(T val) {
                 return (T(0) < val) - (val < T(0));

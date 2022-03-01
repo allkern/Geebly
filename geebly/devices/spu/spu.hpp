@@ -9,6 +9,8 @@
 #include "noise.hpp"
 #include "wave.hpp"
 
+#include <mutex>
+
 namespace gameboy {
     namespace spu {
         bool mute_ch1 = false,
@@ -50,6 +52,9 @@ namespace gameboy {
 
                 right = left;
             }
+
+            right -= 0x3fff;
+            left -= 0x3fff;
 
             return (((int16_t)right & 0xffff) << 0x10) | ((int16_t)left & 0xffff);
         }
@@ -163,6 +168,14 @@ namespace gameboy {
 
                 //if (value & 0x7f) _log(debug, "ff26 write=%02x, value=%02x", nr[0x16], value);
             }
+        }
+
+        void reset_master_clock() {
+            master_clk = 0;
+        }
+
+        void update() {
+            master_clk++;
         }
 
         u32 read(u16 addr, size_t size) {

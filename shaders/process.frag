@@ -27,7 +27,7 @@
 // - Improve lowpass filters overall using window functions
 
 // Strength of the 2D low-pass (blur) filter
-#define FIR_SIZE_H 2
+#define FIR_SIZE_H 1
 #define FIR_SIZE_V 1
 
 float hash12(vec2 p) {

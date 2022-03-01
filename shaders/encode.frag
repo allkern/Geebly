@@ -40,8 +40,7 @@ float hash13(vec3 p3) {
 void main() {
     // Chroma encoder oscillator frequency 
     float fc = iResolution.x;
-    
-    // Base oscillator angle for this dot
+
     float t = float(fragCoord.x);
     
     // Tuning error offset (not necessary)

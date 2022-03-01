@@ -16,9 +16,10 @@ namespace gameboy {
                    
             if (!((u32)std::round(c))) return 0x0;
 
-            double s = detail::sign(std::fmod(t, c) - h);
+            double s = (1 - detail::sign(std::fmod(t, c) - h)) / 2;
+            double amp = 0x7fff * a;
 
-            return s * (a * 0x7fff);
+            return 0x7fff - (s * amp);
         }
 
         struct square_t {
@@ -118,7 +119,10 @@ namespace gameboy {
                                     cs.current_amp -= cs.env_step;
                                 }
 
-                                if (!cs.env_step_count) { cs.current_amp = cs.env_direction ? 1.0 : 0.0; cs.playing = false; }
+                                if (!cs.env_step_count) {
+                                    cs.current_amp = cs.env_direction ? 1.0 : 0.0;
+                                    cs.playing = false;
+                                }
 
                                 cs.env_step_count--;
                                 cs.env_step_remaining = cs.env_step_length;
@@ -129,10 +133,10 @@ namespace gameboy {
                     } else {
                         reset();
                         cs.playing = false;
-                        return 0;
+                        return 0x7fff;
                     }
                 } else {
-                    return 0;
+                    return 0x7fff;
                 }
             }
 

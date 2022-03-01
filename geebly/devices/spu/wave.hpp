@@ -9,6 +9,8 @@ namespace gameboy {
     namespace spu {
         u8 s = 0, fetched = 0;
 
+        std::queue <u8> output_level_fifo;
+
         int16_t generate_wave_sample(u16& sample, double t, double f, double a, u8 level) {
             if ((!f) || (!a)) return 0x0;
 
@@ -39,7 +41,8 @@ namespace gameboy {
 
                 size_t remaining_samples = 0;
                 u16    current_sample_idx = 0;
-                u8     output_level = 0x0;
+                u8     output_level = 0x0,
+                       prev_output_level = 0x0;
 
                 double freq = 0.0, amp = 0.0;
             } cs;
@@ -55,15 +58,25 @@ namespace gameboy {
             int16_t get_sample() {
                 if (cs.playing) {
                     if (cs.infinite ? true : (cs.remaining_samples--)) {
-                        int16_t sample = generate_wave_sample(cs.current_sample_idx, clk++, cs.freq, cs.amp, cs.output_level);
+                        u8 output_level;
 
+                        if (output_level_fifo.size()) {
+                            output_level = output_level_fifo.front();
+
+                            output_level_fifo.pop();
+                        } else {
+                            output_level = cs.output_level;
+                        }
+
+                        int16_t sample = generate_wave_sample(cs.current_sample_idx, clk++, cs.freq, cs.amp, output_level);
+        
                         return sample;
                     } else {
                         cs.playing = false;
-                        return 0;
+                        return 0x7fff;
                     }
                 } else {
-                    return 0;
+                    return 0x7fff;
                 }
             }
 
@@ -72,7 +85,12 @@ namespace gameboy {
 
                 u16 rf = (nr[SPUNR_FREQ] | ((nr[SPUNR_CTRL] & CTRL_FREQH) << 8)) & 0x7ff;
 
+                cs.prev_output_level = cs.output_level;
+
                 cs.output_level = (nr[0x2] >> 5) & 3;
+
+                if (cs.output_level != cs.prev_output_level)
+                    output_level_fifo.push(cs.output_level);
 
                 cs.freq = 65536.0 / (2048.0 - rf);
             }
@@ -97,6 +115,7 @@ namespace gameboy {
                         l,      // cs.remaining_samples
                         0,      // cs.current_sample_idx
                         o,      // cs.output_level
+                        o,      // cs.prev_output_level
                         f,      // cs.freq
                         1       // cs.amp
                     };

@@ -546,18 +546,6 @@ namespace gameboy {
                     //     }
                     // }
                 } break;
-
-                case MODE_LY153: {
-                    if (clk >= 4) {
-                        wiy = 0;
-                        r[PPU_LY] = 0;
-                        fx = 0;
-                        cx = 0;
-                        clk = 0;
-
-                        SWITCH_MODE(MODE_SPR_SEARCH);
-                    }
-                } break;
             }
 
             test_irqs();

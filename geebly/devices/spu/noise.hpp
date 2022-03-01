@@ -6,16 +6,18 @@
 
 namespace gameboy {
     namespace spu {
-        int16_t r = 0;
+        int16_t r = 0;   
 
         int16_t generate_noise_sample(double t, double f, double a) {
             if ((!f) || (f >= SPU_NATIVE_SAMPLERATE) || (!a)) return 0x0;
 
             double c = SPU_NATIVE_SAMPLERATE / f;
             
-            if (!(((u32)std::round(t) % (u32)std::round(c)))) r = (rand() % 3) - 1;
+            if (!(((u32)std::round(t) % (u32)std::round(c)))) r = rand() & 0x1;
 
-            return r * (a * 0x7fff);
+            double dr = r ? 0.5 : -0.5;
+
+            return 0x3fff - (dr * (a * 0x7fff));
         }
         
         struct noise_t {
@@ -75,10 +77,10 @@ namespace gameboy {
                         cs.current_freq = 0.0;
                         //cs.playing = false;
 
-                        return 0;
+                        return 0x7fff;
                     }
                 } else {
-                    return 0;
+                    return 0x7fff;
                 }
             }
 

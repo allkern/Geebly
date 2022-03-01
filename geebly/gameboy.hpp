@@ -198,6 +198,7 @@ namespace gameboy {
 
             ppu::cycle();
             timer::update();
+            spu::update();
 
             if (settings::enable_joyp_irq_delay)
                 joypad::update();
@@ -206,6 +207,7 @@ namespace gameboy {
                 cpu::execute();
                 cpu::handle_interrupts();
                 cpu::fetch();
+                spu::update();
 
                 ppu::cycle();
                 timer::update();
