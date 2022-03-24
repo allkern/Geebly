@@ -104,7 +104,7 @@ namespace gameboy {
                 if (test_flags(CF)) { dst -= 0x60; }
                 if (test_flags(HF)) { dst -= 0x6; }
             }
-            set_flags(ZF, dst==0);
+            set_flags(ZF, !dst);
             set_flags(HF, false);
         }
 
