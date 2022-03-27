@@ -58,7 +58,7 @@ namespace gameboy {
 
                 double current_freq = 0.0, current_amp = 0.0;
 
-                bool lsfr_width = false;
+                bool lfsr_width = false;
             } cs;
 
             void reset() {
@@ -72,7 +72,7 @@ namespace gameboy {
             int16_t get_sample() {
                 if (cs.playing) {
                     if (cs.infinite ? cs.infinite : (cs.remaining_samples--)) {
-                        int16_t sample = generate_noise_sample(clk++, cs.current_freq, cs.current_amp, cs.lsfr_width);
+                        int16_t sample = generate_noise_sample(clk++, cs.current_freq, cs.current_amp, cs.lfsr_width);
 
                         if (cs.env_enabled) {
                             if ((!(cs.env_step_remaining--)) && cs.env_step_count) {
@@ -139,7 +139,7 @@ namespace gameboy {
                         envd,   // cs.env_direction
                         f,      // cs.current_freq
                         a,      // cs.current_amp
-                        w       // cs.lsfr_width
+                        w       // cs.lfsr_width
                     };
                 }
             }
@@ -155,7 +155,7 @@ namespace gameboy {
                        s = (nr[SPUNR_FREQ] & 0xf0) >> 4;
                 bool   w = nr[SPUNR_FREQ] & 0x8;
 
-                cs.lsfr_width = w;
+                cs.lfsr_width = w;
                 cs.current_freq = 524288.0 / (!r ? 0.5 : r) / std::pow(2, s + 1);
             }
 

@@ -66,6 +66,7 @@ namespace gameboy {
 #define WINDOW_ENABLED (TEST_REG(PPU_LCDC, LCDC_WNDSWI))
 
         inline bool window_visible(size_t x) {
+            // _log(debug, "x=%u, wx=%u, wx-7=%i", x, r[PPU_WX], (int)r[PPU_WX] - 7);
             return WINDOW_ENABLED &&
                    (r[PPU_LY] >= r[PPU_WY]) &&
                    (x >= ((int)r[PPU_WX] - 7));
