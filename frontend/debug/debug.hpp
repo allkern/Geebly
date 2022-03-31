@@ -22,7 +22,9 @@
 #include "cpu.hpp"
 #include "screen.hpp"
 
+#ifdef _WIN32
 #include "../dialog.hpp"
+#endif
 #include "../input.hpp"
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
@@ -203,11 +205,13 @@ namespace frontend {
             if (ImGui::BeginMainMenuBar()) {
                 if (ImGui::BeginMenu("File")) {
                     if (ImGui::MenuItem("Open...")) {
+#ifdef _WIN32
                         std::string f = fd::open();
 
                         if (f.size()) {
                             _log(debug, "rom: %s", f.c_str());
                         }
+#endif
                     }
 
                     ImGui::EndMenu();

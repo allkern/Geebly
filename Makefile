@@ -6,6 +6,8 @@ SRC    := frontend
 BIN    := bin
 BUILD  := build
 IMGUI_DIR := imgui
+LGW_DIR := lgw
+
 SOURCES := $(IMGUI_DIR)/imgui.cpp
 SOURCES += $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 SOURCES += $(IMGUI_DIR)/backends/imgui_impl_sdl.cpp $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
@@ -15,7 +17,9 @@ SOURCES += $(IMGUI_DIR)/examples/libs/gl3w/GL/gl3w.c
 geebly: $(BIN)/$(EXE)
 
 $(BIN)/$(EXE): $(BUILD)/$(EXE).o
-	c++ *.o $(BUILD)/$(EXE).o -o $(BIN)/$(EXE) -ldl -lGL -Ofast -m64 -lSDL2 -g -pthread
+	c++ *.o $(BUILD)/$(EXE).o -o $(BIN)/$(EXE) \
+	-ldl -lGL -Ofast -m64 -lSDL2 -g -pthread \
+	-m64 -mbmi2 -lSDL2main -lSDL2 -lSDL2_ttf -fpermissive
 
 	rm -f build/$(EXE).o
 
@@ -26,11 +30,16 @@ $(BUILD)/$(EXE).o: $(SRC)/$(EXE).cpp
 	c++ -c \
 		-I$(IMGUI_DIR)/examples/libs/gl3w \
 		-I$(IMGUI_DIR) \
+		-I$(LGW_DIR) \
 		-I/usr/include/SDL2 \
 		-ldl \
+		-I"." \
 		$(SOURCES)
 
-	c++ -c $(SRC)/$(EXE).cpp -o $(BUILD)/$(EXE).o -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends -I$(IMGUI_DIR)/examples/libs/gl3w \
+	c++ -c $(SRC)/$(EXE).cpp -o $(BUILD)/$(EXE).o \
+		-I"." \
+		-I$(IMGUI_DIR) -I$(LGW_DIR) -I$(IMGUI_DIR)/backends -I$(IMGUI_DIR)/examples/libs/gl3w \
+		-I/usr/include/SDL2 \
 		-DIMGUI_IMPL_OPENGL_LOADER_GL3W \
 		-DGEEBLY_VERSION_TAG=$(VERSION_TAG) \
 		-DGEEBLY_COMMIT_HASH=$(COMMIT_HASH) \

@@ -367,7 +367,7 @@ namespace frontend {
                     width * sizeof(uint32_t)
                 );
 
-                SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
+                //SDL_SetTextureScaleMode(texture, SDL_ScaleModeLinear);
 
                 SDL_Rect rect;
 

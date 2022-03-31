@@ -2,8 +2,9 @@
 
 #include "SDL.h"
 #include "SDL_ttf.h"
-
+#ifdef _WIN32
 #include "../dialog.hpp"
+#endif
 #include "geebly/log.hpp"
 
 #include "common.hpp"
@@ -170,6 +171,7 @@ namespace frontend {
             open_rom_button->scale_x = 1.0;
             open_rom_button->scale_y = 1.0;
             open_rom_button->callback = [](){
+#ifdef _WIN32
                 std::string name = fd::open("Open ROM", ".gb", "Game Boy\0*.gb\0Game Boy Color\0*.gbc\0\0");
 
                 if (!name.size()) return;
@@ -188,6 +190,7 @@ namespace frontend {
                 } else {
                     rom_name = name.substr(slash_pos + 1);
                 }
+#endif
             };
 
             image_t* insert_cart_button_icon = new image_t;
@@ -214,6 +217,7 @@ namespace frontend {
 
                 if (state_path.size()) {
                     if (!gameboy::load_state(state_path)) {
+#ifdef _WIN32
                         std::string text = "This Save State was created for \""
                                     + gameboy::state_rom + "\"\n\nLoad anyways?";
 
@@ -227,6 +231,7 @@ namespace frontend {
                         if (result == IDYES) {
                             gameboy::load_state(state_path, true);
                         }
+#endif
                     }
 
                     state_path.clear();
@@ -288,6 +293,7 @@ namespace frontend {
             load_state_button->scale_x = 1.0;
             load_state_button->scale_y = 1.0;
             load_state_button->callback = [](){
+#ifdef _WIN32
                 std::string name = fd::open("Open state", ".ss", "Geebly Save State\0*.ss\0\0");
                 
                 if (!name.size()) return;
@@ -305,6 +311,7 @@ namespace frontend {
                 } else {
                     state_name = name.substr(slash_pos + 1);
                 }
+#endif
             };
 
             text_container_t* settings_button_text = new text_container_t;

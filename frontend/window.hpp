@@ -437,6 +437,7 @@ namespace frontend {
                                 _log(ok, "Saved quick save state");
                             } break;
                             case SDLK_2: {
+#ifdef _WIN32
                                 bool compatible = gameboy::load_state("quick.ss");
 
                                 if (!compatible) {
@@ -464,7 +465,16 @@ namespace frontend {
                                 } else {
                                     _log(info, "Loaded quick save state");
                                 }
+#else
+                                bool compatible = true;
+
+                                gameboy::load_state("quick.ss", true);
+
+                                _log(info, "Loaded quick save state");
+#endif
                             } break;
+
+#ifdef _WIN32
                             case SDLK_9: {
                                 gameboy::mute();
 
@@ -482,6 +492,7 @@ namespace frontend {
 
                                 gameboy::unmute();
                             } break;
+
                             case SDLK_0: {
                                 gameboy::mute();
                             
@@ -522,6 +533,7 @@ namespace frontend {
 
                                 gameboy::unmute();
                             } break;
+#endif
                             case SDLK_3: {
                                 gameboy::mute();
 

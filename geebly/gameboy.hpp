@@ -71,7 +71,7 @@ namespace gameboy {
 
         state_rom.resize(rom_name_size);
 
-        i.read(state_rom.data(), rom_name_size);
+        i.read((char*)state_rom.data(), rom_name_size);
 
         GEEBLY_LOAD_VARIABLE(save_global_checksum);
 

@@ -36,7 +36,9 @@ namespace frontend {
                 );
 
                 SDL_SetTextureBlendMode(texture, SDL_BLENDMODE_BLEND);
+#ifdef _WIN32
                 SDL_SetTextureScaleMode(texture, SDL_ScaleModeBest);
+#endif
 
                 SDL_UpdateTexture(texture, NULL, image->ptr, image->width * sizeof(uint32_t));
             }
