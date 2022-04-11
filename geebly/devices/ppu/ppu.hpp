@@ -29,7 +29,7 @@ namespace gameboy {
     namespace ppu {
         /**
 		 *  \brief Initialize the PPU
-		 *  
+		 *
 		 *  \param fr_cb A function that will be called every time a frame is ready.
          *               Pass nullptr to disable the callback feature
 		 */
@@ -69,7 +69,7 @@ namespace gameboy {
             // _log(debug, "x=%u, wx=%u, wx-7=%i", x, r[PPU_WX], (int)r[PPU_WX] - 7);
             return WINDOW_ENABLED &&
                    (r[PPU_LY] >= r[PPU_WY]) &&
-                   (x >= ((int)r[PPU_WX] - 7));
+                   ((int)x >= ((int)r[PPU_WX] - 7));
         }
 
         void refetch(bool window = false) {
@@ -108,7 +108,7 @@ namespace gameboy {
             }
 
             size_t yflip_off = (bg_attr.yflip ? ((7 - (sy % 8)) << 1) : ((sy % 8) << 1));
-    
+
             if (TEST_REG(PPU_LCDC, LCDC_BGWTSS)) {
                 coff = (tile << 4) + yflip_off;
             } else {
@@ -129,7 +129,7 @@ namespace gameboy {
 
             for (sprite_t& spr : queued_sprites) {
                 if (((int)cx >= ((int)spr.x - 8)) && ((int)cx < (int)spr.x) && (!pixel_pushed)) {
-                    size_t yoff = (spr.a & 0x40) ? 
+                    size_t yoff = (spr.a & 0x40) ?
                         ((TEST_REG(PPU_LCDC, LCDC_SPSIZE) ? 15 : 7) - (r[PPU_LY] - (spr.y - 16))) :
                         (r[PPU_LY] - (spr.y - 16));
 
@@ -278,14 +278,14 @@ namespace gameboy {
              stat_vbl_irq_signal = false, prev_stat_vbl_irq_signal = stat_vbl_irq_signal,
              stat_md2_irq_signal = false, prev_stat_md2_irq_signal = stat_md2_irq_signal,
              stat_lyc_irq_signal = false, prev_stat_lyc_irq_signal = stat_lyc_irq_signal;
-        
+
         bool md0_mode_signal = false, prev_md0_mode_signal = md0_mode_signal,
              md1_mode_signal = false, prev_md1_mode_signal = md1_mode_signal,
              md2_mode_signal = false, prev_md2_mode_signal = md2_mode_signal,
              md3_mode_signal = false, prev_md3_mode_signal = md3_mode_signal;
-        
+
         bool fake_stat_irq = false, prev_fake_stat_irq = fake_stat_irq;
-        
+
         void test_irqs() {
             prev_stat_irq_signal = stat_irq_signal;
             prev_vbl_irq_signal = vbl_irq_signal;
@@ -331,7 +331,7 @@ namespace gameboy {
             if (vbl_irq_signal && (!prev_vbl_irq_signal) && lcd_on) ic::fire(IRQ_VBL);
 
             if (r[PPU_LY] == r[PPU_LYC]) {
-                r[PPU_STAT] |= STAT_CDFLAG; 
+                r[PPU_STAT] |= STAT_CDFLAG;
             } else {
                 r[PPU_STAT] &= ~STAT_CDFLAG;
             }
@@ -487,7 +487,7 @@ namespace gameboy {
 
                             if (frame_ready_cb != nullptr)
                                 frame_ready_cb(frame[buffer_latch].get_buffer(), frame[!buffer_latch].get_buffer());
-                            
+
                             toggle(buffer_latch);
                         } else {
                             fx = 0;
