@@ -45,6 +45,30 @@ $(BUILD)/$(EXE).o: $(SRC)/$(EXE).cpp
 		-DGEEBLY_COMMIT_HASH=$(COMMIT_HASH) \
 		-Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing -g -ldl
 
+environment:
+# Clone imgui
+	git clone https://github.com/ocornut/imgui
+
+# Always update your apt!
+	sudo apt update
+
+# Install libsdl2 and libsdl2-ttf
+	sudo apt install libsdl2-dev
+	sudo apt install libsdl2-ttf-dev
+
+# Get gl3w, generate sources and copy them to ImGui's dir
+	git clone https://github.com/skaslev/gl3w
+	python3 gl3w/gl3w_gen.py
+	mkdir -p imgui/examples/libs/gl3w/GL
+	cp gl3w/src/gl3w.c gl3w/include/GL/gl3w.h gl3w/include/GL/glcorearb.h imgui/examples/libs/gl3w/GL
+
+# Get and install SDL_shader
+	git clone https://github.com/Lycoder/sdl_shader
+	cd sdl_shader
+	make install
+
+# Now you're ready to make!
+
 clean:
 	rm -rf $(BUILD)
 	rm -rf $(BIN)
