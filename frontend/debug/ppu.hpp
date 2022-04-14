@@ -101,7 +101,7 @@ namespace frontend {
     
                 PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, 0.0f));
 
-                char buf[6] = { 0 };
+                char buf[7];
 
                 sprintf(&buf[0], "table%u", bank);
 
