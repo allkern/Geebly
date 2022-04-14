@@ -19,6 +19,7 @@ namespace gameboy {
             mbc2,
             mbc3,
             mbc5,
+            aec1,
             camera,
             no_cart = 0x100,
             unknown = 0x200
@@ -36,6 +37,8 @@ namespace gameboy {
             virtual bool save_sram(std::ofstream& sav) { return false; };
             virtual void save_state(std::ofstream&) = 0;
             virtual void load_state(std::ifstream&) = 0;
+            virtual int16_t get_sample() { return 0x0; }
+            virtual inline bool vin_line_connected() { return false; }
 
             virtual void init(std::ifstream*) {};
             virtual u32 read(u16, size_t) { return 0; };

@@ -154,6 +154,8 @@ namespace frontend {
             };
 
             bool shader_has_framebuffer(shader_t* shader) {
+                if (!shader) return false;
+
                 return shader->fb_created;
             }
 

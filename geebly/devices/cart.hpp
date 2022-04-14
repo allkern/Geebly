@@ -16,6 +16,7 @@
 #include "mappers/mbc3.hpp"
 #include "mappers/mbc5.hpp"
 #include "mappers/camera.hpp"
+#include "mappers/aec1/aec1.hpp"
 
 #define HDR_CGB_COMPATIBLE  0x43
 #define HDR_CART_TYPE       0x47
@@ -68,6 +69,7 @@ namespace gameboy {
             { 0x1e, "Rumble Motor, SRAM, Battery" },
             { 0x20, "None" },
             { 0x22, "Sensor, Rumble Motor, SRAM, Battery" },
+            { 0x97, "YM2612-like Sound Chip" },
             { 0xfc, "M64282FP, SRAM, Battery" },
             { 0xfd, "None" },
             { 0xfe, "None" },
@@ -99,6 +101,7 @@ namespace gameboy {
             { 0x1e, "Nintendo MBC5" },
             { 0x20, "Nintendo MBC6" },
             { 0x22, "Nintendo MBC7" },
+            { 0x97, "Lycoder AEC1" },
             { 0xfc, "Nintendo 9807 SA (Pocket Camera)" },
             { 0xfd, "Bandai TAMA5" },
             { 0xfe, "Hudson HuC3" },
@@ -333,6 +336,9 @@ namespace gameboy {
                 case 0x1d: { cartridge = new mbc5(true);           } break;
                 case 0x1e: { cartridge = new mbc5(true, &sav);     } break;
 
+                // Custom audio enhancement cart by Lycoder
+                case 0x97: { cartridge = new aec1();               } break;
+
                 // Pocket camera
                 case 0xfc: { cartridge = new camera(sbc, true, &sav);} break;
                 // ...
@@ -370,6 +376,14 @@ namespace gameboy {
 
                 cartridge->save_sram(sav);
             }
+        }
+
+        int16_t get_sample() {
+            return cartridge->get_sample();
+        }
+
+        inline bool vin_line_connected() {
+            return cartridge->vin_line_connected();
         }
 
         void save_state(std::ofstream& o) {

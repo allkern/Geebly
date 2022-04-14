@@ -15,6 +15,7 @@ namespace gameboy {
         static const duty_cycles_t duty_cycles = { 8.0, 4.0, 2.0, 1.3 };
 
         double so1_output_level, so2_output_level;
+        bool output_vin_to_so1 = false, output_vin_to_so2 = false;
 
         nr_t nr = {
             0x80, 0xbf, 0xf3, 0xff, 0x3f, 0xff,

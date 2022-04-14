@@ -8,6 +8,7 @@
 #include "square.hpp"
 #include "noise.hpp"
 #include "wave.hpp"
+#include "../cart.hpp"
 
 #include <mutex>
 
@@ -16,16 +17,20 @@ namespace gameboy {
         bool mute_ch1 = false,
              mute_ch2 = false,
              mute_ch3 = false,
-             mute_ch4 = false;
+             mute_ch4 = false,
+             mute_ch5 = false;
 
         inline int16_t clamp(int32_t v) { return (v > 0xffff) ? 0xffff : v; }
+
+        bool mix_vin = false;
 
         int32_t get_sample() {
             int16_t samples[] = {
                 mute_ch1 ? (int16_t)0 : ch1.get_sample(),
                 mute_ch2 ? (int16_t)0 : ch2.get_sample(),
                 mute_ch3 ? (int16_t)0 : ch3.get_sample(),
-                mute_ch4 ? (int16_t)0 : ch4.get_sample()
+                mute_ch4 ? (int16_t)0 : ch4.get_sample(),
+                mute_ch5 ? (int16_t)0 : cart::get_sample()
             };
 
             int left, right;
@@ -38,14 +43,19 @@ namespace gameboy {
                     if (nr[0x15] & (0x1 << i)) sr += samples[i];
                 }
 
-                left = ((sl / 4) * so1_output_level) * master_volume;
-                right = ((sr / 4) * so2_output_level) * master_volume;
+                if (mix_vin) {
+                    if (output_vin_to_so1) sl += samples[4];
+                    if (output_vin_to_so2) sr += samples[4];
+                }
+
+                left = ((sl / (output_vin_to_so1 ? 5 : 4)) * so1_output_level) * master_volume;
+                right = ((sr / (output_vin_to_so2 ? 5 : 4)) * so2_output_level) * master_volume;
             } else {
                 int sum = 0;
         
-                for (int i = 0; i < 4; i++) sum += samples[i];
+                for (int i = 0; i < (mix_vin ? 5 : 4); i++) sum += samples[i];
 
-                left = sum / 4;
+                left = sum / (mix_vin ? 5 : 4);
 
                 left *= ((so1_output_level + so2_output_level) / 2);
                 left *= master_volume;
@@ -82,6 +92,8 @@ namespace gameboy {
             ch2.init(nr[0x5], 1);
             ch3.init(nr[0xa]);
             ch4.init(nr[0xf]);
+
+            mix_vin = cart::vin_line_connected();
         }
 
         void save_state(std::ofstream& o) {
@@ -90,6 +102,7 @@ namespace gameboy {
             
             GEEBLY_WRITE_VARIABLE(so1_output_level);
             GEEBLY_WRITE_VARIABLE(so2_output_level);
+            GEEBLY_WRITE_VARIABLE(mix_vin);
             GEEBLY_WRITE_VARIABLE(mixed);
 
             ch1.save_state(o);
@@ -104,6 +117,7 @@ namespace gameboy {
             
             GEEBLY_LOAD_VARIABLE(so1_output_level);
             GEEBLY_LOAD_VARIABLE(so2_output_level);
+            GEEBLY_LOAD_VARIABLE(mix_vin);
             GEEBLY_LOAD_VARIABLE(mixed);
 
             ch1.load_state(i);
@@ -159,6 +173,8 @@ namespace gameboy {
             if (addr == 0xff24) {
                 so1_output_level = (double)(nr[0x14] & 0x7) / 7;
                 so2_output_level = (double)((nr[0x14] >> 4) & 0x7) / 7;
+                output_vin_to_so1 = nr[0x14] & 0x8;
+                output_vin_to_so2 = nr[0x14] & 0x80;
             }
 
             if (addr == 0xff26) {

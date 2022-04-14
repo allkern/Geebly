@@ -1,0 +1,26 @@
+all R/W
+aC00 -> channel C control (r00meeee)
+    r: restart all operator ADSRs
+    m: mute flag
+    e:
+    - 0000 -> disable all operators
+    - 0001 -> enable only operator 1
+    - 0010 -> enable only operator 2
+    - 0011 -> enable both operator 1 and 2
+    ....
+    - 1111 -> enable all operators
+
+aC01 -> channel C master volume (as 1/(255 - value))
+aCO2 -> channel C operator O frequency (16-bit access twice)
+aCO3 -> channel C operator O amplitude (as 1/(255 - value)) (non-adsr mode only)
+aCO4 -> channel C operator O adsr attack (16-bit access twice)
+aCO5 -> channel C operator O adsr decay (16-bit access twice)
+aCO6 -> channel C operator O adsr sustain (16-bit access twice)
+aCO7 -> channel C operator O adsr release (16-bit access twice)
+aCO8 -> channel C operator O adsr base level (16-bit access twice)
+aCO9 -> channel C operator O adsr peak level (16-bit access twice)
+aCOa -> channel C operator O adsr sustain level (16-bit access twice)
+
+Write only
+b000 -> copy channel data 0ddd0sss
+b001 -> copy operator data 0ddssccc

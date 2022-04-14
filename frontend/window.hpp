@@ -261,7 +261,8 @@ namespace frontend {
                 SDL_GL_SetSwapInterval(1);
 
             continue_without_codec:
-            
+
+#ifdef _WIN32
             ui::init(sdl::window, sdl::renderer, sdl::texture, open);
             ui::push_font("ubuntu-mono.ttf", 24);
             ui::push_font("arial.ttf", 24);
@@ -269,6 +270,9 @@ namespace frontend {
             ui::load_main_menu();
 
             if (start_with_gui) ui::show();
+#else
+        ;
+#endif
         }
 
 #ifdef _WIN32
@@ -316,8 +320,9 @@ namespace frontend {
             if (!ntsc_codec_enabled && blend_frames)
                 blend_frames(current_frame, prev_frame);
 
+#ifdef _WIN32
             ui::update(buf);
-
+#endif
             end = std::chrono::high_resolution_clock::now();
 
             std::chrono::duration <double> d = end - start;
@@ -428,9 +433,11 @@ namespace frontend {
                             case SDLK_F3: { gameboy::spu::mute_ch3 = !gameboy::spu::mute_ch3; } break;
                             case SDLK_F4: { gameboy::spu::mute_ch4 = !gameboy::spu::mute_ch4; } break;
                             case SDLK_ESCAPE: {
+#ifdef _WIN32
                                 gameboy::mute();
                                 ui::show();
                                 gameboy::unmute();
+#endif 
                             } break;
                             case SDLK_1: {
                                 gameboy::save_state("quick.ss");
