@@ -40,6 +40,16 @@ namespace frontend {
         int push_font(std::string name, int size) {
             font_t font;
 
+            std::ifstream f;
+
+            f.open(name);
+
+            if (!f.good()) {
+                _log(warning, "Couldn't load font \"%s\"", name.c_str());
+
+                return 0;
+            }
+
             font.path = name;
             font.ptr = TTF_OpenFont(name.c_str(), size);
 

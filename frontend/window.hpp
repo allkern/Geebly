@@ -265,8 +265,6 @@ namespace frontend {
 #ifdef _WIN32
             ui::init(sdl::window, sdl::renderer, sdl::texture, open);
             ui::push_font("ubuntu-mono.ttf", 24);
-            ui::push_font("arial.ttf", 24);
-            ui::push_font("roboto.ttf", 24);
             ui::load_main_menu();
 
             if (start_with_gui) ui::show();
