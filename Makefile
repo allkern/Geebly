@@ -58,9 +58,11 @@ environment:
 
 # Get gl3w, generate sources and copy them to ImGui's dir
 	git clone https://github.com/skaslev/gl3w
+	cd gl3w
 	python3 gl3w/gl3w_gen.py
-	mkdir -p imgui/examples/libs/gl3w/GL
-	cp gl3w/src/gl3w.c gl3w/include/GL/gl3w.h gl3w/include/GL/glcorearb.h imgui/examples/libs/gl3w/GL
+	mkdir -p ../imgui/examples/libs/gl3w/GL
+	cp src/gl3w.c include/GL/gl3w.h include/GL/glcorearb.h ../imgui/examples/libs/gl3w/GL
+	cd ..
 
 # Get and install SDL_shader
 	git clone https://github.com/Lycoder/sdl_shader
