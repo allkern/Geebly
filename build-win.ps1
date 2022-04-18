@@ -16,11 +16,9 @@ c++ -c -I"`"$($IMGUI_DIR)`"" `
        -I"`"$($LGW_INCLUDE_DIR)`"" `
        -I"`"$($SDL2_DIR)\include\SDL2`"" `
        -I"`"$($SDL2_DIR)\include`"" `
-       -I"`"$($IMPLOT_DIR)`"" `
        "`"$($IMGUI_DIR)\backends\imgui_impl_sdl.cpp`"" `
        "`"$($IMGUI_DIR)\backends\imgui_impl_opengl3.cpp`"" `
        "`"$($IMGUI_DIR)\*.cpp`"" `
-       "`"$($IMPLOT_DIR)\*.cpp`"" `
        "`"$($IMGUI_DIR)\examples\libs\gl3w\GL\gl3w.c`"" `
        -L"`"$($SDL2_DIR)\lib\x64`"" `
        -DIMGUI_IMPL_OPENGL_LOADER_GL3W `
@@ -33,7 +31,6 @@ c++ -I"`"$($IMGUI_DIR)`"" `
     -I"`"$($LGW_INCLUDE_DIR)`"" `
     -I"`"$($SDL2_DIR)\include\SDL2`"" `
     -I"`"$($SDL2_DIR)\include`"" `
-    -I"`"$($IMPLOT_DIR)`"" `
     "*.o" `
     frontend\geebly.cpp `
     -DGEEBLY_VERSION_TAG="`"$($VERSION_TAG)`"" `
