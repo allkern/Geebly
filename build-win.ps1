@@ -1,8 +1,7 @@
 $GEEBLY_INCLUDE_DIR = "."
-$LGW_INCLUDE_DIR    = $args[0]
-$IMPLOT_DIR         = $args[1]
-$IMGUI_DIR          = $args[2]
-$SDL2_DIR           = $args[3]
+$LGW_INCLUDE_DIR    = "lgw"
+$IMGUI_DIR          = "imgui"
+$SDL2_DIR           = "sdl2/SDL2-2.0.20/"
 
 $VERSION_TAG = git describe --always --tags --abbrev=0
 $COMMIT_HASH = git rev-parse --short HEAD
@@ -38,4 +37,4 @@ c++ -I"`"$($IMGUI_DIR)`"" `
     -o bin\geebly.exe `
     -L"`"$($SDL2_DIR)\lib\x64`"" `
     -DIMGUI_IMPL_OPENGL_LOADER_GL3W `
-    -limm32 -m64 -mbmi2 -lSDL2main -lSDL2 -lopengl32 -fpermissive -lcomdlg32
+    -limm32 -m64 -mbmi2 -lSDL2main -lSDL2 -lSDL2_ttf -lopengl32 -fpermissive -lcomdlg32
