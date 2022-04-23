@@ -43,7 +43,7 @@ $(BUILD)/$(EXE).o: $(SRC)/$(EXE).cpp
 		-DIMGUI_IMPL_OPENGL_LOADER_GL3W \
 		-DGEEBLY_VERSION_TAG=$(VERSION_TAG) \
 		-DGEEBLY_COMMIT_HASH=$(COMMIT_HASH) \
-		-Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing -g -ldl
+		-Ofast -m64 -mbmi2 -Wno-format -Wno-narrowing -g -ldl -O3
 
 environment:
 # Clone imgui

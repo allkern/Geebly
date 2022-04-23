@@ -7,10 +7,31 @@
 namespace gameboy {
     namespace cart {
         struct fm_channel_t {
-            double a;
+            double main_amp;
+            double t = 0.0;
+
+            struct lfo_t {
+                double f, a;
+
+                double get_sample(double t) {
+                    return std::sin(t * f * AEC1_PI / AEC1_SAMPLERATE) * a;
+                }
+            } lfo;
+
+            bool lfo_enable;
+
+            enum algorithm_t : int {
+                FM_ALG1 = 0,
+                FM_ALG2 = 1,
+                FM_ALG3 = 2
+            };
+
+            algorithm_t algorithm = FM_ALG1;
 
             struct fm_operator_t {
                 double a = 0.0, f = 0.0;
+                double multiplier = 1.0;
+                double detune = 0.0;
 
                 enum adsr_state_t : int {
                     AS_NONE,
@@ -41,7 +62,9 @@ namespace gameboy {
 
                 bool enabled = false;
 
-                double get_sample(double t, bool carrier = false, double fm = 0.0) {
+                double get_sample(double t, bool carrier = false, double fm = 0.0, bool lfo_enable = false, double lfo = 0.0) {
+                    if (!enabled) return 0.0;
+
                     if (adsr.enabled) {
                         if (!adsr.m_samples) {
                             switch (adsr.state) {
@@ -95,22 +118,52 @@ namespace gameboy {
 
                     double phase = carrier ? fm : 0.0;
                     double amp = carrier ? a : 1.0;
+                    double freq = (f * multiplier) + detune + (lfo_enable ? lfo : 0.0);
 
-                    return enabled ? std::sin(phase + t * f * AEC1_PI / AEC1_SAMPLERATE) * amp : 0.0;
+                    return enabled ? std::sin(phase + t * freq * AEC1_PI / AEC1_SAMPLERATE) * amp : 0.0;
                 }
             };
 
             fm_operator_t operators[4];
 
-            double get_sample(double t) {
+            double get_sample() {
                 double v[4];
 
-                v[0] = operators[0].get_sample(t);
-                v[1] = operators[1].get_sample(t, true, v[0]);
-                v[2] = operators[2].get_sample(t, true, v[1]);
-                v[3] = operators[3].get_sample(t, true, v[2]);
+                double lfo_sample = lfo.get_sample(t);
 
-                return v[3] * a;
+                switch (algorithm) {
+                    case FM_ALG1: {
+                        // M1 -> M2 -> M3 -> M4 -> Out
+                        v[0] = operators[0].get_sample(t, false, 0.0 , lfo_enable, lfo_sample);
+                        v[1] = operators[1].get_sample(t, true , v[0], lfo_enable, lfo_sample);
+                        v[2] = operators[2].get_sample(t, true , v[1], lfo_enable, lfo_sample);
+                        v[3] = operators[3].get_sample(t, true , v[2], lfo_enable, lfo_sample);
+                    } break;
+
+                    case FM_ALG2: {
+                        // M1
+                        //  +-> M3 -> M4 -> Out
+                        // M2 
+                        v[0] = operators[0].get_sample(t, false, 0.0        , lfo_enable, lfo_sample);
+                        v[1] = operators[1].get_sample(t, false, 0.0        , lfo_enable, lfo_sample);
+                        v[2] = operators[2].get_sample(t, true , v[0] + v[1], lfo_enable, lfo_sample);
+                        v[3] = operators[3].get_sample(t, true , v[2]       , lfo_enable, lfo_sample);
+                    } break;
+
+                    case FM_ALG3: {
+                        // M2 -> M3
+                        //        +-> M4 -> Out
+                        //       M1
+                        v[0] = operators[1].get_sample(t, false, 0.0        , lfo_enable, lfo_sample);
+                        v[1] = operators[2].get_sample(t, true , v[0]       , lfo_enable, lfo_sample);
+                        v[2] = operators[0].get_sample(t, false, 0.0        , lfo_enable, lfo_sample);
+                        v[3] = operators[3].get_sample(t, true , v[1] + v[2], lfo_enable, lfo_sample);
+                    } break;
+                }
+
+                t++;
+
+                return v[3] * main_amp;
             }
         };
     }

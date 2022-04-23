@@ -27,6 +27,8 @@ namespace gameboy {
             struct channel_t {
                 u8 control;
                 u8 master_volume;
+                u8 algorithm_lfo_enable;
+                u8 lfo_freq, lfo_amp;
 
                 struct operator_t {
                     struct latched_data_t {
@@ -43,6 +45,7 @@ namespace gameboy {
                     latched_data_t adsr_base_level;
                     latched_data_t adsr_peak_level;
                     latched_data_t adsr_sustain_level;
+                    u8 multiplier, detune;
                 } operators_data[4];
             };
 
@@ -81,15 +84,20 @@ namespace gameboy {
                 for (int c = 0; c < 8; c++) {
                     if (channel_data[0].master_volume) {
                         if (channel_data[0].master_volume == 0xff) {
-                            channels[c].a = 1.0;
+                            channels[c].main_amp = 1.0;
                         } else {
-                            channels[c].a = 1.0 / (255.0 - (double)channel_data[0].master_volume);
+                            channels[c].main_amp = 1.0 / (255.0 - (double)channel_data[0].master_volume);
                         }
                     } else {
-                        channels[c].a = 0.0;
+                        channels[c].main_amp = 0.0;
                     }
                     
-                    if (channel_data[c].control & 0x10) channels[c].a = 0.0;
+                    if (channel_data[c].control & 0x10) channels[c].main_amp = 0.0;
+
+                    channels[c].algorithm = (fm_channel_t::algorithm_t)(channel_data[c].algorithm_lfo_enable & 0x7f);
+                    channels[c].lfo_enable = channel_data[c].algorithm_lfo_enable & 0x80;
+                    channels[c].lfo.f = ((double)channel_data[c].lfo_freq) / 10.0; // 0.0 -> 25.5 Hz LFO freqs
+                    channels[c].lfo.a = ((double)channel_data[c].lfo_amp) / 10.0; // 0.0 -> 25.5 LFO amps
 
                     for (int o = 0; o < 4; o++) {
                         channels[c].operators[o].enabled = channel_data[c].control & (1 << o);
@@ -101,44 +109,28 @@ namespace gameboy {
                         channels[c].operators[o].adsr.base_level = (double)channel_data[c].operators_data[o].adsr_base_level.value;
                         channels[c].operators[o].adsr.peak_level = (double)channel_data[c].operators_data[o].adsr_peak_level.value;
                         channels[c].operators[o].adsr.sustain_level = (double)channel_data[c].operators_data[o].adsr_sustain_level.value;
+                        
+                        if (!channel_data[c].operators_data[o].multiplier) channel_data[c].operators_data[o].multiplier = 1;
+
+                        double multiplier = (double)(channel_data[c].operators_data[o].multiplier & 0x7f);
+                        bool reciprocal = channel_data[c].operators_data[o].multiplier & 0x80;
+
+                        channels[c].operators[o].multiplier = reciprocal ? (1.0 / multiplier) : multiplier;
+                        channels[c].operators[o].detune = ((double)channel_data[c].operators_data[o].detune) / 10.0; // 0.0 -> 25.5 Hz detune
                     }
                 }
-                // _log(debug,
-                //     "channel[0].a=%f\n"
-                //     "channel[0].operator[3].enabled=%u\n"
-                //     "channel[0].operator[2].enabled=%u\n"
-                //     "channel[0].operator[3].f=%f\n"
-                //     "channel[0].operator[3].adsr.a=%f\n"
-                //     "channel[0].operator[3].adsr.d=%f\n"
-                //     "channel[0].operator[3].adsr.s=%f\n"
-                //     "channel[0].operator[3].adsr.r=%f\n"
-                //     "channel[0].operator[3].adsr.peak_level=%f\n"
-                //     "channel[0].operator[3].adsr.sustain_level=%f\n"
-                //     "channel[0].operator[3].adsr.base_level=%f\n",
-                //     channels[0].a,
-                //     channels[0].operators[3].enabled,
-                //     channels[0].operators[2].enabled,
-                //     channels[0].operators[3].f,
-                //     channels[0].operators[3].adsr.a,
-                //     channels[0].operators[3].adsr.d,
-                //     channels[0].operators[3].adsr.s,
-                //     channels[0].operators[3].adsr.r,
-                //     channels[0].operators[3].adsr.peak_level,
-                //     channels[0].operators[3].adsr.sustain_level,
-                //     channels[0].operators[3].adsr.base_level
-                // );
             }
 
             int16_t get_sample() override {
                 double sample = 0.0;
 
                 for (int i = 0; i < 8; i++) {
-                    sample += channels[i].get_sample(t);
+                    if ((int)channels[i].main_amp) {
+                        sample += channels[i].get_sample();
+                    }
                 }
 
                 sample /= 8.0;
-
-                t += 1.0;
 
                 return sample * (2.0 * 0x7fff);
             }
@@ -168,6 +160,7 @@ namespace gameboy {
 
             void restart_channel_adsr(int channel) {
                 for (int i = 0; i < 4; i++) {
+                    channels[channel].t = 0.0;
                     channels[channel].operators[i].adsr.m_samples = 0;
                     channels[channel].operators[i].adsr.state = fm_channel_t::fm_operator_t::AS_NONE;
                 }
@@ -181,21 +174,66 @@ namespace gameboy {
                         } break;
                         
                         case 0xb001: {
+                            // _log(debug, "Copying channel %u operator %u to operator %u", value & 0x7, (value >> 3) & 0x3, (value >> 5) & 0x3);
                             channel_data[value & 0x7].operators_data[(value >> 5) & 0x3] = channel_data[value & 0x7].operators_data[(value >> 3) & 0x3];
                         } break;
                     }
+                    return;
                 }
+
                 int channel = (addr >> 8) & 0x7,
                     operator_id = (addr >> 4) & 0x3;
                 
                 switch (addr & 0xf) {
                     case 0x00: { // Channel control
                         channel_data[channel].control = value;
+                        
+                        // _log(debug, "Channel %u Control write %02x", channel, value);
 
-                        if (value & 0x80) restart_channel_adsr(channel);
+                        if (value & 0x80) {
+                            update_channels();
+
+                            // _log(debug, "Playing channel %u with settings:\n\t"
+                            //     "channel.a=%f\n\t",
+                            //     channel,
+                            //     channels[channel].main_amp
+                            // );
+
+                            // for (int i = 0; i < 4; i++) {
+                            //     _log(debug,
+                            //         "Operator %u:\n\t"
+                            //         "enabled=%u\n\t"
+                            //         "f=%f\n\t"
+                            //         "a=%f\n\t"
+                            //         "adsr.enabled=%u\n\t"
+                            //         "adsr.a=%f\n\t"
+                            //         "adsr.d=%f\n\t"
+                            //         "adsr.s=%f\n\t"
+                            //         "adsr.r=%f\n\t"
+                            //         "adsr.peak_level=%f\n\t"
+                            //         "adsr.sustain_level=%f\n\t"
+                            //         "adsr.base_level=%f\n\t",
+                            //         i + 1,
+                            //         channels[channel].operators[i].enabled,
+                            //         channels[channel].operators[i].f,
+                            //         channels[channel].operators[i].a,
+                            //         channels[channel].operators[i].adsr.enabled,
+                            //         channels[channel].operators[i].adsr.a,
+                            //         channels[channel].operators[i].adsr.d,
+                            //         channels[channel].operators[i].adsr.s,
+                            //         channels[channel].operators[i].adsr.r,
+                            //         channels[channel].operators[i].adsr.peak_level,
+                            //         channels[channel].operators[i].adsr.sustain_level,
+                            //         channels[channel].operators[i].adsr.base_level
+                            //     );
+                            // }
+
+                            restart_channel_adsr(channel);
+                        }
                     } break;
                     case 0x01: { // Channel master volume
                         channel_data[channel].master_volume = value;
+                        //_log(debug, "Channel %u Master Volume write %02x", channel, value);
                     } break;
                     case 0x02: {
                         handle_latched_access(
@@ -203,9 +241,21 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u frequency write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].frequency.value
+                        // );
                     } break;
                     case 0x03: {
                         channel_data[channel].operators_data[operator_id].amplitude = value;
+                        // _log(debug, "Channel %u operator %u amplitude write %02x: value=%02x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].amplitude
+                        // );
                     } break;
                     case 0x04: {
                         handle_latched_access(
@@ -213,6 +263,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR attack write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_attack.value
+                        // );
                     } break;
                     case 0x05: {
                         handle_latched_access(
@@ -220,6 +276,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR decay write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_decay.value
+                        // );
                     } break;
                     case 0x06: {
                         handle_latched_access(
@@ -227,6 +289,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR sustain write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_sustain.value
+                        // );
                     } break;
                     case 0x07: {
                         handle_latched_access(
@@ -234,6 +302,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR release write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_release.value
+                        // );
                     } break;
                     case 0x08: {
                         handle_latched_access(
@@ -241,6 +315,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR base level write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_base_level.value
+                        // );
                     } break;
                     case 0x09: {
                         handle_latched_access(
@@ -248,6 +328,12 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR peak level write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_peak_level.value
+                        // );
                     } break;
                     case 0x0a: {
                         handle_latched_access(
@@ -255,6 +341,27 @@ namespace gameboy {
                             true,
                             value
                         );
+                        // _log(debug, "Channel %u operator %u ADSR sustain level write %02x: value=%04x",
+                        //     channel,
+                        //     operator_id,
+                        //     value,
+                        //     channel_data[channel].operators_data[operator_id].adsr_sustain_level.value
+                        // );
+                    } break;
+                    case 0x0b: {
+                        channel_data[channel].operators_data[operator_id].multiplier = value;
+                    } break;
+                    case 0x0c: {
+                        channel_data[channel].operators_data[operator_id].detune = value;
+                    } break;
+                    case 0x0d: {
+                        channel_data[channel].algorithm_lfo_enable = value;
+                    } break;
+                    case 0x0e: {
+                        channel_data[channel].lfo_freq = value;
+                    } break;
+                    case 0x0f: {
+                        channel_data[channel].lfo_amp = value;
                     } break;
                 }
 

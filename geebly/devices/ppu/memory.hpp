@@ -364,7 +364,7 @@ namespace gameboy {
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) return 0xff;
+                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH) && settings::vram_access_emulation_enabled) return 0xff;
                 return utility::default_mb_read(vram[current_bank_idx].data(), addr, size, VRAM_BEGIN);
             }
 
@@ -414,7 +414,7 @@ namespace gameboy {
             }
 
             if (addr >= VRAM_BEGIN && addr <= VRAM_END) {
-                if (vram_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) return;
+                if (vram_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH) && settings::vram_access_emulation_enabled) return;
                 utility::default_mb_write(vram[current_bank_idx].data(), addr, value, size, VRAM_BEGIN);
                 return;
             }

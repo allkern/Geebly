@@ -20,6 +20,11 @@ aCO7 -> channel C operator O adsr release (16-bit access twice)
 aCO8 -> channel C operator O adsr base level (16-bit access twice)
 aCO9 -> channel C operator O adsr peak level (16-bit access twice)
 aCOa -> channel C operator O adsr sustain level (16-bit access twice)
+aCOb -> channel C operator O frequency multiplier
+aCOc -> channel C operator O detune
+aC0d -> channel C algorithm select and operator LFO enable eaaaaaaa
+aC0e -> channel C LFO freq
+aCOf -> channel C LFO level
 
 Write only
 b000 -> copy channel data 0ddd0sss
