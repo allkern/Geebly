@@ -33,8 +33,7 @@ namespace frontend {
 
     void init() {
         ppu::init(settings::debugger_enabled ? nullptr : window::update);
-
-
+    
         if (!settings::debugger_enabled) {
             window::register_keydown_cb(input::keydown_cb);
             window::register_keyup_cb(input::keyup_cb);

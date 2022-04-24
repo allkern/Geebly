@@ -67,7 +67,8 @@ void scale_and_flip_buf(uint32_t* buf, int scale) {
 namespace frontend {
     bool ntsc_codec_enabled = false,
          start_with_gui = false,
-         blend_frames = false;
+         blend_frames = false,
+         gl_supported = true;
 
     namespace window {
         namespace sdl {
@@ -208,7 +209,7 @@ namespace frontend {
             sdl::renderer = SDL_CreateRenderer(
                 sdl::window,
                 -1,
-                SDL_RENDERER_PRESENTVSYNC
+                0
             );
 
             sdl::texture = SDL_CreateTexture(
@@ -220,9 +221,15 @@ namespace frontend {
 
             SDL_SetRenderDrawBlendMode(sdl::renderer, SDL_BLENDMODE_BLEND);
 
-            gl3wInit();
+            int gl_not_supported = gl3wInit();
 
-            if (!ntsc_codec_enabled) goto continue_without_codec;
+            if (gl_not_supported) {
+                gl_supported = false;
+                ntsc_codec_enabled = false;
+                shader_stack_available = false;
+            }
+
+            if ((!ntsc_codec_enabled) || (!gl_supported)) goto continue_without_codec;
 
             encoder = SDL_CreateShader(sdl::window, "shaders/identity.vert", "shaders/encode.frag");
             decoder = SDL_CreateShader(sdl::window, "shaders/identity.vert", "shaders/decode.frag");
@@ -237,6 +244,7 @@ namespace frontend {
             if (!curvature) { _log(warning, "%s", SDL_GetError()); shader_stack_available = false; goto unavailable; }
 
             unavailable:
+
             if (!shader_stack_available) {
                 _log(warning, "Shader stack unavailable, continuing with default rendering");
 
@@ -263,11 +271,17 @@ namespace frontend {
             continue_without_codec:
 
 #ifdef _WIN32
-            ui::init(sdl::window, sdl::renderer, sdl::texture, open);
-            ui::push_font("ubuntu-mono.ttf", 24);
-            ui::load_main_menu();
+            if ((ntsc_codec_enabled || shader_stack_available) && gl_supported) {
+                _log(debug, "before ui::init()");
+                ui::init(sdl::window, sdl::renderer, sdl::texture, open);
+                _log(debug, "before ui::push_font()");
+                ui::push_font("ubuntu-mono.ttf", 24);
+                _log(debug, "before ui::load_main_menu()");
+                ui::load_main_menu();
+                _log(debug, "before ui::show()");
 
-            if (start_with_gui) ui::show();
+                if (start_with_gui) ui::show();
+            }
 #else
         ;
 #endif
@@ -319,7 +333,8 @@ namespace frontend {
                 blend_frames(current_frame, prev_frame);
 
 #ifdef _WIN32
-            ui::update(buf);
+            if ((ntsc_codec_enabled || shader_stack_available) && gl_supported)
+                ui::update(buf);
 #endif
             end = std::chrono::high_resolution_clock::now();
 
@@ -338,7 +353,7 @@ namespace frontend {
 
             SDL_RenderClear(sdl::renderer);
 
-            if (shader_stack_available && ntsc_codec_enabled) {
+            if (shader_stack_available && ntsc_codec_enabled && gl_supported) {
                 scale_and_flip_buf(buf, window_scale);
                 //_log(debug, "buffers[0]=%08x", buf[0]);
 
@@ -404,7 +419,7 @@ namespace frontend {
                 SDL_RenderCopy(sdl::renderer, sdl::texture, NULL, NULL);
             }
 
-            if (ntsc_codec_enabled) {
+            if (ntsc_codec_enabled && gl_supported) {
                 SDL_GL_SwapWindow(sdl::window);
             } else {
                 SDL_RenderPresent(sdl::renderer);
@@ -433,7 +448,9 @@ namespace frontend {
                             case SDLK_ESCAPE: {
 #ifdef _WIN32
                                 gameboy::mute();
-                                ui::show();
+
+                                if (gl_supported) ui::show();
+
                                 gameboy::unmute();
 #endif 
                             } break;
