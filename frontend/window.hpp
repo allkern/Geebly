@@ -272,13 +272,9 @@ namespace frontend {
 
 #ifdef _WIN32
             if ((ntsc_codec_enabled || shader_stack_available) && gl_supported) {
-                _log(debug, "before ui::init()");
                 ui::init(sdl::window, sdl::renderer, sdl::texture, open);
-                _log(debug, "before ui::push_font()");
                 ui::push_font("ubuntu-mono.ttf", 24);
-                _log(debug, "before ui::load_main_menu()");
                 ui::load_main_menu();
-                _log(debug, "before ui::show()");
 
                 if (start_with_gui) ui::show();
             }

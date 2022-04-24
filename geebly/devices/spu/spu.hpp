@@ -129,7 +129,6 @@ namespace gameboy {
         void reset(bool reset_on = true) {
             if (reset_on) spu_on = !spu_on;
 
-            //_log(debug, "before spu reset ff14=%02x", nr[0x4]);
             ch1.reset();
             ch2.reset();
             ch3.reset();
@@ -137,7 +136,6 @@ namespace gameboy {
 
             nr[0x14] = 0x0;
             nr[0x15] = 0x0;
-            //_log(debug, "after spu reset ff14=%02x", nr[0x4]);
         }
 
         void write(u16 addr, u16 value, size_t size) {

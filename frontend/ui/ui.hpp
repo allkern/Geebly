@@ -77,15 +77,12 @@ namespace frontend {
             m_open = &open;
             background = { 0, 0, 0, 255 };
 
-            _log(debug, "before SDL_GetWindowSize");
             SDL_GetWindowSize(window, &width, &height);
 
             //SDL_GL_CreateContext(window);
 
-            _log(debug, "before primitives::init()");
             primitives::init(window);
 
-            _log(debug, "before TTF_init()");
             TTF_Init();
         }
 

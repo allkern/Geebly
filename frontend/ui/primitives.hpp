@@ -57,8 +57,6 @@ namespace frontend {
 
         void load_shader_functions() {
 #ifdef GPU_PRIMITIVES_GL_STANDALONE
-                _log(debug, "loading shader functions");
-                _log(debug, "glCreateShader=%p", (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");)
                 glCreateShader            = (PFNGLCREATESHADERPROC)SDL_GL_GetProcAddress("glCreateShader");
                 glShaderSource            = (PFNGLSHADERSOURCEPROC)SDL_GL_GetProcAddress("glShaderSource");
                 glCompileShader           = (PFNGLCOMPILESHADERPROC)SDL_GL_GetProcAddress("glCompileShader");
@@ -252,16 +250,13 @@ namespace frontend {
             }
 
             shader_t* create_shader(SDL_Window* window, std::string vertex_shader_src, std::string fragment_shader_src, bool append_headers = true) {
-                _log(debug, "load_shader_functions()");
                 if (!loaded_shader_functions) load_shader_functions();
 
-                _log(debug, "glCreateShader()");
                 GLuint vert_shader = glCreateShader(GL_VERTEX_SHADER),
                        frag_shader = glCreateShader(GL_FRAGMENT_SHADER);
 
                 shader_t* shader = new shader_t();
 
-                _log(debug, "shader = new shader_t()");
                 shader->window = window;
 
                 if (append_headers) {
@@ -269,7 +264,6 @@ namespace frontend {
                     fragment_shader_src = fragment_shader_header + fragment_shader_src;
                 }
 
-                _log(debug, "append_header()");
                 const char* vert_src_ptr = vertex_shader_src.c_str();
                 const char* frag_src_ptr = fragment_shader_src.c_str();
 
