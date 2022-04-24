@@ -209,7 +209,7 @@ namespace frontend {
             sdl::renderer = SDL_CreateRenderer(
                 sdl::window,
                 -1,
-                0
+                SDL_RENDERER_PRESENTVSYNC
             );
 
             sdl::texture = SDL_CreateTexture(

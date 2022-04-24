@@ -14,6 +14,8 @@ Invoke-WebRequest "https://github.com/libsdl-org/SDL_ttf/releases/download/relea
 Expand-Archive -Force "./sdl2.zip" -DestinationPath "sdl2/"
 Expand-Archive -Force "./sdl2-ttf.zip" -DestinationPath "sdl2-ttf/"
 
+del "./sdl2.zip","./sdl2-ttf.zip"
+
 cp -Force "sdl2-ttf/SDL2_ttf-2.0.18/include/SDL_ttf.h" "sdl2/SDL2-2.0.20/include/"
 cp -Force "sdl2-ttf/SDL2_ttf-2.0.18/lib/x64/SDL2_ttf.*" "sdl2/SDL2-2.0.20/lib/x64/"
 
