@@ -45,4 +45,37 @@ Here's all the settings currently present in the CLI:
 Geebly passes 77 tests on Daid's shootout
 
 ## Building
-So many things have changed in this last version that the build process is just not the same anymore, I'll fix that in upcoming commits
+I've improved both Windows and Linux build systems a lot, and tested them in various systems. I made sure to cover all possible scenarios.
+
+### Linux
+Building in Linux hosts with `apt` is really simple:
+```sh
+git clone https://github.com/Lycoder/Geebly
+cd Geebly
+make environment
+make
+```
+
+`make environment` will set up the build environment, this includes cloning the various repositories the emulator depends on, these are `ocornut/imgui`, `skaslev/gl3w`, `Lycoder/lgw` and `Lycoder/sdl_shader`. It also installs `sdl2-dev` and `sdl2-ttf-dev`
+
+### Windows
+Building in Windows hosts is a little bit more involved, and usually requires actions after the build is completed, its also really simple nonetheless.
+
+Keep in mind the scripts provided require Powershell and script execution enabled (See [this](https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_execution_policies?view=powershell-7.2))
+```
+git clone https://github.com/Lycoder/Geebly
+cd Geebly
+./prepare-build
+./build-win
+```
+
+Assuming you have a C++20-compatible compiler, it should build no problems. It might complain about `-m64`, in that case,  your compiler doesn't support 64-bit builds, just remove the flag.
+
+The emulator should compile fine, but you might run into some problems after its built.
+
+#### Troubleshooting
+Common issues:
+- The UI system requires the font Ubuntu Mono to be in the current directory to work, just download the font [here](https://fonts.google.com/specimen/Ubuntu+Mono), then copy the file `UbuntuMono-Regular.ttf` to Geebly's folder and rename it to "ubuntu-mono.ttf"
+- The program might not start, in that case, you're probably lacking DLLs inside the folder you're running the emulator from, just copy `SDL2.dll` and `SDL2_ttf.dll` to your folder. Keep in mind the `prepare-build` script already copies those two DLLs to the root Geebly folder, if its still complaining, you might be lacking some compiler DLLs,  such as: `libstdc++-7.dll`, and similar.
+
+Please open an issue or just PM me on Discord (Lycoder#8480) if you find any more issues
