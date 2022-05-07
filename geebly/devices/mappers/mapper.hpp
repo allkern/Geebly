@@ -19,7 +19,8 @@ namespace gameboy {
             mbc2,
             mbc3,
             mbc5,
-            aec1,
+            aec1a,
+            aec1b,
             camera,
             no_cart = 0x100,
             unknown = 0x200

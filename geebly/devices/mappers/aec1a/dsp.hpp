@@ -14,7 +14,7 @@ namespace gameboy {
                 double f, a;
 
                 double get_sample(double t) {
-                    return std::sin(t * f * AEC1_PI / AEC1_SAMPLERATE) * a;
+                    return std::sin(t * f * AEC1A_PI / AEC1A_SAMPLERATE) * a;
                 }
             } lfo;
 
@@ -73,7 +73,7 @@ namespace gameboy {
 
                                     a = adsr.base_level;
 
-                                    adsr.m_samples = AEC1_SAMPLERATE * (adsr.a / 1000.0);
+                                    adsr.m_samples = AEC1A_SAMPLERATE * (adsr.a / 1000.0);
                                     adsr.m_step    = (adsr.peak_level - adsr.base_level) / (double)adsr.m_samples;
                                 } break;
                                 case AS_ATTACK: {
@@ -81,7 +81,7 @@ namespace gameboy {
 
                                     a = adsr.peak_level;
 
-                                    adsr.m_samples = AEC1_SAMPLERATE * (adsr.d / 1000.0);
+                                    adsr.m_samples = AEC1A_SAMPLERATE * (adsr.d / 1000.0);
                                     adsr.m_step    = (adsr.sustain_level - adsr.peak_level) / (double)adsr.m_samples;
                                 } break;
                                 case AS_DECAY: {
@@ -89,13 +89,13 @@ namespace gameboy {
 
                                     a = adsr.sustain_level;
 
-                                    adsr.m_samples = AEC1_SAMPLERATE * (adsr.s / 1000.0);
+                                    adsr.m_samples = AEC1A_SAMPLERATE * (adsr.s / 1000.0);
                                     adsr.m_step    = 0;
                                 } break;
                                 case AS_SUSTAIN: {
                                     adsr.state = AS_RELEASE;
 
-                                    adsr.m_samples = AEC1_SAMPLERATE * (adsr.r / 1000.0);
+                                    adsr.m_samples = AEC1A_SAMPLERATE * (adsr.r / 1000.0);
                                     adsr.m_step    = (adsr.base_level - adsr.sustain_level) / (double)adsr.m_samples;
 
                                     a = adsr.sustain_level;
@@ -120,7 +120,7 @@ namespace gameboy {
                     double amp = carrier ? a : 1.0;
                     double freq = (f * multiplier) + detune + (lfo_enable ? lfo : 0.0);
 
-                    return enabled ? std::sin(phase + t * freq * AEC1_PI / AEC1_SAMPLERATE) * amp : 0.0;
+                    return enabled ? std::sin(phase + t * freq * AEC1A_PI / AEC1A_SAMPLERATE) * amp : 0.0;
                 }
             };
 

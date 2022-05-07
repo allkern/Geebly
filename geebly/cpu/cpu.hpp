@@ -606,7 +606,7 @@ namespace gameboy {
                 case 0x3f: { set_flags(CF, !test_flags(CF)); set_flags(NF | HF, false); update(1, 4); }; break;
 
                 default: {
-                    _log(error, "Invalid opcode 0x%02x @ pc=%04x, CPU halted", opcode, pc);
+                    _log(error, "Invalid opcode 0x%02x @ pc=%04x (cycles=%u), CPU halted", opcode, pc, cycles);
                     update(0, 4);
                     ime = false;
                     halted = true;

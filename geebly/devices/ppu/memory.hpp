@@ -420,7 +420,7 @@ namespace gameboy {
             }
 
             if (addr >= OAM_BEGIN && addr <= OAM_END) {
-                if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) { for (auto& b : oam) b = rand() % 0xff; return; }
+                // if (oam_disabled && TEST_REG(PPU_LCDC, LCDC_SWITCH)) { _log(debug, "corrupting OAM..."); for (auto& b : oam) b = rand() % 0xff; return; }
                 utility::default_mb_write(oam.data(), addr, value, size, OAM_BEGIN);
                 return;
             }

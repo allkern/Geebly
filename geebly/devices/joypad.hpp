@@ -106,6 +106,8 @@ namespace gameboy {
                 sgb::start_transfer();
         }
 
+        int counterxd = 60;
+
         u8 read() {
             if (settings::sgb_mode) {
                 u8 value = 0xfe;
@@ -115,7 +117,12 @@ namespace gameboy {
 
                 return value;
             } else {
-                if (button) return 0xd0 | (buttons & 0xf);
+                //if (!(counterxd--)) {
+                //    if (button) return 0xd0 | (buttons & 0xf) & ~JOYP_START;
+                //    counterxd = 60;
+                //} else {
+                    if (button) return 0xd0 | (buttons & 0xf);
+                //}
                 if (direct) return 0xe0 | (buttons >> 4);
 
                 return 0xff;

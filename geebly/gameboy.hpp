@@ -195,6 +195,7 @@ namespace gameboy {
             cpu::cycle();
 
             //if (cpu::registers::pc == 0x169) { cpu::fetch(); step = false; pause = true; master_volume = 1.0 * (!pause); }
+            //if (cpu::registers::cycles >= 35538052) { cpu::fetch(); step = false; pause = true; master_volume = 1.0 * (!pause); }
 
             ppu::cycle();
             timer::update();

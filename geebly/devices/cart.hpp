@@ -16,7 +16,8 @@
 #include "mappers/mbc3.hpp"
 #include "mappers/mbc5.hpp"
 #include "mappers/camera.hpp"
-#include "mappers/aec1/aec1.hpp"
+#include "mappers/aec1a/aec1a.hpp"
+#include "mappers/aec1b/aec1b.hpp"
 
 #define HDR_CGB_COMPATIBLE  0x43
 #define HDR_CART_TYPE       0x47
@@ -70,6 +71,7 @@ namespace gameboy {
             { 0x20, "None" },
             { 0x22, "Sensor, Rumble Motor, SRAM, Battery" },
             { 0x97, "YM2612-like Sound Chip" },
+            { 0x98, "YM3438" },
             { 0xfc, "M64282FP, SRAM, Battery" },
             { 0xfd, "None" },
             { 0xfe, "None" },
@@ -101,7 +103,8 @@ namespace gameboy {
             { 0x1e, "Nintendo MBC5" },
             { 0x20, "Nintendo MBC6" },
             { 0x22, "Nintendo MBC7" },
-            { 0x97, "Lycoder AEC1" },
+            { 0x97, "Lycoder AEC1A" },
+            { 0x98, "Lycoder AEC1B" },
             { 0xfc, "Nintendo 9807 SA (Pocket Camera)" },
             { 0xfd, "Bandai TAMA5" },
             { 0xfe, "Hudson HuC3" },
@@ -336,8 +339,9 @@ namespace gameboy {
                 case 0x1d: { cartridge = new mbc5(true);           } break;
                 case 0x1e: { cartridge = new mbc5(true, &sav);     } break;
 
-                // Custom audio enhancement cart by Lycoder
-                case 0x97: { cartridge = new aec1();               } break;
+                // Custom audio enhancement carts by Lycoder
+                case 0x97: { cartridge = new aec1a();              } break;
+                case 0x98: { cartridge = new aec1b();              } break;
 
                 // Pocket camera
                 case 0xfc: { cartridge = new camera(sbc, true, &sav);} break;

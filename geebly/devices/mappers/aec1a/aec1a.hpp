@@ -10,7 +10,7 @@
 
 namespace gameboy {
     namespace cart {
-        class aec1 : public mapper {
+        class aec1a : public mapper {
             u8 dummy = 0;
 
             typedef std::array<u8, 0x7eb0> rom_t;
@@ -138,7 +138,7 @@ namespace gameboy {
             void save_state(std::ofstream& o) override {}
             void load_state(std::ifstream& i) override {}
 
-            aec1(bool has_sram = false, std::ifstream* sav = nullptr) {}
+            aec1a(bool has_sram = false, std::ifstream* sav = nullptr) {}
 
             u8* get_bank0() { return rom.data(); }
             u8* get_bank1() { return &rom[0x3eaf]; }
@@ -149,7 +149,7 @@ namespace gameboy {
             }
 
             void init(std::ifstream* f) override {
-                tag = mapper_tag::aec1;
+                tag = mapper_tag::aec1a;
                 
                 if (f->is_open() && f->good()) {
                     f->read((char*)rom.data(), rom.size());
