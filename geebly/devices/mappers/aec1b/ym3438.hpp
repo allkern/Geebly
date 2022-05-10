@@ -1633,6 +1633,24 @@ Bit8u OPN2_Read(ym3438_t *chip, Bit32u port)
     return 0;
 }
 
+int16_t opn2_dummy = 0x0;
+
+void opn2_buffered_write(ym3438_t* chip, int part, uint8_t addr, uint8_t data) {
+    while (OPN2_Read(chip, 0) & 0x80)
+        OPN2_Clock(chip, &opn2_dummy);
+
+    OPN2_Write(chip, 0 + (2 * (part - 1)), addr);
+
+    // Delay 1 clock between address and data writes
+    OPN2_Clock(chip, &opn2_dummy);
+    
+    OPN2_Write(chip, 1 + (2 * (part - 1)), data);
+
+    // OPN2 Write takes 2 clocks
+    OPN2_Clock(chip, &opn2_dummy);
+    OPN2_Clock(chip, &opn2_dummy);
+}
+
 #ifdef __cplusplus
 }
 #endif

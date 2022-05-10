@@ -44,8 +44,8 @@ namespace gameboy {
                 }
 
                 if (mix_vin) {
-                    if (output_vin_to_so1) sl += samples[4];
-                    if (output_vin_to_so2) sr += samples[4];
+                    sl += samples[4];
+                    sr += samples[4];
                 }
 
                 left = ((sl / (output_vin_to_so1 ? 5 : 4)) * so1_output_level) * master_volume;
