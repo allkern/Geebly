@@ -51,12 +51,11 @@ namespace gameboy {
             for (auto& b : oam) { b = rand() % 0xff; }
 
             for (size_t idx = 0; idx < sprites.size(); idx++)
-                sprites.at(idx) = (sprite_t*)(&oam.at(idx << 2));
-
+                sprites[idx] = (sprite_t*)(&oam[idx << 2]);
+            
             queued_sprites.reserve(12);
 
             if (settings::skip_bootrom) {
-                _log(debug, "Initializing PPU state skipping bootrom");
                 r[PPU_LCDC] = 0x91;
                 r[PPU_STAT] = 0x85;
                 r[PPU_BGP] = 0xfc;

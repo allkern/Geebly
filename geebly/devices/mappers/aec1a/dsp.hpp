@@ -1,20 +1,18 @@
 #pragma once
 
-#include <cmath>
-
 #include "common.hpp"
 
 namespace gameboy {
     namespace cart {
         struct fm_channel_t {
-            double main_amp;
-            double t = 0.0;
+            AEC1A_DSP_TYPE main_amp;
+            AEC1A_DSP_TYPE t = 0.0;
 
             struct lfo_t {
-                double f, a;
+                AEC1A_DSP_TYPE f, a;
 
-                double get_sample(double t) {
-                    return std::sin(t * f * AEC1A_PI / AEC1A_SAMPLERATE) * a;
+                AEC1A_DSP_TYPE get_sample(AEC1A_DSP_TYPE t) {
+                    return AEC1A_SIN(t * f * AEC1A_PI / AEC1A_SAMPLERATE) * a;
                 }
             } lfo;
 
@@ -29,9 +27,9 @@ namespace gameboy {
             algorithm_t algorithm = FM_ALG1;
 
             struct fm_operator_t {
-                double a = 0.0, f = 0.0;
-                double multiplier = 1.0;
-                double detune = 0.0;
+                AEC1A_DSP_TYPE a = 0.0, f = 0.0;
+                AEC1A_DSP_TYPE multiplier = 1.0;
+                AEC1A_DSP_TYPE detune = 0.0;
 
                 enum adsr_state_t : int {
                     AS_NONE,
@@ -44,16 +42,16 @@ namespace gameboy {
 
                 struct adsr_t {
                     int m_samples = 0;
-                    double m_step = 0.0;
+                    AEC1A_DSP_TYPE m_step = 0.0;
 
                     adsr_state_t state = AS_DONE;
 
-                    double a = 0.0,
+                    AEC1A_DSP_TYPE a = 0.0,
                            d = 0.0,
                            s = 0.0,
                            r = 0.0;
 
-                    double peak_level = 0.0,
+                    AEC1A_DSP_TYPE peak_level = 0.0,
                            sustain_level = 0.0,
                            base_level = 0.0;
 
@@ -62,7 +60,7 @@ namespace gameboy {
 
                 bool enabled = false;
 
-                double get_sample(double t, bool carrier = false, double fm = 0.0, bool lfo_enable = false, double lfo = 0.0) {
+                AEC1A_DSP_TYPE get_sample(AEC1A_DSP_TYPE t, bool carrier = false, AEC1A_DSP_TYPE fm = 0.0, bool lfo_enable = false, AEC1A_DSP_TYPE lfo = 0.0) {
                     if (!enabled) return 0.0;
 
                     if (adsr.enabled) {
@@ -74,7 +72,7 @@ namespace gameboy {
                                     a = adsr.base_level;
 
                                     adsr.m_samples = AEC1A_SAMPLERATE * (adsr.a / 1000.0);
-                                    adsr.m_step    = (adsr.peak_level - adsr.base_level) / (double)adsr.m_samples;
+                                    adsr.m_step    = (adsr.peak_level - adsr.base_level) / (AEC1A_DSP_TYPE)adsr.m_samples;
                                 } break;
                                 case AS_ATTACK: {
                                     adsr.state = AS_DECAY;
@@ -82,7 +80,7 @@ namespace gameboy {
                                     a = adsr.peak_level;
 
                                     adsr.m_samples = AEC1A_SAMPLERATE * (adsr.d / 1000.0);
-                                    adsr.m_step    = (adsr.sustain_level - adsr.peak_level) / (double)adsr.m_samples;
+                                    adsr.m_step    = (adsr.sustain_level - adsr.peak_level) / (AEC1A_DSP_TYPE)adsr.m_samples;
                                 } break;
                                 case AS_DECAY: {
                                     adsr.state = AS_SUSTAIN;
@@ -96,7 +94,7 @@ namespace gameboy {
                                     adsr.state = AS_RELEASE;
 
                                     adsr.m_samples = AEC1A_SAMPLERATE * (adsr.r / 1000.0);
-                                    adsr.m_step    = (adsr.base_level - adsr.sustain_level) / (double)adsr.m_samples;
+                                    adsr.m_step    = (adsr.base_level - adsr.sustain_level) / (AEC1A_DSP_TYPE)adsr.m_samples;
 
                                     a = adsr.sustain_level;
                                 } break;
@@ -116,20 +114,20 @@ namespace gameboy {
                         if (adsr.m_samples) adsr.m_samples--;
                     }
 
-                    double phase = carrier ? fm : 0.0;
-                    double amp = carrier ? a : 1.0;
-                    double freq = (f * multiplier) + detune + (lfo_enable ? lfo : 0.0);
+                    AEC1A_DSP_TYPE phase = carrier ? fm : 0.0;
+                    AEC1A_DSP_TYPE amp = carrier ? a : 1.0;
+                    AEC1A_DSP_TYPE freq = (f * multiplier) + detune + (lfo_enable ? lfo : 0.0);
 
-                    return enabled ? std::sin(phase + t * freq * AEC1A_PI / AEC1A_SAMPLERATE) * amp : 0.0;
+                    return enabled ? AEC1A_SIN(phase + t * freq * AEC1A_PI / AEC1A_SAMPLERATE) * amp : 0.0;
                 }
             };
 
             fm_operator_t operators[4];
 
-            double get_sample() {
-                double v[4];
+            AEC1A_DSP_TYPE get_sample() {
+                AEC1A_DSP_TYPE v[4];
 
-                double lfo_sample = lfo.get_sample(t);
+                AEC1A_DSP_TYPE lfo_sample = lfo.get_sample(t);
 
                 switch (algorithm) {
                     case FM_ALG1: {

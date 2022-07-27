@@ -2,8 +2,6 @@
 
 #include "../../aliases.hpp"
 
-#include "translate.hpp"
-
 #include <cstring>
 
 #define HDMA_BEGIN 0xff51
@@ -14,6 +12,13 @@
 #define HDMA_DSTH 0xff53
 #define HDMA_DSTL 0xff54
 #define HDMA_CTRL 0xff55
+
+namespace gameboy {
+    namespace bus {
+        void write(u16, u16, size_t);
+        u32 read(u16, size_t);
+    }
+}
 
 namespace gameboy {
     namespace hdma {
@@ -81,11 +86,17 @@ namespace gameboy {
 
                 u8 *src_ptr = dma::translate(src),
                    *dst_ptr = dma::translate(dst);
-
+                
                 if (!src_ptr) _log(warning, "%s transfer failure, source invalid", mode ? "HDMA" : "GDMA");
                 if (!dst_ptr) _log(warning, "%s transfer failure, destination invalid", mode ? "HDMA" : "GDMA");
 
-                if (src_ptr && dst_ptr) std::memcpy(dst_ptr, src_ptr, len);
+                for (int i = 0; i < len; i++) {
+                    u16 dstw = 0x8000 + ((dst + i) & 0x1fff);
+
+                    bus::write(dstw, bus::read(src + i, 1), 1);
+                }
+
+                //if (src_ptr && dst_ptr) std::memcpy(dst_ptr, src_ptr, len);
             }
         }
 

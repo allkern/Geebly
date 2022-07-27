@@ -239,6 +239,7 @@ namespace gameboy {
                     } else {
                         halted = ime || ((ia & ie & 0x1f) == 0);
                     }
+
                     update(1, 4);
                 } break;
 
@@ -422,8 +423,8 @@ namespace gameboy {
                     u16 res = sp + (s8)s.imm8;
                     hl = res;
                     set_flags(ZF | NF, false);
-                    set_flags(CF, (res&0xff) < s.imm8);
-                    set_flags(HF, (res&0xf) < (s.imm8&0xf));
+                    set_flags(CF, (res & 0xff) < s.imm8);
+                    set_flags(HF, (res & 0xf) < (s.imm8 & 0xf));
                     update(2, 12);
                 } break;
 

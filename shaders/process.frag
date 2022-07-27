@@ -1,58 +1,39 @@
-// Input on Buffer A or Buffer A's iChannel0
+// Simple NTSC codec
+// Change Buffer A to whatever you want
 
-// This final pass lowpasses (blurs) the image some.
-// Also applies some small sync noise
+#define FIR_SIZE 5
+#define PI   3.14159265358979323846
 
-// Developer's note:
-// I found that most NTSC codecs/decoders on this site are pretty
-// hard to understand.
-//
-// I made this filter to document a lot on how these filters work
-// as information on the matter is scarce even on the internet.
-// That is why this code is littered with comments everywhere.
-//
-// As for actual documents or specifications:
-// The ITU-R BT.1700 recommendation goes into a lot of detail on how
-// an encoder can be implemented both in Hardware and Software.
-// (its "usefulness" for software implementations was probably unintentional)
-//
-// Here's a link to that recommendation's papers download page:
-// - https://www.itu.int/rec/R-REC-BT.1700-0-200502-I/en
-//
-// I hope all of this can help you implement your own NTSC/VHS
-// filter!
-
-// To-do list:
-// - Filter out chroma from luma, decode them separately
-// - Improve lowpass filters overall using window functions
-
-// Strength of the 2D low-pass (blur) filter
-#define FIR_SIZE_H 1
-#define FIR_SIZE_V 1
-
-float hash12(vec2 p) {
-	vec3 p3  = fract(vec3(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx + 33.33);
-    return fract((p3.x + p3.y) * p3.z);
+float blackman(float n, float N) {
+    float a0 = (1.0 - 0.16) / 2.0;
+    float a1 = 1.0 / 2.0;
+    float a2 = 0.16 / 2.0;
+    
+    return a0 - (a1 * cos((2.0 * PI * n) / N)) + (a2 * cos((4.0 * PI * n) / N)) * 1.0;
 }
 
 void main() {
-    vec3 s;
+    vec3 rgb = vec3(0.0);
     
     float counter = 0.0;
     
-    //float xoffset = hash12(vec2(fragCoord.y, float(iFrame))) * 1.0;
+    for (int y = -3; y < 0; y++) {
+        for (int d = -FIR_SIZE; d < FIR_SIZE; d++) {
+            vec2 pos = vec2(fragCoord.x + float(d), fragCoord.y + float(y));
 
-    for (int i = -FIR_SIZE_H; i <= FIR_SIZE_H; i++) {
-        for (int y = -FIR_SIZE_V; y <= FIR_SIZE_V; y++) {
-            vec2 uv = vec2(fragCoord.x + float(i), fragCoord.y + float(y)) / iResolution.xy;
+            vec3 s = texture(iChannel0, pos / iResolution.xy).rgb;
+        
+            // Apply Blackman window for smoother colors
+            float window = blackman(float(d + FIR_SIZE), float(FIR_SIZE * 2 + 1)); 
 
-            s = s + texture(iChannel0, uv).xyz;
-            counter += 1.0;
+            rgb += s * window;
+
+            counter++;
         }
     }
     
-    //s /= (float(FIR_SIZE) * 16.0) + 1.0;
-    s /= counter;
-    fragColor = vec4(s, 1.0);
+    rgb /= counter;
+    rgb *= 5.0;
+
+    fragColor = vec4(rgb, 1.0);
 }

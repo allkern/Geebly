@@ -96,7 +96,7 @@ namespace frontend {
 
             SDL_Init(SDL_INIT_VIDEO | SDL_INIT_EVENTS);
 
-            sdl::window = SDL_CreateWindow("Debug", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, window_flags);
+            sdl::window = SDL_CreateWindow("Debugger", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 1280, 720, window_flags);
             sdl::gl_context = SDL_GL_CreateContext(sdl::window);
 
             SDL_GL_MakeCurrent(sdl::window, sdl::gl_context);
@@ -154,8 +154,6 @@ namespace frontend {
             screen_panel::init();
 
             ImGui::GetStyle().WindowBorderSize = 0.0f;
-            
-            open = true;
 
             return true;
         }
@@ -172,29 +170,14 @@ namespace frontend {
             // Cleanup
             ImGui_ImplOpenGL3_Shutdown();
             ImGui_ImplSDL2_Shutdown();
+            //ImGui::DestroyContext();
             //ImPlot::DestroyContext();
-            ImGui::DestroyContext();
 
             SDL_GL_DeleteContext(sdl::gl_context);
             SDL_DestroyWindow(sdl::window);
         }
 
         void update() {
-            SDL_Event event;
-
-            while (SDL_PollEvent(&event)) {
-                ImGui_ImplSDL2_ProcessEvent(&event);
-
-                switch (event.type) {
-                    case SDL_QUIT: { close(); } break;
-                    case SDL_KEYDOWN: { input::keydown_cb(event.key.keysym.sym); } break;
-                    case SDL_KEYUP: { input::keyup_cb(event.key.keysym.sym); } break;
-                }
-
-                if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(sdl::window))
-                    open = false;
-            }
-
             // Start the Dear ImGui frame
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplSDL2_NewFrame(sdl::window);
@@ -261,6 +244,18 @@ namespace frontend {
             glClear(GL_COLOR_BUFFER_BIT);
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
             SDL_GL_SwapWindow(sdl::window);
+
+            SDL_Event event;
+
+            while (SDL_PollEvent(&event)) {
+                ImGui_ImplSDL2_ProcessEvent(&event);
+
+                switch (event.type) {
+                    case SDL_QUIT: { close(); } break;
+                    case SDL_KEYDOWN: { input::keydown_cb(event.key.keysym.sym); } break;
+                    case SDL_KEYUP: { input::keyup_cb(event.key.keysym.sym); } break;
+                }
+            }
         }
         
         void update_proc() {
@@ -272,15 +267,17 @@ namespace frontend {
         }
 
         void start() {
+            _log(ok, "Initialized debug");
+
+            open = true;
+
             std::thread debug_thread(update_proc);
 
             debug_thread.detach();
 
-            _log(info, "Waiting for debug to fully initialize...");
+            // _log(info, "Waiting for debug to fully initialize...");
 
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-            _log(ok, "Initialized debug");
+            // std::this_thread::sleep_for(std::chrono::milliseconds(100));
         }
     }
 }

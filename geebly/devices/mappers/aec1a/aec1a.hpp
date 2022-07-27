@@ -6,8 +6,6 @@
 #include "common.hpp"
 #include "dsp.hpp"
 
-#include <cmath>
-
 namespace gameboy {
     namespace cart {
         class aec1a : public mapper {
@@ -22,7 +20,7 @@ namespace gameboy {
                 return true;
             }
 
-            double t = 0.0;
+            AEC1A_DSP_TYPE t = 0.0;
 
             struct channel_t {
                 u8 control;
@@ -86,7 +84,7 @@ namespace gameboy {
                         if (channel_data[0].master_volume == 0xff) {
                             channels[c].main_amp = 1.0;
                         } else {
-                            channels[c].main_amp = 1.0 / (255.0 - (double)channel_data[0].master_volume);
+                            channels[c].main_amp = 1.0 / (255.0 - (AEC1A_DSP_TYPE)channel_data[0].master_volume);
                         }
                     } else {
                         channels[c].main_amp = 0.0;
@@ -96,33 +94,33 @@ namespace gameboy {
 
                     channels[c].algorithm = (fm_channel_t::algorithm_t)(channel_data[c].algorithm_lfo_enable & 0x7f);
                     channels[c].lfo_enable = channel_data[c].algorithm_lfo_enable & 0x80;
-                    channels[c].lfo.f = ((double)channel_data[c].lfo_freq) / 10.0; // 0.0 -> 25.5 Hz LFO freqs
-                    channels[c].lfo.a = ((double)channel_data[c].lfo_amp) / 10.0; // 0.0 -> 25.5 LFO amps
+                    channels[c].lfo.f = ((AEC1A_DSP_TYPE)channel_data[c].lfo_freq) / 10.0; // 0.0 -> 25.5 Hz LFO freqs
+                    channels[c].lfo.a = ((AEC1A_DSP_TYPE)channel_data[c].lfo_amp) / 10.0; // 0.0 -> 25.5 LFO amps
 
                     for (int o = 0; o < 4; o++) {
                         channels[c].operators[o].enabled = channel_data[c].control & (1 << o);
-                        channels[c].operators[o].f = 131072.0 / (2048.0 - (double)channel_data[c].operators_data[o].frequency.value);
-                        channels[c].operators[o].adsr.a = (double)channel_data[c].operators_data[o].adsr_attack.value;
-                        channels[c].operators[o].adsr.d = (double)channel_data[c].operators_data[o].adsr_decay.value;
-                        channels[c].operators[o].adsr.s = (double)channel_data[c].operators_data[o].adsr_sustain.value;
-                        channels[c].operators[o].adsr.r = (double)channel_data[c].operators_data[o].adsr_release.value;
-                        channels[c].operators[o].adsr.base_level = (double)channel_data[c].operators_data[o].adsr_base_level.value;
-                        channels[c].operators[o].adsr.peak_level = (double)channel_data[c].operators_data[o].adsr_peak_level.value;
-                        channels[c].operators[o].adsr.sustain_level = (double)channel_data[c].operators_data[o].adsr_sustain_level.value;
+                        channels[c].operators[o].f = 131072.0 / (2048.0 - (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].frequency.value);
+                        channels[c].operators[o].adsr.a = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_attack.value;
+                        channels[c].operators[o].adsr.d = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_decay.value;
+                        channels[c].operators[o].adsr.s = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_sustain.value;
+                        channels[c].operators[o].adsr.r = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_release.value;
+                        channels[c].operators[o].adsr.base_level = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_base_level.value;
+                        channels[c].operators[o].adsr.peak_level = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_peak_level.value;
+                        channels[c].operators[o].adsr.sustain_level = (AEC1A_DSP_TYPE)channel_data[c].operators_data[o].adsr_sustain_level.value;
                         
                         if (!channel_data[c].operators_data[o].multiplier) channel_data[c].operators_data[o].multiplier = 1;
 
-                        double multiplier = (double)(channel_data[c].operators_data[o].multiplier & 0x7f);
+                        AEC1A_DSP_TYPE multiplier = (AEC1A_DSP_TYPE)(channel_data[c].operators_data[o].multiplier & 0x7f);
                         bool reciprocal = channel_data[c].operators_data[o].multiplier & 0x80;
 
                         channels[c].operators[o].multiplier = reciprocal ? (1.0 / multiplier) : multiplier;
-                        channels[c].operators[o].detune = ((double)channel_data[c].operators_data[o].detune) / 10.0; // 0.0 -> 25.5 Hz detune
+                        channels[c].operators[o].detune = ((AEC1A_DSP_TYPE)channel_data[c].operators_data[o].detune) / 10.0; // 0.0 -> 25.5 Hz detune
                     }
                 }
             }
 
             int16_t get_sample() override {
-                double sample = 0.0;
+                AEC1A_DSP_TYPE sample = 0.0;
 
                 for (int i = 0; i < 8; i++) {
                     if ((int)channels[i].main_amp) {

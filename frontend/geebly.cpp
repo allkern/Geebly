@@ -28,12 +28,18 @@ int main(int argc, char *argv[]) {
 
     frontend::load_settings();
 
-    if (settings::debugger_enabled) debug::start();
-
     gameboy::init();
     frontend::init();
 
-    while (window::is_open()) gameboy::update();
+    if (settings::debugger_enabled) debug::start();
+
+    bool open = settings::debugger_enabled ? debug::is_open() : window::is_open();
+
+    while (open) {
+        gameboy::update();
+
+        open = settings::debugger_enabled ? debug::is_open() : window::is_open();
+    }
 
     frontend::close();
 

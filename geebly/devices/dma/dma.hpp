@@ -9,6 +9,13 @@
 #define MMIO_DMA_TRANSFER 0xff46
 
 namespace gameboy {
+    namespace bus {
+        void write(u16, u16, size_t);
+        u32 read(u16, size_t);
+    }
+}
+
+namespace gameboy {
     namespace dma {
         u8 dummy;
 
@@ -40,6 +47,12 @@ namespace gameboy {
             u8* t = translate(base);
             
             if (t) std::memcpy(ppu::oam.data(), translate(base), 0xa0);
+
+            // for (int i = 0; i < 0xa0; i++) {
+            //     u16 dstw = 0x8000 + ((dst + i) & 0x1ff0);
+
+            //     bus::write(dstw, bus::read(src + i, 1), 1);
+            // }
         }
 
         u8& ref(u16 addr) {

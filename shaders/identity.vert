@@ -1,5 +1,7 @@
 void main() {
 	gl_Position = gl_Vertex;
-	vec2 coord = ((gl_Position.xy * iResolution.xy) + (iResolution.xy)) / 2;
-	fragCoord = vec2(coord.x, coord.y);
+
+	vec2 normalized = (gl_Position.xy + vec2(1.0)) / 2.0;
+
+	fragCoord = normalized * iResolution.xy;
 }

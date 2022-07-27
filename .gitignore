@@ -84,3 +84,4 @@ test/
 debug-build-libs.ps1
 saves/
 *.ss
+shaders.old/
