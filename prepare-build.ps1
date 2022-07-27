@@ -2,7 +2,7 @@ git clone "https://github.com/ocornut/imgui"
 git clone "https://github.com/skaslev/gl3w"
 git clone "https://github.com/Lycoder/lgw"
 
-python3 "gl3w/gl3w_gen.py"
+python "gl3w/gl3w_gen.py"
 
 md -Force -Path "imgui/examples/libs/gl3w/GL" > $null
 
